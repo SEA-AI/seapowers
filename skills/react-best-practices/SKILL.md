@@ -1,13 +1,10 @@
 ---
-name: react-best-practices
-description: >
-  React and Next.js performance optimization guidelines from Vercel.
-  Covers eliminating waterfalls, bundle size optimization, server-side performance,
-  client-side data fetching, re-render optimization, rendering performance,
-  JavaScript performance, and advanced patterns. Use when writing, reviewing,
-  or refactoring React/Next.js code.
+name: vercel-react-best-practices
+description: React and Next.js performance optimization guidelines from Vercel Engineering. This skill should be used when writing, reviewing, or refactoring React/Next.js code to ensure optimal performance patterns. Triggers on tasks involving React components, Next.js pages, data fetching, bundle optimization, or performance improvements.
 license: MIT
-upstream: https://github.com/vercel-labs/agent-skills/blob/main/skills/react-best-practices/SKILL.md
+metadata:
+  author: vercel
+  version: "1.0.0"
 ---
 
 # Vercel React Best Practices
@@ -118,3 +115,22 @@ Reference these guidelines when:
 - `advanced-event-handler-refs` - Store event handlers in refs
 - `advanced-init-once` - Initialize app once per app load
 - `advanced-use-latest` - useLatest for stable callback refs
+
+## How to Use
+
+Read individual rule files for detailed explanations and code examples:
+
+```
+rules/async-parallel.md
+rules/bundle-barrel-imports.md
+```
+
+Each rule file contains:
+- Brief explanation of why it matters
+- Incorrect code example with explanation
+- Correct code example with explanation
+- Additional context and references
+
+## Full Compiled Document
+
+For the complete guide with all rules expanded: `AGENTS.md`
