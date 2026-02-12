@@ -9,6 +9,13 @@
 
 A shared collection of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skills, prompts, and workflows used across the SEA.AI organization — distributed as a Claude Code plugin.
 
+## Available Skills
+
+| Skill | Description | Source |
+|-------|-------------|--------|
+| `pull-request` | SEA.AI PR template with What/Why/How/Testing sections | Internal |
+| `react-best-practices` | React & Next.js performance optimization (57 rules across 8 categories) | [Vercel Labs](https://github.com/vercel-labs/agent-skills) |
+
 ## What are Skills?
 
 Claude Code skills are reusable prompt-based instructions that standardize how AI assists with common development tasks — think of them as muscle memory for your AI pair programmer. Instead of every developer explaining the same context over and over, skills encode team knowledge once and share it everywhere.
@@ -93,13 +100,6 @@ If you only need certain skills, pass an array of skill names instead of `true` 
   }
 }
 ```
-
-## Available Skills
-
-| Skill | Description | Source |
-|-------|-------------|--------|
-| `pull-request` | SEA.AI PR template with What/Why/How/Testing sections | Internal |
-| `react-best-practices` | React & Next.js performance optimization (57 rules across 8 categories) | [Vercel Labs](https://github.com/vercel-labs/agent-skills) |
 
 ## Upstream Syncing
 
