@@ -1,0 +1,23 @@
+{
+  "name": "sea-ai-skills",
+  "owner": {
+    "name": "SEA.AI"
+  },
+  "metadata": {
+    "description": "SEA.AI shared skills marketplace",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "ai-skills",
+      "source": ".",
+      "description": "Shared AI skills and workflows for the SEA.AI team",
+      "version": "1.0.0",
+      "author": {
+        "name": "SEA.AI"
+      },
+      "license": "MIT",
+      "keywords": ["skills", "react", "nextjs"]
+    }
+  ]
+}
