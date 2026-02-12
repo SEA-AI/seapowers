@@ -5,22 +5,20 @@
 [![Upstream Sync](https://img.shields.io/github/actions/workflow/status/SEA-AI/ai-skills/sync-upstream-skills.yml?label=Upstream%20Sync&style=flat-square)](https://github.com/SEA-AI/ai-skills/actions/workflows/sync-upstream-skills.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
-> _Teaching our AI assistants to sail the SEA.AI way._
+✨ **Shared Claude Code skills, prompts, and workflows for the SEA.AI team** ✨
 
-A shared collection of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skills, prompts, and workflows used across the SEA.AI organization — distributed as a Claude Code plugin.
-
-## Available Skills
+## 🧩 Available Skills
 
 | Skill | Description | Source |
 |-------|-------------|--------|
-| `pull-request` | SEA.AI PR template with What/Why/How/Testing sections | Internal |
-| `react-best-practices` | React & Next.js performance optimization (57 rules across 8 categories) | [Vercel Labs](https://github.com/vercel-labs/agent-skills) |
+| 📝 `pull-request` | SEA.AI PR template with What/Why/How/Testing sections | Internal |
+| ⚛️ `react-best-practices` | React & Next.js performance optimization (57 rules across 8 categories) | [Vercel Labs](https://github.com/vercel-labs/agent-skills) |
 
-## What are Skills?
+## 💡 What are Skills?
 
 Claude Code skills are reusable prompt-based instructions that standardize how AI assists with common development tasks — think of them as muscle memory for your AI pair programmer. Instead of every developer explaining the same context over and over, skills encode team knowledge once and share it everywhere.
 
-## Repository Structure
+## 📁 Repository Structure
 
 ```
 ai-skills/
@@ -40,7 +38,7 @@ ai-skills/
 └── README.md
 ```
 
-## Installation
+## 🚀 Installation
 
 ### Install globally (all projects)
 
@@ -101,7 +99,7 @@ If you only need certain skills, pass an array of skill names instead of `true` 
 }
 ```
 
-## Upstream Syncing
+## 🔄 Upstream Syncing
 
 Some skills are vendored from external repos. Instead of fetching at runtime, we keep a local copy that's automatically synced via a weekly GitHub Action.
 
@@ -121,7 +119,7 @@ The manifest lives in `plugins/ai-skills/upstream-skills.json`:
 
 To add a new upstream skill, append an entry with the raw URL and local destination (relative to the repo root). The [sync workflow](.github/workflows/sync-upstream-skills.yml) runs weekly and opens a PR when upstream content changes.
 
-## Contributing
+## 🤝 Contributing
 
 ### Adding a Skill
 
@@ -131,6 +129,6 @@ To add a new upstream skill, append an entry with the raw URL and local destinat
 
 Got a workflow that saves you time? A prompt pattern that keeps Claude on track? Ship it! The bar is low — if it helped you twice, it'll help someone else too.
 
-## Why?
+## 🤷 Why?
 
 Because nobody should have to explain our deploy process to Claude from scratch every Monday morning.
