@@ -1,0 +1,12 @@
+{
+  "name": "ai-skills",
+  "version": "1.0.0",
+  "description": "Shared AI skills and workflows for the SEA.AI team",
+  "author": {
+    "name": "SEA.AI",
+    "url": "https://github.com/SEA-AI"
+  },
+  "repository": "https://github.com/SEA-AI/ai-skills",
+  "license": "MIT",
+  "keywords": ["skills", "react", "nextjs", "sea-ai"]
+}
