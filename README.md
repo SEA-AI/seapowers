@@ -12,9 +12,10 @@ Claude Code skills are reusable prompt-based instructions that standardize how A
 
 ```
 ai-skills/
-├── claude-code/          # Claude Code skills (.md files)
-│   ├── example-skill.md  # Each skill is a markdown file
-│   └── ...
+├── .claude/
+│   └── skills/               # Claude Code auto-discovers skills here
+│       └── my-skill/
+│           └── SKILL.md
 └── README.md
 ```
 
@@ -22,23 +23,20 @@ ai-skills/
 
 ### Adding a Skill
 
-1. Create a new `.md` file in `claude-code/`
+1. Create a new directory in `.claude/skills/` with a `SKILL.md` file
 2. Follow the [skill format](https://docs.anthropic.com/en/docs/claude-code/skills) from the Claude Code docs
 3. Open a PR and let the team review
 
 ### Using Skills in Claude Code
 
-Point Claude Code to this repo by adding it to your project's `.claude/settings.json`:
+Clone this repo and launch Claude Code with `--add-dir`:
 
-```json
-{
-  "skills": {
-    "sources": ["https://github.com/SEA-AI/ai-skills"]
-  }
-}
+```bash
+git clone git@github.com:SEA-AI/ai-skills.git
+claude --add-dir /path/to/ai-skills
 ```
 
-Or reference individual skills directly during a session.
+Claude Code automatically discovers all skills in `.claude/skills/` of added directories.
 
 ## Contributing
 
