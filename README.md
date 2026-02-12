@@ -27,18 +27,36 @@ ai-skills/
 
 ## Installation
 
-### One-time setup
+### Install globally (all projects)
 
-Add the marketplace and install the plugin:
+Run these commands inside Claude Code:
 
 ```
 /plugin marketplace add SEA-AI/ai-skills
 /plugin install ai-skills@sea-ai-skills
 ```
 
-### Pre-configure for a project
+This writes the following to your `~/.claude/settings.json` — you can also add it manually:
 
-Add this to your project's `.claude/settings.json` so every team member gets the skills automatically:
+```json
+{
+  "extraKnownMarketplaces": {
+    "sea-ai-skills": {
+      "source": {
+        "source": "github",
+        "repo": "SEA-AI/ai-skills"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "ai-skills@sea-ai-skills": true
+  }
+}
+```
+
+### Install per-project
+
+Add this to your **project's** `.claude/settings.json` so every team member gets the skills automatically when working in that repo:
 
 ```json
 {
@@ -58,7 +76,7 @@ Add this to your project's `.claude/settings.json` so every team member gets the
 
 ### Enable only specific skills
 
-If you only need certain skills in a project, pass an array of skill names instead of `true`:
+If you only need certain skills, pass an array of skill names instead of `true` (works in both global and project settings):
 
 ```json
 {
