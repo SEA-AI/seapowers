@@ -52,6 +52,18 @@ Add this to your project's `.claude/settings.json` so every team member gets the
 }
 ```
 
+### Enable only specific skills
+
+If you only need certain skills in a project, pass an array of skill names instead of `true`:
+
+```json
+{
+  "enabledPlugins": {
+    "ai-skills@sea-ai-skills": ["react-best-practices"]
+  }
+}
+```
+
 ## Contributing
 
 ### Adding a Skill
