@@ -13,15 +13,18 @@ Claude Code skills are reusable prompt-based instructions that standardize how A
 ```
 ai-skills/
 ├── .claude-plugin/
-│   ├── plugin.json          # Plugin metadata
-│   └── marketplace.json     # Makes it installable
+│   └── marketplace.json              # Makes it installable
 ├── .github/
 │   └── workflows/
 │       └── sync-upstream-skills.yml  # Weekly upstream sync
-├── skills/
-│   └── my-skill/
-│       └── SKILL.md
-├── upstream-skills.json     # Manifest of vendored upstream skills
+├── plugins/
+│   └── ai-skills/
+│       ├── .claude-plugin/
+│       │   └── plugin.json           # Plugin metadata
+│       ├── skills/
+│       │   └── my-skill/
+│       │       └── SKILL.md
+│       └── upstream-skills.json      # Manifest of vendored upstream skills
 └── README.md
 ```
 
@@ -97,27 +100,27 @@ If you only need certain skills, pass an array of skill names instead of `true` 
 
 Some skills are vendored from external repos. Instead of fetching at runtime, we keep a local copy that's automatically synced via a weekly GitHub Action.
 
-The manifest lives in `upstream-skills.json`:
+The manifest lives in `plugins/ai-skills/upstream-skills.json`:
 
 ```json
 [
   {
     "name": "react-best-practices",
     "url": "https://raw.githubusercontent.com/vercel-labs/agent-skills/main/skills/react-best-practices/SKILL.md",
-    "dest": "skills/react-best-practices/SKILL.md",
+    "dest": "plugins/ai-skills/skills/react-best-practices/SKILL.md",
     "license": "MIT",
     "upstream_repo": "https://github.com/vercel-labs/agent-skills"
   }
 ]
 ```
 
-To add a new upstream skill, append an entry with the raw URL and local destination. The [sync workflow](.github/workflows/sync-upstream-skills.yml) runs weekly and opens a PR when upstream content changes.
+To add a new upstream skill, append an entry with the raw URL and local destination (relative to the repo root). The [sync workflow](.github/workflows/sync-upstream-skills.yml) runs weekly and opens a PR when upstream content changes.
 
 ## Contributing
 
 ### Adding a Skill
 
-1. Create a new directory in `skills/` with a `SKILL.md` file
+1. Create a new directory in `plugins/ai-skills/skills/` with a `SKILL.md` file
 2. Follow the [skill format](https://docs.anthropic.com/en/docs/claude-code/skills) from the Claude Code docs
 3. Open a PR and let the team review
 

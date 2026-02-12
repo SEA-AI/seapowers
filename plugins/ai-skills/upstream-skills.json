@@ -2,7 +2,7 @@
   {
     "name": "react-best-practices",
     "url": "https://raw.githubusercontent.com/vercel-labs/agent-skills/main/skills/react-best-practices/SKILL.md",
-    "dest": "skills/react-best-practices/SKILL.md",
+    "dest": "plugins/ai-skills/skills/react-best-practices/SKILL.md",
     "license": "MIT",
     "upstream_repo": "https://github.com/vercel-labs/agent-skills"
   }

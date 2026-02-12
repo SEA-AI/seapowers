@@ -18,7 +18,7 @@ jobs:
       - name: Sync upstream skills
         run: |
           changed=false
-          jq -c '.[]' upstream-skills.json | while read -r entry; do
+          jq -c '.[]' plugins/ai-skills/upstream-skills.json | while read -r entry; do
             name=$(echo "$entry" | jq -r '.name')
             url=$(echo "$entry" | jq -r '.url')
             dest=$(echo "$entry" | jq -r '.dest')
