@@ -1,0 +1,55 @@
+name: Sync Upstream Skills
+
+on:
+  schedule:
+    - cron: "0 0 * * 1" # every Monday at midnight UTC
+  workflow_dispatch: # allow manual trigger
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync upstream skills
+        run: |
+          changed=false
+          jq -c '.[]' upstream-skills.json | while read -r entry; do
+            name=$(echo "$entry" | jq -r '.name')
+            url=$(echo "$entry" | jq -r '.url')
+            dest=$(echo "$entry" | jq -r '.dest')
+
+            echo "Syncing $name from $url"
+            mkdir -p "$(dirname "$dest")"
+
+            if curl -sfL "$url" -o "$dest.tmp"; then
+              if ! diff -q "$dest" "$dest.tmp" > /dev/null 2>&1; then
+                mv "$dest.tmp" "$dest"
+                echo "  Updated: $dest"
+                echo "CHANGED=true" >> "$GITHUB_ENV"
+              else
+                rm "$dest.tmp"
+                echo "  No changes: $dest"
+              fi
+            else
+              rm -f "$dest.tmp"
+              echo "  WARNING: Failed to fetch $name from $url"
+            fi
+          done
+
+      - name: Create Pull Request
+        if: env.CHANGED == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore: sync upstream skills"
+          title: "chore: sync upstream skills"
+          body: |
+            Automated sync of upstream skills defined in `upstream-skills.json`.
+
+            Check the diff to see what changed.
+          branch: chore/sync-upstream-skills
+          delete-branch: true
