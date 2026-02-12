@@ -15,9 +15,13 @@ ai-skills/
 ├── .claude-plugin/
 │   ├── plugin.json          # Plugin metadata
 │   └── marketplace.json     # Makes it installable
+├── .github/
+│   └── workflows/
+│       └── sync-upstream-skills.yml  # Weekly upstream sync
 ├── skills/
 │   └── my-skill/
 │       └── SKILL.md
+├── upstream-skills.json     # Manifest of vendored upstream skills
 └── README.md
 ```
 
@@ -63,6 +67,33 @@ If you only need certain skills in a project, pass an array of skill names inste
   }
 }
 ```
+
+## Available Skills
+
+| Skill | Description | Source |
+|-------|-------------|--------|
+| `pull-request` | SEA.AI PR template with What/Why/How/Testing sections | Internal |
+| `react-best-practices` | React & Next.js performance optimization (57 rules across 8 categories) | [Vercel Labs](https://github.com/vercel-labs/agent-skills) |
+
+## Upstream Syncing
+
+Some skills are vendored from external repos. Instead of fetching at runtime, we keep a local copy that's automatically synced via a weekly GitHub Action.
+
+The manifest lives in `upstream-skills.json`:
+
+```json
+[
+  {
+    "name": "react-best-practices",
+    "url": "https://raw.githubusercontent.com/vercel-labs/agent-skills/main/skills/react-best-practices/SKILL.md",
+    "dest": "skills/react-best-practices/SKILL.md",
+    "license": "MIT",
+    "upstream_repo": "https://github.com/vercel-labs/agent-skills"
+  }
+]
+```
+
+To add a new upstream skill, append an entry with the raw URL and local destination. The [sync workflow](.github/workflows/sync-upstream-skills.yml) runs weekly and opens a PR when upstream content changes.
 
 ## Contributing
 
