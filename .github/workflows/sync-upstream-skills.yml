@@ -45,7 +45,7 @@ jobs:
                 mkdir -p "$dest"
                 rsync -a --delete --checksum "$tmpdir/$src/" "$dest/"
 
-                if ! git diff --quiet -- "$dest"; then
+                if [ -n "$(git status --porcelain -- "$dest")" ]; then
                   echo "Updated: $dest"
                   echo "CHANGED=true" >> "$GITHUB_ENV"
                 else
