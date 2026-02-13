@@ -103,21 +103,36 @@ If you only need certain skills, pass an array of skill names instead of `true` 
 
 Some skills are vendored from external repos. Instead of fetching at runtime, we keep a local copy that's automatically synced via a weekly GitHub Action.
 
-The manifest lives in `plugins/ai-skills/upstream-skills.json`:
+The manifest lives in `plugins/ai-skills/upstream-skills.json` and supports two entry types:
+
+**Directory entry** — syncs an entire directory from an upstream repo using a tarball download + rsync:
 
 ```json
-[
-  {
-    "name": "react-best-practices",
-    "url": "https://raw.githubusercontent.com/vercel-labs/agent-skills/main/skills/react-best-practices/SKILL.md",
-    "dest": "plugins/ai-skills/skills/react-best-practices/SKILL.md",
-    "license": "MIT",
-    "upstream_repo": "https://github.com/vercel-labs/agent-skills"
-  }
-]
+{
+  "name": "react-best-practices",
+  "type": "directory",
+  "repo": "vercel-labs/agent-skills",
+  "branch": "main",
+  "src": "skills/react-best-practices",
+  "dest": "plugins/ai-skills/skills/react-best-practices",
+  "license": "MIT",
+  "upstream_repo": "https://github.com/vercel-labs/agent-skills"
+}
 ```
 
-To add a new upstream skill, append an entry with the raw URL and local destination (relative to the repo root). The [sync workflow](.github/workflows/sync-upstream-skills.yml) runs weekly and opens a PR when upstream content changes.
+**File entry** — syncs a single file via its raw URL (the default when `type` is omitted):
+
+```json
+{
+  "name": "my-skill",
+  "url": "https://raw.githubusercontent.com/owner/repo/main/path/to/SKILL.md",
+  "dest": "plugins/ai-skills/skills/my-skill/SKILL.md",
+  "license": "MIT",
+  "upstream_repo": "https://github.com/owner/repo"
+}
+```
+
+The [sync workflow](.github/workflows/sync-upstream-skills.yml) runs weekly and opens a PR when upstream content changes. To add a new upstream skill, append an entry to the manifest using the appropriate format.
 
 ## 🤝 Contributing
 

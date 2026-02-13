@@ -17,28 +17,69 @@ jobs:
 
       - name: Sync upstream skills
         run: |
-          changed=false
           jq -c '.[]' plugins/ai-skills/upstream-skills.json | while read -r entry; do
             name=$(echo "$entry" | jq -r '.name')
-            url=$(echo "$entry" | jq -r '.url')
-            dest=$(echo "$entry" | jq -r '.dest')
+            type=$(echo "$entry" | jq -r '.type // "file"')
 
-            echo "Syncing $name from $url"
-            mkdir -p "$(dirname "$dest")"
+            echo "::group::Syncing $name ($type)"
 
-            if curl -sfL "$url" -o "$dest.tmp"; then
-              if ! diff -q "$dest" "$dest.tmp" > /dev/null 2>&1; then
-                mv "$dest.tmp" "$dest"
-                echo "  Updated: $dest"
-                echo "CHANGED=true" >> "$GITHUB_ENV"
+            if [ "$type" = "directory" ]; then
+              repo=$(echo "$entry" | jq -r '.repo')
+              branch=$(echo "$entry" | jq -r '.branch // "main"')
+              src=$(echo "$entry" | jq -r '.src')
+              dest=$(echo "$entry" | jq -r '.dest')
+
+              echo "Syncing directory $src from $repo@$branch"
+
+              tmpdir=$(mktemp -d)
+              trap "rm -rf '$tmpdir'" EXIT
+
+              if curl -sfL "https://github.com/${repo}/archive/refs/heads/${branch}.tar.gz" | tar xz -C "$tmpdir" --strip-components=1; then
+                if [ ! -d "$tmpdir/$src" ]; then
+                  echo "WARNING: Source path '$src' not found in $repo@$branch"
+                  rm -rf "$tmpdir"
+                  echo "::endgroup::"
+                  continue
+                fi
+
+                mkdir -p "$dest"
+                rsync -a --delete --checksum "$tmpdir/$src/" "$dest/"
+
+                if ! git diff --quiet -- "$dest"; then
+                  echo "Updated: $dest"
+                  echo "CHANGED=true" >> "$GITHUB_ENV"
+                else
+                  echo "No changes: $dest"
+                fi
               else
-                rm "$dest.tmp"
-                echo "  No changes: $dest"
+                echo "WARNING: Failed to fetch tarball for $repo@$branch"
               fi
+
+              rm -rf "$tmpdir"
+
             else
-              rm -f "$dest.tmp"
-              echo "  WARNING: Failed to fetch $name from $url"
+              url=$(echo "$entry" | jq -r '.url')
+              dest=$(echo "$entry" | jq -r '.dest')
+
+              echo "Syncing file from $url"
+              mkdir -p "$(dirname "$dest")"
+
+              if curl -sfL "$url" -o "$dest.tmp"; then
+                if ! diff -q "$dest" "$dest.tmp" > /dev/null 2>&1; then
+                  mv "$dest.tmp" "$dest"
+                  echo "Updated: $dest"
+                  echo "CHANGED=true" >> "$GITHUB_ENV"
+                else
+                  rm "$dest.tmp"
+                  echo "No changes: $dest"
+                fi
+              else
+                rm -f "$dest.tmp"
+                echo "WARNING: Failed to fetch $name from $url"
+              fi
             fi
+
+            echo "::endgroup::"
           done
 
       - name: Create Pull Request
