@@ -8,5 +8,5 @@
   },
   "repository": "https://github.com/SEA-AI/ai-skills",
   "license": "MIT",
-  "keywords": ["skills", "react", "nextjs", "sea-ai"]
+  "keywords": ["skills", "react", "nextjs", "python", "ruff", "linting", "sea-ai"]
 }
