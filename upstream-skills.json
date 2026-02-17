@@ -14,5 +14,11 @@
     "url": "https://raw.githubusercontent.com/SEA-AI/Core-Backend/develop/ruff.toml",
     "dest": "skills/python-linting/ruff.toml",
     "upstream_repo": "https://github.com/SEA-AI/Core-Backend"
+  },
+  {
+    "name": "clang-formatting-config",
+    "url": "https://raw.githubusercontent.com/SEA-AI/Core-Backend/develop/.clang-format",
+    "dest": "skills/clang-formatting/.clang-format",
+    "upstream_repo": "https://github.com/SEA-AI/Core-Backend"
   }
 ]

@@ -8,21 +8,15 @@ description: >
 
 # C/C++/CUDA Formatting
 
-SEA.AI uses **clang-format** for all C, C++, and CUDA source files. The config lives in
-`.clang-format` at the repository root.
+SEA.AI uses **clang-format** for all C, C++, and CUDA source files. The canonical config
+is synced from Core-Backend weekly into `.clang-format` alongside this skill — consult that
+file for the full configuration. In target repositories the same file lives at the repository root.
 
-## Style
+## Style highlights
 
 - **Base style:** Google
 - **Indent:** 4 spaces
 - **Column limit:** 120
-
-```yaml
-# .clang-format
-BasedOnStyle: Google
-IndentWidth: 4
-ColumnLimit: 120
-```
 
 ## Excluded paths
 
