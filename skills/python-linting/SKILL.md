@@ -18,7 +18,7 @@ All code MUST be compatible with **Python 3.6**. Avoid these post-3.6 features:
 
 - **Type hints** — use `typing` generics (`List`, `Dict`, `Optional`, `Union`, `Tuple`), not built-in generics (`list[str]`) or `X | Y` union syntax. Do not use `from __future__ import annotations`.
 - **Syntax** — no walrus operator (`:=`), no `match`/`case`, no positional-only params (`/`), no `dict | dict` merge operator.
-- **Stdlib** — no `dataclasses`, `TypedDict`, `Protocol`, `Literal` (use `typing_extensions` if needed), no `str.removeprefix`/`removesuffix`, no `zoneinfo` (use `pytz`).
+- **Stdlib** — no `TypedDict`, `Protocol`, `Literal` (use `typing_extensions` if needed), no `str.removeprefix`/`removesuffix`, no `zoneinfo` (use `pytz`).
 
 ```python
 # good (Python 3.6)
@@ -43,16 +43,16 @@ def process(items: list[str], config: dict[str, int] | None = None) -> bool:
 ```python
 # good
 result = some_function(
-    argument_one,
-    argument_two,
-    argument_three,
+    "argument_one",
+    "argument_two",
+    "argument_three",
 )
 
 # bad - single quotes, no trailing comma
 result = some_function(
-    argument_one,
-    argument_two,
-    argument_three
+    'argument_one',
+    'argument_two',
+    'argument_three'
 )
 ```
 
