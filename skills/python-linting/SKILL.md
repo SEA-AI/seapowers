@@ -162,4 +162,15 @@ ruff check --fix <files>
 ruff format <files>
 ```
 
-If the project has pre-commit hooks configured, those will run both automatically on commit.
+### Pre-commit hooks
+
+Core-Backend runs these hooks on every commit (via `.pre-commit-config.yaml`):
+
+- **ruff** — lint (`--fix`) and format (same as above)
+- **gitleaks** — blocks commits containing secrets or credentials
+- **trailing-whitespace** — strips trailing whitespace
+- **check-added-large-files** — rejects files larger than 1500 KB
+- **pretty-format-json** — auto-formats JSON (no key sorting, excludes notebooks)
+- **name-tests-test** — enforces `test_*.py` naming (`--pytest-test-first`)
+- **check-yaml** / **check-json** / **check-case-conflict** — basic file validation
+- **clang-format** — formats C/C++/CUDA files (see clang-formatting skill)
