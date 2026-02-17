@@ -12,6 +12,41 @@ SEA.AI Python projects use **Ruff** as the single linter and formatter. The cano
 is synced weekly from Core-Backend into `ruff.toml` alongside this skill. When in doubt,
 consult that file for the full rule set.
 
+## Python Version Compatibility
+
+All code MUST be compatible with **Python 3.6**. This has major implications for syntax:
+
+| Feature | Available from | What to use instead |
+|---------|---------------|-------------------|
+| `from __future__ import annotations` | 3.7 | Do NOT use. Write concrete type hints. |
+| `dict`, `list`, `tuple` as generics (`list[str]`) | 3.9 | Use `typing.List`, `typing.Dict`, `typing.Tuple` |
+| `X \| Y` union syntax | 3.10 | Use `typing.Union[X, Y]` |
+| `X \| None` optional syntax | 3.10 | Use `typing.Optional[X]` |
+| `match` / `case` statements | 3.10 | Use `if`/`elif` chains |
+| Walrus operator (`:=`) | 3.8 | Assign on a separate line |
+| `dataclasses` | 3.7 | Use regular classes or `attrs` |
+| `TypedDict` | 3.8 | Use plain `dict` with comments or `typing_extensions` |
+| `Protocol` | 3.8 | Use ABCs or `typing_extensions` |
+| `Literal` | 3.8 | Use comments or `typing_extensions` |
+| Positional-only params (`/`) | 3.8 | Just don't use the `/` separator |
+| `str.removeprefix()` / `str.removesuffix()` | 3.9 | Use slicing or `lstrip`/`rstrip` |
+| `dict \| dict` merge operator | 3.9 | Use `{**a, **b}` |
+| `zoneinfo` | 3.9 | Use `pytz` |
+| f-strings | 3.6 | OK to use |
+| `pathlib` | 3.4 | OK to use |
+
+```python
+# good (Python 3.6 compatible)
+from typing import Dict, List, Optional, Tuple, Union
+
+def process(items: List[str], config: Optional[Dict[str, int]] = None) -> Tuple[int, str]:
+    ...
+
+# bad (requires Python 3.9+ / 3.10+)
+def process(items: list[str], config: dict[str, int] | None = None) -> tuple[int, str]:
+    ...
+```
+
 ## Formatting
 
 - **Line length:** 120 characters
@@ -43,13 +78,12 @@ Imports are sorted by **isort** (via Ruff `I` rules). Additional rules:
 - **Absolute imports only** — no relative imports (`TID252`)
 - **`TYPE_CHECKING` blocks** — imports used only for type hints go inside `if TYPE_CHECKING:` (`TC` rules)
 - Top-of-file import position is not enforced (`E402` ignored) to allow lazy loading
+- **Use `typing` module generics** — `List`, `Dict`, `Tuple`, `Optional`, `Union` from `typing`, not built-in generics
 
 ```python
 # good
-from __future__ import annotations
-
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from core.module import MyClass
 
@@ -58,6 +92,9 @@ if TYPE_CHECKING:
 
 # bad - relative import
 from .module import MyClass
+
+# bad - __future__ annotations (requires Python 3.7)
+from __future__ import annotations
 ```
 
 ## Naming
@@ -100,13 +137,31 @@ Test files (`tests/*`) and notebooks (`*.ipynb`) are exempt from most docstring 
 Type annotations are required on function signatures (`ANN` rules).
 Test files are exempt from `ANN001` (parameter annotations) and `ANN201` (return type).
 
+Always use `typing` module generics for Python 3.6 compatibility:
+
 ```python
-# good
+# good (Python 3.6)
+from typing import Dict, List, Optional, Tuple, Union
+
 def compute_distance(a: np.ndarray, b: np.ndarray) -> float:
+    ...
+
+def get_items(ids: List[int]) -> Dict[int, str]:
+    ...
+
+def maybe_load(path: Optional[str] = None) -> Union[np.ndarray, None]:
     ...
 
 # bad - missing annotations
 def compute_distance(a, b):
+    ...
+
+# bad - Python 3.9+ built-in generics
+def get_items(ids: list[int]) -> dict[int, str]:
+    ...
+
+# bad - Python 3.10+ union syntax
+def maybe_load(path: str | None = None) -> np.ndarray | None:
     ...
 ```
 
