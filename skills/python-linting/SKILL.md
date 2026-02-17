@@ -14,36 +14,21 @@ consult that file for the full rule set.
 
 ## Python Version Compatibility
 
-All code MUST be compatible with **Python 3.6**. This has major implications for syntax:
+All code MUST be compatible with **Python 3.6**. Avoid these post-3.6 features:
 
-| Feature | Available from | What to use instead |
-|---------|---------------|-------------------|
-| `from __future__ import annotations` | 3.7 | Do NOT use. Write concrete type hints. |
-| `dict`, `list`, `tuple` as generics (`list[str]`) | 3.9 | Use `typing.List`, `typing.Dict`, `typing.Tuple` |
-| `X \| Y` union syntax | 3.10 | Use `typing.Union[X, Y]` |
-| `X \| None` optional syntax | 3.10 | Use `typing.Optional[X]` |
-| `match` / `case` statements | 3.10 | Use `if`/`elif` chains |
-| Walrus operator (`:=`) | 3.8 | Assign on a separate line |
-| `dataclasses` | 3.7 | Use regular classes or `attrs` |
-| `TypedDict` | 3.8 | Use plain `dict` with comments or `typing_extensions` |
-| `Protocol` | 3.8 | Use ABCs or `typing_extensions` |
-| `Literal` | 3.8 | Use comments or `typing_extensions` |
-| Positional-only params (`/`) | 3.8 | Just don't use the `/` separator |
-| `str.removeprefix()` / `str.removesuffix()` | 3.9 | Use slicing or `lstrip`/`rstrip` |
-| `dict \| dict` merge operator | 3.9 | Use `{**a, **b}` |
-| `zoneinfo` | 3.9 | Use `pytz` |
-| f-strings | 3.6 | OK to use |
-| `pathlib` | 3.4 | OK to use |
+- **Type hints** — use `typing` generics (`List`, `Dict`, `Optional`, `Union`, `Tuple`), not built-in generics (`list[str]`) or `X | Y` union syntax. Do not use `from __future__ import annotations`.
+- **Syntax** — no walrus operator (`:=`), no `match`/`case`, no positional-only params (`/`), no `dict | dict` merge operator.
+- **Stdlib** — no `dataclasses`, `TypedDict`, `Protocol`, `Literal` (use `typing_extensions` if needed), no `str.removeprefix`/`removesuffix`, no `zoneinfo` (use `pytz`).
 
 ```python
-# good (Python 3.6 compatible)
-from typing import Dict, List, Optional, Tuple, Union
+# good (Python 3.6)
+from typing import Dict, List, Optional
 
-def process(items: List[str], config: Optional[Dict[str, int]] = None) -> Tuple[int, str]:
+def process(items: List[str], config: Optional[Dict[str, int]] = None) -> bool:
     ...
 
-# bad (requires Python 3.9+ / 3.10+)
-def process(items: list[str], config: dict[str, int] | None = None) -> tuple[int, str]:
+# bad (3.9+ / 3.10+)
+def process(items: list[str], config: dict[str, int] | None = None) -> bool:
     ...
 ```
 
@@ -92,9 +77,6 @@ if TYPE_CHECKING:
 
 # bad - relative import
 from .module import MyClass
-
-# bad - __future__ annotations (requires Python 3.7)
-from __future__ import annotations
 ```
 
 ## Naming
@@ -154,14 +136,6 @@ def maybe_load(path: Optional[str] = None) -> Union[np.ndarray, None]:
 
 # bad - missing annotations
 def compute_distance(a, b):
-    ...
-
-# bad - Python 3.9+ built-in generics
-def get_items(ids: list[int]) -> dict[int, str]:
-    ...
-
-# bad - Python 3.10+ union syntax
-def maybe_load(path: str | None = None) -> np.ndarray | None:
     ...
 ```
 
