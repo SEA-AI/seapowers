@@ -1,18 +1,27 @@
 ---
-name: python-linting
+name: code-formatting
 description: >
-  SEA.AI Python formatting and linting conventions based on Ruff. Use when writing,
-  reviewing, or refactoring Python code to produce Ruff-compliant output on the first pass.
-  Triggers on any task involving Python code in SEA.AI repositories.
+  SEA.AI code formatting and linting conventions. Use when writing, reviewing, or refactoring
+  Python, C, C++, or CUDA code. Checks the repository for ruff and clang-format configurations
+  and applies the relevant formatting standards.
 ---
 
-# Python Linting & Formatting
+# Code Formatting & Linting
 
-SEA.AI Python projects use **Ruff** as the single linter and formatter. The canonical config
-is synced weekly from Core-Backend into `ruff.toml` alongside this skill. When in doubt,
-consult that file for the full rule set.
+## How to Use
 
-## Python Version Compatibility
+Before writing or reviewing code, check the repository for formatting configurations:
+
+- **Python (Ruff):** Look for `ruff.toml`, `.ruff.toml`, or `[tool.ruff]` in `pyproject.toml`
+- **C/C++/CUDA (clang-format):** Look for `.clang-format` or `_clang-format`
+
+Only apply the sections below that match configurations found in the current repository.
+
+---
+
+## Python (Ruff)
+
+### Python 3.6 Compatibility
 
 All code MUST be compatible with **Python 3.6**. Avoid these post-3.6 features:
 
@@ -32,7 +41,7 @@ def process(items: list[str], config: dict[str, int] | None = None) -> bool:
     ...
 ```
 
-## Formatting
+### Formatting
 
 - **Line length:** 120 characters
 - **Indent:** 4 spaces (no tabs)
@@ -56,13 +65,13 @@ result = some_function(
 )
 ```
 
-## Imports
+### Imports
 
 Imports are sorted by **isort** (via Ruff `I` rules). Additional rules:
 
-- **Absolute imports only** — no relative imports (`TID252`)
-- **`TYPE_CHECKING` blocks** — imports used only for type hints go inside `if TYPE_CHECKING:` (`TC` rules)
-- Top-of-file import position is not enforced (`E402` ignored) to allow lazy loading
+- **Absolute imports only** — no relative imports
+- **`TYPE_CHECKING` blocks** — imports used only for type hints go inside `if TYPE_CHECKING:`
+- Top-of-file import position is not enforced to allow lazy loading
 - **Use `typing` module generics** — `List`, `Dict`, `Tuple`, `Optional`, `Union` from `typing`, not built-in generics
 
 ```python
@@ -79,9 +88,9 @@ if TYPE_CHECKING:
 from .module import MyClass
 ```
 
-## Naming
+### Naming
 
-PEP 8 naming is enforced (`N` rules):
+PEP 8 naming:
 
 - **Functions / methods:** `snake_case`
 - **Classes:** `PascalCase`
@@ -91,13 +100,11 @@ PEP 8 naming is enforced (`N` rules):
 Exception: single-letter matrix/tensor names (`K`, `R`, `H`, `T`, `P`, `B`, `C`, `W`, `G` and
 their prefixed variants like `R_x`, `Hk_world`) are allowed for mathematical code.
 
-## Docstrings
+### Docstrings
 
-Google-style docstrings (`convention = "google"`):
+Google-style docstrings with triple double quotes.
 
-- Use triple double quotes (`"""`) (`D300`)
-- Do not repeat the function signature in the first line (`D402`)
-- Document all parameters, and parameter names must match the signature (`D417`)
+**Function docstring:**
 
 ```python
 def transform_point(point: np.ndarray, T: np.ndarray) -> np.ndarray:
@@ -112,12 +119,59 @@ def transform_point(point: np.ndarray, T: np.ndarray) -> np.ndarray:
     """
 ```
 
-Test files (`tests/*`) and notebooks (`*.ipynb`) are exempt from most docstring rules.
+**Class docstring:**
 
-## Type Annotations
+```python
+class CameraCalibration:
+    """Handles camera intrinsic and extrinsic calibration parameters.
 
-Type annotations are required on function signatures (`ANN` rules).
-Test files are exempt from `ANN001` (parameter annotations) and `ANN201` (return type).
+    Provides methods to project 3D points into image coordinates and
+    undistort captured images.
+
+    Attributes:
+        K: The 3x3 intrinsic camera matrix.
+        dist_coeffs: Distortion coefficients as a (5,) array.
+        image_size: Tuple of (width, height) in pixels.
+
+    Example:
+        >>> calib = CameraCalibration.from_file("camera.yaml")
+        >>> pixel = calib.project(point_3d)
+    """
+```
+
+**Function with Raises and detailed Args:**
+
+```python
+def load_detections(
+    path: str,
+    min_confidence: float = 0.5,
+) -> List[Dict[str, Any]]:
+    """Load detection results from a JSON file.
+
+    Reads a JSON file containing object detections, filters by confidence
+    threshold, and returns the remaining detections sorted by score.
+
+    Args:
+        path: Path to the JSON detections file.
+        min_confidence: Minimum confidence score to keep a detection.
+            Defaults to 0.5.
+
+    Returns:
+        List of detection dictionaries, each containing keys
+        ``bbox``, ``class_id``, and ``score``.
+
+    Raises:
+        FileNotFoundError: If the detections file does not exist.
+        ValueError: If ``min_confidence`` is not in [0, 1].
+    """
+```
+
+Test files and notebooks are exempt from most docstring rules.
+
+### Type Annotations
+
+Type annotations are required on function signatures.
+Test files are exempt from parameter and return type annotations.
 
 Always use `typing` module generics for Python 3.6 compatibility:
 
@@ -139,7 +193,7 @@ def compute_distance(a, b):
     ...
 ```
 
-## Code Quality
+### Code Quality
 
 The following rule sets catch common issues:
 
@@ -153,7 +207,7 @@ The following rule sets catch common issues:
 | `C` (complexity) | McCabe complexity | Keep functions focused and simple |
 | `NPY` (numpy) | Deprecated NumPy APIs | Use modern NumPy idioms |
 
-## Verification
+### Verification
 
 Before considering Python code complete, run:
 
@@ -162,15 +216,16 @@ ruff check --fix <files>
 ruff format <files>
 ```
 
-### Pre-commit hooks
+---
 
-Core-Backend runs these hooks on every commit (via `.pre-commit-config.yaml`):
+## C/C++/CUDA (clang-format)
 
-- **ruff** — lint (`--fix`) and format (same as above)
-- **gitleaks** — blocks commits containing secrets or credentials
-- **trailing-whitespace** — strips trailing whitespace
-- **check-added-large-files** — rejects files larger than 1500 KB
-- **pretty-format-json** — auto-formats JSON (no key sorting, excludes notebooks)
-- **name-tests-test** — enforces `test_*.py` naming (`--pytest-test-first`)
-- **check-yaml** / **check-json** / **check-case-conflict** — basic file validation
-- **clang-format** — formats C/C++/CUDA files (see clang-formatting skill)
+When a `.clang-format` file is present in the repository, apply it to all C, C++, and CUDA source files.
+
+Consult the `.clang-format` file at the repository root for the full configuration.
+
+### Verification
+
+```bash
+clang-format -i <files>
+```

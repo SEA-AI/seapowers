@@ -1,26 +1,25 @@
 # ai-skills
 
-[![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-7c3aed?logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQyIDAtOC0zLjU4LTgtOHMzLjU4LTggOC04IDggMy41OCA4IDgtMy41OCA4LTggOHoiLz48L3N2Zz4=&style=flat-square)](https://docs.anthropic.com/en/docs/claude-code/skills)
-[![Skills](https://img.shields.io/badge/Skills-4-blue?style=flat-square)](#available-skills)
+[![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-7c3aed?logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQyIDAtOC0zLjU4LTgtOHMzLjU4LTggOC04IDggMy41OCA4IDgtMy41OCA0LTggOHoiLz48L3N2Zz4=&style=flat-square)](https://docs.anthropic.com/en/docs/claude-code/skills)
+[![Skills](https://img.shields.io/badge/Skills-3-blue?style=flat-square)](#available-skills)
 [![Upstream Sync](https://img.shields.io/github/actions/workflow/status/SEA-AI/ai-skills/sync-upstream-skills.yml?label=Upstream%20Sync&style=flat-square)](https://github.com/SEA-AI/ai-skills/actions/workflows/sync-upstream-skills.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
-✨ **Shared Claude Code skills, prompts, and workflows for the SEA.AI team** ✨
+Shared Claude Code skills, prompts, and workflows for the SEA.AI team.
 
-## 🧩 Available Skills
+## Available Skills
 
 | Skill | Description | Source |
 |-------|-------------|--------|
-| 📝 `pull-request` | SEA.AI PR template with What/Why/How/Testing sections | Internal |
-| 🔧 `clang-formatting` | SEA.AI C/C++/CUDA formatting conventions (clang-format) | Internal + [Core-Backend](https://github.com/SEA-AI/Core-Backend) |
-| 🐍 `python-linting` | SEA.AI Python formatting & linting conventions (Ruff) | Internal + [Core-Backend](https://github.com/SEA-AI/Core-Backend) |
-| ⚛️ `react-best-practices` | React & Next.js performance optimization (57 rules across 8 categories) | [Vercel Labs](https://github.com/vercel-labs/agent-skills) |
+| `pull-request` | SEA.AI PR template with What/Why/How/Testing sections | Internal |
+| `code-formatting` | Python (Ruff) and C/C++/CUDA (clang-format) formatting — applies when configs are present in the repo | Internal |
+| `react-best-practices` | React & Next.js performance optimization (57 rules across 8 categories) | [Vercel Labs](https://github.com/vercel-labs/agent-skills) |
 
-## 💡 What are Skills?
+## What are Skills?
 
 Claude Code skills are reusable prompt-based instructions that standardize how AI assists with common development tasks — think of them as muscle memory for your AI pair programmer. Instead of every developer explaining the same context over and over, skills encode team knowledge once and share it everywhere.
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 ai-skills/
@@ -37,7 +36,7 @@ ai-skills/
 └── README.md
 ```
 
-## 🚀 Installation
+## Installation
 
 ### Install globally (all projects)
 
@@ -98,7 +97,7 @@ If you only need certain skills, pass an array of skill names instead of `true` 
 }
 ```
 
-## 🔄 Upstream Syncing
+## Upstream Syncing
 
 Some skills are vendored from external repos. Instead of fetching at runtime, we keep a local copy that's automatically synced via a weekly GitHub Action.
 
@@ -133,7 +132,7 @@ The manifest lives in `upstream-skills.json` and supports two entry types:
 
 The [sync workflow](.github/workflows/sync-upstream-skills.yml) runs weekly and opens a PR when upstream content changes. To add a new upstream skill, append an entry to the manifest using the appropriate format.
 
-## 🤝 Contributing
+## Contributing
 
 ### Adding a Skill
 
@@ -143,6 +142,6 @@ The [sync workflow](.github/workflows/sync-upstream-skills.yml) runs weekly and 
 
 Got a workflow that saves you time? A prompt pattern that keeps Claude on track? Ship it! The bar is low — if it helped you twice, it'll help someone else too.
 
-## 🤷 Why?
+## Why?
 
 Because nobody should have to explain our deploy process to Claude from scratch every Monday morning.
