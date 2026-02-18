@@ -46,7 +46,8 @@ Run these commands inside Claude Code:
 /plugin install superpowers@sea-ai-superpowers
 ```
 
-> **Tip:** After installing, run `/plugin marketplace` and enable **auto-update** for the `sea-ai-superpowers` marketplace so you automatically get new skills as they're added.
+> [!TIP]
+> After installing, run `/plugin marketplace` and enable **auto-update** for the `sea-ai-superpowers` marketplace so you automatically get new skills as they're added.
 
 This writes the following to your `~/.claude/settings.json` — you can also add it manually:
 
