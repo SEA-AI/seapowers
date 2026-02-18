@@ -16,15 +16,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Sync upstream skills
-        env:
-          GH_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
         run: |
-          # Build auth header for private repo access
-          AUTH_HEADER=""
-          if [ -n "$GH_TOKEN" ]; then
-            AUTH_HEADER="Authorization: Bearer $GH_TOKEN"
-          fi
-
           jq -c '.[]' upstream-skills.json | while read -r entry; do
             name=$(echo "$entry" | jq -r '.name')
             type=$(echo "$entry" | jq -r '.type // "file"')
@@ -42,7 +34,7 @@ jobs:
               tmpdir=$(mktemp -d)
               trap "rm -rf '$tmpdir'" EXIT
 
-              if curl -sfL ${AUTH_HEADER:+-H "$AUTH_HEADER"} "https://github.com/${repo}/archive/refs/heads/${branch}.tar.gz" | tar xz -C "$tmpdir" --strip-components=1; then
+              if curl -sfL "https://github.com/${repo}/archive/refs/heads/${branch}.tar.gz" | tar xz -C "$tmpdir" --strip-components=1; then
                 if [ ! -d "$tmpdir/$src" ]; then
                   echo "WARNING: Source path '$src' not found in $repo@$branch"
                   rm -rf "$tmpdir"
@@ -72,7 +64,7 @@ jobs:
               echo "Syncing file from $url"
               mkdir -p "$(dirname "$dest")"
 
-              if curl -sfL ${AUTH_HEADER:+-H "$AUTH_HEADER"} "$url" -o "$dest.tmp"; then
+              if curl -sfL "$url" -o "$dest.tmp"; then
                 if ! diff -q "$dest" "$dest.tmp" > /dev/null 2>&1; then
                   mv "$dest.tmp" "$dest"
                   echo "Updated: $dest"
