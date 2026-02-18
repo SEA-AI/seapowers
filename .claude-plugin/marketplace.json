@@ -1,5 +1,5 @@
 {
-  "name": "sea-ai-skills",
+  "name": "sea-ai-superpowers",
   "owner": {
     "name": "SEA.AI"
   },
@@ -9,7 +9,7 @@
   },
   "plugins": [
     {
-      "name": "ai-skills",
+      "name": "superpowers",
       "source": "./",
       "description": "Shared AI skills and workflows for the SEA.AI team",
       "version": "1.0.0",

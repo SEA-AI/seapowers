@@ -1,8 +1,8 @@
-# ai-skills
+# superpowers
 
 [![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-7c3aed?logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQyIDAtOC0zLjU4LTgtOHMzLjU4LTggOC04IDggMy41OCA4IDgtMy41OCA4LTggOHoiLz48L3N2Zz4=&style=flat-square)](https://docs.anthropic.com/en/docs/claude-code/skills)
 [![Skills](https://img.shields.io/badge/Skills-2-blue?style=flat-square)](#available-skills)
-[![Upstream Sync](https://img.shields.io/github/actions/workflow/status/SEA-AI/ai-skills/sync-upstream-skills.yml?label=Upstream%20Sync&style=flat-square)](https://github.com/SEA-AI/ai-skills/actions/workflows/sync-upstream-skills.yml)
+[![Upstream Sync](https://img.shields.io/github/actions/workflow/status/SEA-AI/superpowers/sync-upstream-skills.yml?label=Upstream%20Sync&style=flat-square)](https://github.com/SEA-AI/superpowers/actions/workflows/sync-upstream-skills.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
 ✨ **Shared Claude Code skills, prompts, and workflows for the SEA.AI team** ✨
@@ -21,7 +21,7 @@ Claude Code skills are reusable prompt-based instructions that standardize how A
 ## 📁 Repository Structure
 
 ```
-ai-skills/
+superpowers/
 ├── .claude-plugin/
 │   ├── marketplace.json              # Makes it installable
 │   └── plugin.json                   # Plugin metadata
@@ -42,8 +42,8 @@ ai-skills/
 Run these commands inside Claude Code:
 
 ```
-/plugin marketplace add SEA-AI/ai-skills
-/plugin install ai-skills@sea-ai-skills
+/plugin marketplace add SEA-AI/superpowers
+/plugin install superpowers@sea-ai-superpowers
 ```
 
 This writes the following to your `~/.claude/settings.json` — you can also add it manually:
@@ -51,15 +51,15 @@ This writes the following to your `~/.claude/settings.json` — you can also add
 ```json
 {
   "extraKnownMarketplaces": {
-    "sea-ai-skills": {
+    "sea-ai-superpowers": {
       "source": {
         "source": "github",
-        "repo": "SEA-AI/ai-skills"
+        "repo": "SEA-AI/superpowers"
       }
     }
   },
   "enabledPlugins": {
-    "ai-skills@sea-ai-skills": true
+    "superpowers@sea-ai-superpowers": true
   }
 }
 ```
@@ -71,15 +71,15 @@ Add this to your **project's** `.claude/settings.json` so every team member gets
 ```json
 {
   "extraKnownMarketplaces": {
-    "sea-ai-skills": {
+    "sea-ai-superpowers": {
       "source": {
         "source": "github",
-        "repo": "SEA-AI/ai-skills"
+        "repo": "SEA-AI/superpowers"
       }
     }
   },
   "enabledPlugins": {
-    "ai-skills@sea-ai-skills": true
+    "superpowers@sea-ai-superpowers": true
   }
 }
 ```
@@ -91,7 +91,7 @@ If you only need certain skills, pass an array of skill names instead of `true` 
 ```json
 {
   "enabledPlugins": {
-    "ai-skills@sea-ai-skills": ["react-best-practices"]
+    "superpowers@sea-ai-superpowers": ["react-best-practices"]
   }
 }
 ```

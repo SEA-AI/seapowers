@@ -1,12 +1,12 @@
 {
-  "name": "ai-skills",
+  "name": "superpowers",
   "version": "1.0.0",
   "description": "Shared AI skills and workflows for the SEA.AI team",
   "author": {
     "name": "SEA.AI",
     "url": "https://github.com/SEA-AI"
   },
-  "repository": "https://github.com/SEA-AI/ai-skills",
+  "repository": "https://github.com/SEA-AI/superpowers",
   "license": "MIT",
   "keywords": ["skills", "react", "nextjs", "sea-ai"]
 }
