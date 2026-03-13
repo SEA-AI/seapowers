@@ -11,6 +11,7 @@
     {
       "name": "superpowers",
       "source": "./",
+      "localSourcePath": "../",
       "description": "Shared AI skills and workflows for the SEA.AI team",
       "version": "1.0.0",
       "author": {
