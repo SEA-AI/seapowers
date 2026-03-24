@@ -18,10 +18,7 @@
 
 ### Plugins
 
-| Plugin | Description | Language |
-|--------|-------------|----------|
-| 🔗 `clangd-lsp` | Clangd language server protocol plugin from Anthropic | C/C++ |
-| 🔗 `pyright-lsp` | Pyright language server protocol plugin from Anthropic | Python |
+Coming soon! External plugin sources support is in development.
 
 ## 💡 What are Skills?
 
@@ -52,18 +49,18 @@ Run these commands inside Claude Code:
 
 ```
 /plugin marketplace add sea-ai/superpowers
-/plugin install superpowers@sea-ai-superpowers
+/plugin install seapowers@sea-ai
 ```
 
 > [!TIP]
-> After installing, run `/plugin marketplace` and enable **auto-update** for the `sea-ai-superpowers` marketplace so you automatically get new skills as they're added.
+> After installing, run `/plugin marketplace` and enable **auto-update** for the `sea-ai` marketplace so you automatically get new skills as they're added.
 
 This writes the following to your `~/.claude/settings.json` — you can also add it manually:
 
 ```json
 {
   "extraKnownMarketplaces": {
-    "sea-ai-superpowers": {
+    "sea-ai": {
       "source": {
         "source": "github",
         "repo": "SEA-AI/superpowers"
@@ -71,7 +68,7 @@ This writes the following to your `~/.claude/settings.json` — you can also add
     }
   },
   "enabledPlugins": {
-    "superpowers@sea-ai-superpowers": true
+    "seapowers@sea-ai": true
   }
 }
 ```
@@ -83,7 +80,7 @@ Add this to your **project's** `.claude/settings.json` so every team member gets
 ```json
 {
   "extraKnownMarketplaces": {
-    "sea-ai-superpowers": {
+    "sea-ai": {
       "source": {
         "source": "github",
         "repo": "SEA-AI/superpowers"
@@ -91,7 +88,7 @@ Add this to your **project's** `.claude/settings.json` so every team member gets
     }
   },
   "enabledPlugins": {
-    "superpowers@sea-ai-superpowers": true
+    "seapowers@sea-ai": true
   }
 }
 ```
@@ -103,10 +100,11 @@ If you only need certain skills, pass an array of skill names instead of `true` 
 ```json
 {
   "enabledPlugins": {
-    "superpowers@sea-ai-superpowers": ["react-best-practices"]
+    "seapowers@sea-ai": ["react-best-practices"]
   }
 }
 ```
+
 
 ## 🔄 Upstream Syncing
 
