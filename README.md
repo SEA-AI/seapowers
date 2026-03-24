@@ -108,6 +108,27 @@ If you only need certain skills, pass an array of skill names instead of `true` 
 }
 ```
 
+### Install other plugins from this marketplace
+
+To install LSP plugins, run inside Claude Code:
+
+```bash
+/plugin install clangd-lsp@sea-ai
+/plugin install pyright-lsp@sea-ai
+```
+
+Or enable all plugins in settings.json:
+
+```json
+{
+  "enabledPlugins": {
+    "seapowers@sea-ai": true,
+    "clangd-lsp@sea-ai": true,
+    "pyright-lsp@sea-ai": true
+  }
+}
+```
+
 ## 🔄 Upstream Syncing
 
 Some skills are vendored from external repos. Instead of fetching at runtime, we keep a local copy that's automatically synced via a weekly GitHub Action.
