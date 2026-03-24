@@ -26,32 +26,61 @@ Skills are reusable prompt-based instructions that Claude Code uses for common d
 
 ## Adding a Plugin
 
-Plugins integrate external tools and services with Claude Code. There are three types:
+Plugins integrate external tools and services with Claude Code. The marketplace uses a centralized `marketplace.json` file that lists all plugins.
+
+### Understanding marketplace.json Structure
+
+The `marketplace.json` file is located at `.claude-plugin/marketplace.json` and has this structure:
+
+```json
+{
+  "name": "superpowers",
+  "owner": {
+    "name": "Your Team",
+    "email": "team@example.com"
+  },
+  "plugins": [
+    {
+      "name": "my-plugin",
+      "source": "./plugins/my-plugin",
+      "description": "What this plugin does"
+    }
+  ]
+}
+```
 
 ### Local Plugin (Bundled in this repo)
 
-1. **Create plugin files** in `.claude-plugin/` directory alongside the marketplace.json
+1. **Create plugin directory and files:**
+   ```bash
+   mkdir -p .claude-plugin/plugins/my-plugin
+   ```
 
-2. **Update marketplace.json:**
+2. **Add plugin.json** inside the plugin directory:
    ```json
    {
      "name": "my-plugin",
-     "source": "./.claude-plugin/",
      "description": "What this plugin does",
-     "version": "1.0.0",
-     "author": { "name": "Author Name" },
-     "license": "MIT",
-     "keywords": ["keyword1", "keyword2"]
+     "version": "1.0.0"
    }
    ```
 
-3. **Update plugin.json** with plugin metadata
+3. **Add plugin entry to marketplace.json** in the `plugins` array:
+   ```json
+   {
+     "name": "my-plugin",
+     "source": "./plugins/my-plugin",
+     "description": "What this plugin does"
+   }
+   ```
 
 4. **Update README.md** with the new plugin in the Plugins table
 
 ### Remote GitHub Plugin
 
-1. **Update marketplace.json** with proper GitHub object format:
+To reference a plugin in an external GitHub repository:
+
+1. **Update marketplace.json** with GitHub object format:
    ```json
    {
      "name": "my-plugin",
@@ -60,16 +89,13 @@ Plugins integrate external tools and services with Claude Code. There are three 
        "repo": "owner/repo-name"
      },
      "description": "What this plugin does",
-     "version": "1.0.0",
-     "author": { "name": "Author Name" },
-     "license": "MIT",
-     "keywords": ["keyword1", "keyword2"]
+     "version": "1.0.0"
    }
    ```
 
 2. **Update README.md** with the new plugin
 
-3. **Important:** Always use the object format (`{ "source": "github", "repo": "..." }`) for remote plugins, not string URLs. The marketplace schema does not accept full URLs.
+3. **Important:** Always use the object format (`{ "source": "github", "repo": "..." }`) for remote plugins, not string URLs. Never use `"source": "https://github.com/owner/repo"` - this will fail marketplace validation.
 
 ### Upstream/Vendored Plugin
 
@@ -144,20 +170,21 @@ Run `/my-skill` in Claude Code to see it in action
 
 The marketplace.json file has strict schema validation. Key rules:
 
-- **Source field formats:**
-  - Local: `"source": "./.claude-plugin/"`
-  - GitHub: `"source": { "source": "github", "repo": "owner/repo" }`
-  - URL: `"source": { "source": "url", "url": "https://..." }`
-  - ❌ Do NOT use: `"source": "https://github.com/owner/repo"` (plain string URLs fail)
+### Marketplace-level fields:
+- **Required:** `name`, `owner` (with `name` and optional `email`)
+- **Optional:** `metadata` (can contain `description` and `version`)
 
-- **Required fields per plugin:**
-  - `name`: unique identifier
-  - `source`: where to find the plugin
-  - `description`: what it does
-  - `version`: semantic version
-  - `author`: who created it
-  - `license`: license type
-  - `keywords`: search terms
+### Plugin entry fields:
+- **Required:** `name` (unique identifier), `source` (where to find it)
+- **Optional:** `description`, `version`, `author`, `license`, `keywords`, `homepage`, `repository`, `category`, `tags`
+
+### Source field formats:
+- **Relative path (local):** `"source": "./plugins/my-plugin"`
+- **GitHub:** `"source": { "source": "github", "repo": "owner/repo" }`
+- **Git URL:** `"source": { "source": "url", "url": "https://github.com/owner/repo.git" }`
+- **Git subdirectory:** `"source": { "source": "git-subdir", "url": "https://...", "path": "path/in/repo" }`
+- **npm package:** `"source": { "source": "npm", "package": "@scope/package" }`
+- ❌ **Do NOT use:** `"source": "https://github.com/owner/repo"` (plain string URLs fail)
 
 ## Common Pitfalls
 
@@ -187,6 +214,8 @@ superpowers/
 
 ## Questions?
 
-- Check the [Claude Code documentation](https://docs.anthropic.com/en/docs/claude-code/skills)
-- Review existing skills/plugins in this repo for examples
-- Ask the team in a PR review
+- **Official documentation:**
+  - [Claude Code plugin marketplaces](https://code.claude.com/docs/en/plugin-marketplaces)
+  - [Claude Code skills format](https://docs.anthropic.com/en/docs/claude-code/skills)
+- **Learn by example:** Review existing skills/plugins in this repo for examples
+- **Get help:** Ask the team in a PR review
