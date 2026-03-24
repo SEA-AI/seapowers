@@ -15,8 +15,8 @@ When adding skills, agents, or plugins:
 ## Key Files
 
 - `.claude-plugin/marketplace.json` - Plugin marketplace catalog
-- `.claude-plugin/plugins/seapowers/plugin.json` - Plugin manifest
-- `skills/` - Skill definitions (SKILL.md files)
+- `seapowers/.claude-plugin/plugin.json` - Plugin manifest
+- `seapowers/skills/` - Skill definitions (SKILL.md files)
 
 ## Resources
 
