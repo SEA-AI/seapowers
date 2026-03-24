@@ -18,6 +18,28 @@
       },
       "license": "MIT",
       "keywords": ["skills", "react", "nextjs"]
+    },
+    {
+      "name": "clangd-lsp",
+      "source": "anthropic/clangd-lsp",
+      "description": "Clangd language server protocol plugin from Anthropic",
+      "version": "1.0.0",
+      "author": {
+        "name": "Anthropic"
+      },
+      "license": "MIT",
+      "keywords": ["lsp", "clangd", "c", "cpp", "language-server"]
+    },
+    {
+      "name": "pyright-lsp",
+      "source": "anthropic/pyright-lsp",
+      "description": "Pyright language server protocol plugin from Anthropic",
+      "version": "1.0.0",
+      "author": {
+        "name": "Anthropic"
+      },
+      "license": "MIT",
+      "keywords": ["lsp", "pyright", "python", "language-server"]
     }
   ]
 }
