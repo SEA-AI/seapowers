@@ -21,7 +21,10 @@
     },
     {
       "name": "clangd-lsp",
-      "source": "https://github.com/anthropics/clangd-lsp",
+      "source": {
+        "source": "github",
+        "repo": "anthropics/clangd-lsp"
+      },
       "description": "Clangd language server protocol plugin from Anthropic",
       "version": "1.0.0",
       "author": {
@@ -32,7 +35,10 @@
     },
     {
       "name": "pyright-lsp",
-      "source": "https://github.com/anthropics/pyright-lsp",
+      "source": {
+        "source": "github",
+        "repo": "anthropics/pyright-lsp"
+      },
       "description": "Pyright language server protocol plugin from Anthropic",
       "version": "1.0.0",
       "author": {
