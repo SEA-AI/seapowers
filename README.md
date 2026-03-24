@@ -27,17 +27,19 @@ Claude Code skills are reusable prompt-based instructions that standardize how A
 ## 📁 Repository Structure
 
 ```
-seapowers/
+seapowers/                             # Repository root
 ├── .claude-plugin/
-│   ├── marketplace.json              # Makes it installable
-│   └── plugin.json                   # Plugin metadata
+│   └── marketplace.json               # Makes it installable
 ├── .github/
 │   └── workflows/
-│       └── sync-upstream-skills.yml  # Weekly upstream sync
-├── skills/
-│   └── my-skill/
-│       └── SKILL.md
-├── upstream-skills.json              # Manifest of vendored upstream skills
+│       └── sync-upstream-skills.yml   # Weekly upstream sync
+├── seapowers/                         # Self-contained plugin directory
+│   ├── .claude-plugin/
+│   │   └── plugin.json                # Plugin metadata
+│   └── skills/
+│       └── my-skill/
+│           └── SKILL.md
+├── upstream-skills.json               # Manifest of vendored upstream skills
 └── README.md
 ```
 
@@ -121,7 +123,7 @@ The manifest lives in `upstream-skills.json` and supports two entry types:
   "repo": "vercel-labs/agent-skills",
   "branch": "main",
   "src": "skills/react-best-practices",
-  "dest": "skills/react-best-practices",
+  "dest": "seapowers/skills/react-best-practices",
   "license": "MIT",
   "upstream_repo": "https://github.com/vercel-labs/agent-skills"
 }
@@ -145,7 +147,7 @@ The [sync workflow](.github/workflows/sync-upstream-skills.yml) runs weekly and 
 
 ### Adding a Skill
 
-1. Create a new directory in `skills/` with a `SKILL.md` file
+1. Create a new directory in `seapowers/skills/` with a `SKILL.md` file
 2. Follow the [skill format](https://docs.anthropic.com/en/docs/claude-code/skills) from the Claude Code docs
 3. Open a PR and let the team review
 
