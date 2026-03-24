@@ -18,10 +18,7 @@
 
 ### Plugins
 
-| Plugin | Description | Language |
-|--------|-------------|----------|
-| 🔗 `clangd-lsp` | Clangd language server protocol plugin from Anthropic | C/C++ |
-| 🔗 `pyright-lsp` | Pyright language server protocol plugin from Anthropic | Python |
+Coming soon! External plugin sources support is in development.
 
 ## 💡 What are Skills?
 
@@ -108,26 +105,6 @@ If you only need certain skills, pass an array of skill names instead of `true` 
 }
 ```
 
-### Install other plugins from this marketplace
-
-To install LSP plugins, run inside Claude Code:
-
-```bash
-/plugin install clangd-lsp@sea-ai
-/plugin install pyright-lsp@sea-ai
-```
-
-Or enable all plugins in settings.json:
-
-```json
-{
-  "enabledPlugins": {
-    "seapowers@sea-ai": true,
-    "clangd-lsp@sea-ai": true,
-    "pyright-lsp@sea-ai": true
-  }
-}
-```
 
 ## 🔄 Upstream Syncing
 
