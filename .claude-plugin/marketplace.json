@@ -10,14 +10,19 @@
   "plugins": [
     {
       "name": "seapowers",
-      "source": "./plugins/seapowers",
+      "source": "github",
+      "repo": "SEA-AI/seapowers",
       "description": "Shared AI skills and workflows for the SEA.AI team",
       "version": "1.0.1",
       "author": {
         "name": "SEA.AI"
       },
       "license": "MIT",
-      "keywords": ["skills", "react", "nextjs"]
+      "keywords": [
+        "skills",
+        "react",
+        "nextjs"
+      ]
     }
   ]
 }
