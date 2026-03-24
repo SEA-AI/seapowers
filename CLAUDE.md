@@ -34,7 +34,7 @@ The `marketplace.json` file is located at `.claude-plugin/marketplace.json` and 
 
 ```json
 {
-  "name": "superpowers",
+  "name": "my-marketplace",
   "owner": {
     "name": "Your Team",
     "email": "team@example.com"
