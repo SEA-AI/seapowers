@@ -20,6 +20,7 @@ description: >
 | **Main project** | `SEA` (project ID `11797`) |
 | **DoR page** | `/wiki/x/aQBDDw` |
 | **Demand process** | `/wiki/spaces/PD/pages/687898625` |
+| **AI team Jira project** | `CV` (project key) |
 
 > **Authentication:** A fresh session must call `mcp__plugin_atlassian_atlassian__authenticate` before any tools are available.
 
@@ -28,8 +29,8 @@ description: >
 ## Work Hierarchy
 
 ```
-Demand  (Demand Backlog project — strategic level)
-  └─ Epic  (SEA project, one per team)
+Demand  (strategic level — tracked in roadmap/backlog projects)
+  └─ Epic  (SEA or CV project, one per team)
        └─ Story / Task / Bug / Spike  (SEA project, sprint-level)
             └─ Sub-task  (avoid unless explicitly requested)
 ```
@@ -78,9 +79,9 @@ Both teams share the same SEA project and sprint board. Always set `customfield_
 | Priority | ID | Notes |
 |----------|----|-------|
 | Medium | 3 | Default for most tickets |
+| Essential | *(look up)* | Higher urgency than Medium |
+| Optional | *(look up)* | Lower urgency than Medium |
 | Hotfix | 10001 | Bugs requiring immediate attention |
-
-> Other values (High, Low, Critical) likely exist but may not all be valid via API — test before assuming.
 
 ### Custom Fields
 
@@ -147,10 +148,6 @@ Title · use-case · user value · business value · success metrics · risk ass
 
 | Acronym | Role |
 |---------|------|
-| HoP | Head of Product |
-| HoS | Head of Sales |
-| HoAI | Head of AI |
-| HoSD | Head of Software Development |
 | PO | Product Owner |
 | QA | Quality Assurance |
 | SM | Scrum Master |
