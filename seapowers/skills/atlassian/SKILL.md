@@ -77,6 +77,7 @@ When creating or filtering tickets, always set `customfield_10001` (Team) to dis
 | Product(s) | `customfield_12044` | Array of `{"id": "..."}` objects |
 | Sprint | `customfield_10020` | Sprint ID — always fetch fresh with `sprint in openSprints()` |
 | Story Points | `customfield_10031` | Number (`customfield_10016` is a legacy field on older tickets) |
+| Acceptance Criteria | `customfield_10310` | ADF (Atlassian Document Format) — always fill on create/edit |
 | Labels | `labels` | Array of strings |
 
 #### Product IDs
@@ -109,6 +110,31 @@ When creating or filtering tickets, always set `customfield_10001` (Team) to dis
 **Gate A — backlog entry:** Title · description · issue type · epic/parent (if known) · product(s) · reporter
 
 **Gate B — before sprint:** Acceptance criteria · dependencies linked · story points set · priority set · peer-checked
+
+### Writing Style
+
+Write tickets like a teammate would, not like a formal spec. Use plain, direct language.
+
+**Description:**
+- Say what the problem is and why we care, then what needs to be done
+- Use `**bold headers**` to split parts if the ticket has multiple concerns
+- No bullet-point walls, no corporate jargon
+
+**Acceptance criteria (`customfield_10310`):**
+- Always fill this field — it is required for every create/edit
+- Must be ADF format (not markdown string) — pass as a JSON object
+- Each item = one clear, testable outcome written as a present-tense statement
+- Use a **checkbox list** (`taskList`), not bullet points
+
+```json
+"customfield_10310": {
+  "type": "doc", "version": 1,
+  "content": [{"type": "taskList", "attrs": {"localId": "ac"}, "content": [
+    {"type": "taskItem", "attrs": {"localId": "1", "state": "TODO"}, "content": [{"type": "text", "text": "Inference runs automatically after export and images are uploaded to W&B"}]},
+    {"type": "taskItem", "attrs": {"localId": "2", "state": "TODO"}, "content": [{"type": "text", "text": "The right inference path is used per model type (YOLO / AHOY / DAN)"}]}
+  ]}]
+}
+```
 
 ### Description Formatting
 
