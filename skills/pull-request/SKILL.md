@@ -3,6 +3,7 @@ name: pull-request
 description: >
   SEA.AI pull request template. Enforces a consistent PR format with
   What/Why/How/Testing sections. Use when creating pull requests.
+license: MIT
 ---
 
 # Pull Request Format

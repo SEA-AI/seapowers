@@ -5,7 +5,7 @@
     "repo": "vercel-labs/agent-skills",
     "branch": "main",
     "src": "skills/react-best-practices",
-    "dest": "seapowers/skills/react-best-practices",
+    "dest": "skills/react-best-practices",
     "license": "MIT",
     "upstream_repo": "https://github.com/vercel-labs/agent-skills"
   }
