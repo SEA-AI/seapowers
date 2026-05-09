@@ -14,7 +14,7 @@
 | Skill | Description | Source |
 |-------|-------------|--------|
 | 📝 `pull-request` | SEA.AI PR template with What/Why/How/Testing sections | Internal |
-| ⚛️ `react-best-practices` | React & Next.js performance optimization (57 rules across 8 categories) | [Vercel Labs](https://github.com/vercel-labs/agent-skills) |
+| ⚛️ `react-best-practices` | React & Next.js performance optimization (70 rules across 8 categories) | [Vercel Labs](https://github.com/vercel-labs/agent-skills) |
 | 🎨 `sea-ai-brand` | Brand guidelines for all SEA.AI outputs (docs, diagrams, UI, presentations) | Internal |
 
 ### Plugins
