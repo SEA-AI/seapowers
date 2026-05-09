@@ -22,7 +22,7 @@ Source of truth: **Brand Book 2025** (stored at `Brand info alt/Brand Book 2025.
 
 | 📊 Diagrams & Charts | 📄 Documents (PDF/Word/Excel) | 🎤 Presentations | 💻 Web UI & Components |
 |---|---|---|---|
-| `references/diagrams.md` | `references/documents-pdf.md` | `references/presentations-pptx.md` | `references/ui-coding.md` |
+| `references/diagrams.md` | `references/documents.md` | `references/presentations-pptx.md` | `references/ui-coding.md` |
 | Python/Pillow, PNG | PDF: WeasyPrint/ReportLab<br>Word: python-docx<br>Excel: openpyxl | PowerPoint (pptxgenjs) | React/HTML, DARK theme |
 | | | | + `references/frontend-components.md` |
 
