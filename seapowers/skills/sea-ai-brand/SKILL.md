@@ -20,10 +20,10 @@ Source of truth: **Brand Book 2025** (stored at `Brand info alt/Brand Book 2025.
 
 **What are you building?** Pick the reference file below, then read the full guide:
 
-| 📊 Diagram / Chart / Infographic | 📄 Document / One-pager / Report | 🎤 Presentation | 💻 Web UI / Components |
+| 📊 Diagrams & Charts | 📄 Documents (PDF/Word/Excel) | 🎤 Presentations | 💻 Web UI & Components |
 |---|---|---|---|
-| → `references/diagrams.md` | → `references/documents-pdf.md` | → `references/presentations-pptx.md` | → `references/ui-coding.md` |
-| Python/Pillow, PNG render | WeasyPrint/ReportLab, PDF | PowerPoint (pptxgenjs) | React/HTML, DARK theme |
+| `references/diagrams.md` | `references/documents-pdf.md` | `references/presentations-pptx.md` | `references/ui-coding.md` |
+| Python/Pillow, PNG | PDF: WeasyPrint/ReportLab<br>Word: python-docx<br>Excel: openpyxl | PowerPoint (pptxgenjs) | React/HTML, DARK theme |
 | | | | + `references/frontend-components.md` |
 
 **⚠️ Before you start:** Read the relevant reference file + the "Core Brand" section below (colors, fonts, rules).

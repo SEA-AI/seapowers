@@ -1,6 +1,6 @@
-# SEA.AI Documents & PDFs
+# SEA.AI Documents (PDF, Word, Excel)
 
-For one-pagers, spec sheets, reports, technical documents rendered with WeasyPrint or ReportLab.
+Brand guidelines for all document formats: one-pagers, spec sheets, reports, technical documents. The layout and style rules below apply to **PDF, Word, and Excel**. Only the implementation technology differs (see Format-Specific sections below).
 
 ## Layout Structure
 
@@ -119,6 +119,84 @@ pdfmetrics.registerFont(TTFont('Barlow', 'assets/BarlowSemiCondensed-Regular.ttf
 canvas.setFont("Barlow-Bold", 9)
 canvas.setFillColor(FOCUS_RED)
 canvas.drawString(14*mm, y, "SECTION LABEL")
+```
+
+## Format-Specific Implementation
+
+### PDF (WeasyPrint / ReportLab)
+Use this for PDFs rendered via Python/HTML or ReportLab.
+- Libraries: `WeasyPrint`, `ReportLab`
+- Font loading: Use TTF assets or Google Fonts CDN
+- See CSS and Python code samples above
+
+### Word (.docx)
+Use this for .docx documents (reports, spec sheets, proposals).
+```python
+from docx import Document
+from docx.shared import Pt, RGBColor, Mm
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+doc = Document()
+section = doc.sections[0]
+section.top_margin = Mm(14)
+section.bottom_margin = Mm(14)
+section.left_margin = Mm(14)
+section.right_margin = Mm(14)
+
+# Section label (Focus Red)
+p = doc.add_paragraph()
+p.text = "SECTION LABEL"
+r = p.runs[0]
+r.font.size = Pt(10)
+r.font.bold = True
+r.font.color.rgb = RGBColor(203, 13, 0)  # Focus Red #CB0D00
+
+# Heading
+p = doc.add_paragraph()
+p.text = "Document Heading"
+r = p.runs[0]
+r.font.size = Pt(28)
+r.font.bold = True
+r.font.color.rgb = RGBColor(0, 0, 0)  # Black
+
+# Body text
+p = doc.add_paragraph("Body text goes here...")
+r = p.runs[0]
+r.font.size = Pt(11)
+r.font.color.rgb = RGBColor(0, 0, 0)
+
+doc.save("document.docx")
+```
+
+### Excel (.xlsx)
+Use this for .xlsx spreadsheets, dashboards, and data tables.
+```python
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
+wb = Workbook()
+ws = wb.active
+
+# Set margins (approximate via row heights)
+ws.row_dimensions[1].height = 20
+
+# Header row with Focus Red background
+header_fill = PatternFill(start_color="CB0D00", end_color="CB0D00", fill_type="solid")
+header_font = Font(name='Barlow Semi Condensed', size=10, bold=True, color="FFFFFF")
+
+ws['A1'] = "HEADER"
+ws['A1'].fill = header_fill
+ws['A1'].font = header_font
+
+# Data rows
+ws['A2'] = "Data"
+ws['A2'].font = Font(name='Barlow Semi Condensed', size=11, color="000000")
+
+# Focus Red accent line (thin border)
+thin_border = Border(top=Side(style='thin', color='CB0D00'))
+ws['A3'].border = thin_border
+
+wb.save("spreadsheet.xlsx")
 ```
 
 ## Checklist
