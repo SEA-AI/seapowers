@@ -91,3 +91,13 @@ jobs:
             - `PATCH` (1.1.x) — bug fixes, formatting, small improvements
             - `MINOR` (1.x.0) — new features, new capabilities
             - `MAJOR` (x.0.0) — breaking changes
+
+      - name: Post version check success comment
+        if: success()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: version-check
+          message: |
+            ✅ **Version Check Passed**
+
+            All versions are correctly updated and follow semantic versioning. Ready to merge!
