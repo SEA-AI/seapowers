@@ -9,7 +9,7 @@ description: >
   Covers ALL output types — if it carries the SEA.AI brand, use this skill.
 creator: Philipp Stampfl
 date: 2026-05-09
-release: "2.1.0"
+release: "2.2.0"
 ---
 
 # SEA.AI Brand Skill
@@ -23,8 +23,7 @@ Source of truth: **Brand Book 2025** (stored at `Brand info alt/Brand Book 2025.
 | Diagram / infographic / chart (PNG/SVG) | `references/diagrams.md` |
 | PDF document / one-pager / spec sheet | `references/documents-pdf.md` |
 | PowerPoint presentation (PPTX) | `references/presentations-pptx.md` |
-| Web UI / React / HTML component | `references/ui-coding.md` |
-| Frontend component library (reusable components) | `references/frontend-components.md` |
+| Web UI / React / HTML component | `references/ui-coding.md` + `references/frontend-components.md` |
 
 **Always read the relevant reference file before starting work.**
 
