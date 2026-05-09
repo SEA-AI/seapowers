@@ -5,7 +5,7 @@
 [![Upstream Sync](https://img.shields.io/github/actions/workflow/status/SEA-AI/seapowers/sync-upstream-skills.yml?label=Upstream%20Sync&style=flat-square)](https://github.com/SEA-AI/seapowers/actions/workflows/sync-upstream-skills.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
-✨ **Shared Claude Code skills, plugins, and workflows for the SEA.AI team** ✨
+✨ **Shared Claude Code skills, agents, plugins, and workflows for the SEA.AI team** ✨
 
 ## 🧩 Available Skills and Plugins
 
@@ -145,11 +145,7 @@ The [sync workflow](.github/workflows/sync-upstream-skills.yml) runs weekly and 
 
 ## 🤝 Contributing
 
-### Adding a Skill
-
-1. Create a new directory in `seapowers/skills/` with a `SKILL.md` file
-2. Follow the [skill format](https://docs.anthropic.com/en/docs/claude-code/skills) from the Claude Code docs
-3. Open a PR and let the team review
+See @AGENTS.md for detailed contribution guidelines, including how to add skills, agents, and plugins.
 
 Got a workflow that saves you time? A prompt pattern that keeps Claude on track? Ship it! The bar is low — if it helped you twice, it'll help someone else too.
 
