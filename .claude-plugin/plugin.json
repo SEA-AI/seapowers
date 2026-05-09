@@ -6,7 +6,7 @@
     "name": "SEA.AI",
     "url": "https://github.com/SEA-AI"
   },
-  "repository": "https://github.com/SEA-AI/superpowers",
+  "repository": "https://github.com/SEA-AI/seapowers",
   "license": "MIT",
   "keywords": ["skills", "react", "nextjs", "sea-ai"]
 }
