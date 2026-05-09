@@ -9,7 +9,7 @@ description: >
   Covers ALL output types — if it carries the SEA.AI brand, use this skill.
 creator: Philipp Stampfl
 date: 2026-05-09
-release: "1.2.0"
+release: "2.1.0"
 ---
 
 # SEA.AI Brand Skill
