@@ -8,8 +8,8 @@ description: >
   any PPTX slide deck, any HTML/React UI, any marketing or technical material for SEA.AI.
   Covers ALL output types — if it carries the SEA.AI brand, use this skill.
 creator: Philipp Stampfl
-date: 2025-04-30
-release: "2.0"
+date: 2026-05-09
+release: "2.0.1"
 ---
 
 # SEA.AI Brand Skill
