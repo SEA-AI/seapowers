@@ -27,8 +27,7 @@ Source of truth: **Brand Book 2025** (stored at `Brand info alt/Brand Book 2025.
 | 📄 Word document (.docx) | `references/documents.md` | python-docx |
 | 📄 Excel spreadsheet (.xlsx) | `references/documents.md` | openpyxl |
 | 🎤 Presentation (.pptx) | `references/presentations-pptx.md` | pptxgenjs |
-| 💻 Web UI / React component | `references/ui-coding.md` | React / HTML |
-| 💻 UI component snippets | `references/frontend-components.md` | CSS / HTML |
+| 💻 Web / frontend component | `references/frontend.md` | React / HTML |
 
 **⚠️ Before you start:** Read the relevant reference file + the "Core Brand" section below (colors, fonts, rules).
 
