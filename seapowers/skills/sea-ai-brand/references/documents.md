@@ -1,6 +1,6 @@
 # SEA.AI Documents (PDF, Word, Excel)
 
-Brand guidelines for all document formats: one-pagers, spec sheets, reports, technical documents. Follow these layout and style rules for any output format.
+For one-pagers, spec sheets, reports, technical documents rendered with WeasyPrint or ReportLab.
 
 ## Layout Structure
 
