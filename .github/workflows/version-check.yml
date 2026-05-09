@@ -86,3 +86,8 @@ jobs:
             - **Skills modified?** Bump `seapowers/.claude-plugin/plugin.json` version
             - **Marketplace modified?** Bump `.claude-plugin/marketplace.json` version
             - **Format:** Use semantic versioning (X.Y.Z)
+
+            **Semver Guidelines:**
+            - `PATCH` (1.1.x) — bug fixes, formatting, small improvements
+            - `MINOR` (1.x.0) — new features, new capabilities
+            - `MAJOR` (x.0.0) — breaking changes
