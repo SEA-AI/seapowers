@@ -126,10 +126,10 @@ Regular (400) → Body text, captions, descriptions
 ## Asset Paths
 
 ```
-assets/BarlowSemiCondensed-Bold.ttf        ← always use for Python/Pillow rendering
-assets/BarlowSemiCondensed-Regular.ttf     ← always use for Python/Pillow rendering
-assets/Logo SEA.AI black RGB.jpg        ← on white/light backgrounds
-assets/Logo SEA.AI White RGB.svg        ← on dark backgrounds
+assets/BarlowSemiCondensed-Bold.ttf    ← always use for Python/Pillow rendering
+assets/BarlowSemiCondensed-Regular.ttf ← always use for Python/Pillow rendering
+assets/Logo SEA.AI black RGB.jpg       ← on white/light backgrounds
+assets/Logo SEA.AI White RGB.svg       ← on dark backgrounds
 ```
 
 Paths are relative to the skill folder. Resolve to absolute when using in scripts.
