@@ -1,11 +1,3 @@
----
-File: sea-ai-brand
-Description: SEA.AI Brand Skill — Single source of truth for brand-compliant outputs across all media.
-Creator: Philipp Stampfl
-Date: 2025-04-30
-Release: 2.0
----
-
 # SEA.AI Diagrams & Infographics
 
 For Python-rendered PNGs using Pillow. Read this before creating any diagram, chart, or infographic.

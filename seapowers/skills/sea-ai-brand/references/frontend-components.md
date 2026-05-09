@@ -1,7 +1,3 @@
----
-Description: SEA.AI UI component snippets — HTML + CSS only, uses design tokens from ui-coding.md
----
-
 # Frontend Components
 
 | Component | Use |
