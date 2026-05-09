@@ -1,28 +1,18 @@
 ---
-File: sea-ai-brand
-Description: Core Frontend UI Component Library Reference
-Creator: Claude
-Date: 2026-05-09
+Description: SEA.AI UI component snippets — HTML + CSS only, uses design tokens from ui-coding.md
 ---
 
 # Frontend Components
 
-HTML + CSS snippets to match the SEA.AI UI look & feel. All use design tokens from `ui-coding.md`.
-
-## Component Index
-
 | Component | Use |
 |-----------|-----|
-| Button | Primary/secondary actions |
+| Button | Primary/secondary/danger actions |
 | Toggle | On/off switch |
 | Checkbox | Multi-select option |
 | Input | Text entry |
 | Progress Bar | Linear progress |
-| Circular Progress | Radial progress |
 | Pill | Connection/status badge |
 | Typography | Text hierarchy |
-
----
 
 ## Button
 
@@ -55,24 +45,14 @@ HTML + CSS snippets to match the SEA.AI UI look & feel. All use design tokens fr
 .btn--secondary { background: var(--surface-neutral-4); color: var(--content-neutral-3); }
 .btn--danger    { background: var(--surface-danger-3);  color: #fff; }
 .btn--ghost     { background: transparent; color: var(--content-neutral-3); border: 1px solid var(--surface-neutral-4); }
-
 .btn:disabled   { opacity: 0.3; pointer-events: none; }
 ```
-
----
 
 ## Toggle
 
 ```html
-<!-- unchecked -->
 <label class="toggle">
   <input type="checkbox" />
-  <span class="track"><span class="thumb"></span></span>
-</label>
-
-<!-- checked -->
-<label class="toggle">
-  <input type="checkbox" checked />
   <span class="track"><span class="thumb"></span></span>
 </label>
 ```
@@ -82,8 +62,7 @@ HTML + CSS snippets to match the SEA.AI UI look & feel. All use design tokens fr
 .toggle input { display: none; }
 
 .track {
-  width: 40px;
-  height: 25px;
+  width: 40px; height: 25px;
   border-radius: 20px;
   background: var(--surface-neutral-3);
   position: relative;
@@ -99,11 +78,9 @@ HTML + CSS snippets to match the SEA.AI UI look & feel. All use design tokens fr
   transition: left 0.2s, background 0.2s;
 }
 
-.toggle input:checked ~ .track              { background: var(--surface-neutral-5); }
-.toggle input:checked ~ .track .thumb      { left: 17px; background: var(--surface-primary-3); }
+.toggle input:checked ~ .track           { background: var(--surface-neutral-5); }
+.toggle input:checked ~ .track .thumb   { left: 17px; background: var(--surface-primary-3); }
 ```
-
----
 
 ## Checkbox
 
@@ -111,7 +88,7 @@ HTML + CSS snippets to match the SEA.AI UI look & feel. All use design tokens fr
 <label class="checkbox">
   <input type="checkbox" />
   <span class="box"></span>
-  <span class="checkbox-label">Enable feature</span>
+  <span>Enable feature</span>
 </label>
 ```
 
@@ -127,19 +104,8 @@ HTML + CSS snippets to match the SEA.AI UI look & feel. All use design tokens fr
   transition: 0.2s;
 }
 
-.checkbox input:checked ~ .box {
-  background: var(--surface-primary-3);
-  border-color: var(--surface-primary-3);
-}
-
-.checkbox-label {
-  font-family: 'Barlow Semi Condensed', Arial, sans-serif;
-  font-size: 16px;
-  color: var(--content-neutral-3);
-}
+.checkbox input:checked ~ .box { background: var(--surface-primary-3); border-color: var(--surface-primary-3); }
 ```
-
----
 
 ## Input
 
@@ -150,8 +116,7 @@ HTML + CSS snippets to match the SEA.AI UI look & feel. All use design tokens fr
 
 ```css
 .input {
-  width: 100%;
-  height: 48px;
+  width: 100%; height: 48px;
   padding: 12px 16px;
   border: none;
   border-radius: var(--radius-xs);
@@ -166,8 +131,6 @@ HTML + CSS snippets to match the SEA.AI UI look & feel. All use design tokens fr
 .input.error        { outline: 1px solid var(--accent-danger-2); outline-offset: -1px; }
 ```
 
----
-
 ## Progress Bar
 
 ```html
@@ -177,25 +140,11 @@ HTML + CSS snippets to match the SEA.AI UI look & feel. All use design tokens fr
 ```
 
 ```css
-.progress {
-  width: 100%;
-  height: 8px;
-  background: var(--surface-neutral-4);
-  border-radius: var(--radius-s);
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: var(--surface-primary-3);
-  border-radius: inherit;
-  transition: width 0.4s ease-in-out;
-}
+.progress { width: 100%; height: 8px; background: var(--surface-neutral-4); border-radius: var(--radius-s); overflow: hidden; }
+.progress-fill { height: 100%; background: var(--surface-primary-3); transition: width 0.4s ease-in-out; }
 ```
 
----
-
-## Pill (Status Badge)
+## Pill
 
 ```html
 <span class="pill pill--connected">Connected</span>
@@ -207,7 +156,6 @@ HTML + CSS snippets to match the SEA.AI UI look & feel. All use design tokens fr
 .pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
   padding: 4px 10px;
   border-radius: var(--radius-s);
   font-family: 'Barlow Semi Condensed', Arial, sans-serif;
@@ -217,20 +165,18 @@ HTML + CSS snippets to match the SEA.AI UI look & feel. All use design tokens fr
   letter-spacing: 0.04em;
 }
 
-.pill--connected    { background: var(--surface-success-3);  color: #fff; }
-.pill--disconnected { background: var(--surface-danger-3);   color: #fff; }
-.pill--connecting   { background: var(--surface-warning-3);  color: #000; }
+.pill--connected    { background: var(--surface-success-3); color: #fff; }
+.pill--disconnected { background: var(--surface-danger-3);  color: #fff; }
+.pill--connecting   { background: var(--surface-warning-3); color: #000; }
 ```
-
----
 
 ## Typography
 
 ```html
 <p class="text-title-l">Page Title</p>
 <p class="text-title-m">Section Title</p>
-<p class="text-body-m">Body text for descriptions and content.</p>
-<p class="text-body-s">Small body text for captions.</p>
+<p class="text-body-m">Body text</p>
+<p class="text-body-s">Caption text</p>
 <p class="text-label">STATUS LABEL</p>
 ```
 
