@@ -9,6 +9,8 @@ Date: 2026-05-09
 
 Reference guide for reusable UI components from Core-Frontend/CoreComponents. Only read the section for components you need to use. All components follow SEA.AI design tokens and typography from `ui-coding.md`.
 
+> **Note:** If you don't have access to Core-Frontend, use the implementation snippets below as templates to build similar components in your own UI framework.
+
 ## Quick Index by Category
 
 | Category | Components |
@@ -320,6 +322,272 @@ Slide-up panel for mobile interfaces.
 **File:** `CoreComponents/Menu/MobileControls/MobileControls.js`
 
 Mobile-optimized control panel.
+
+---
+
+## Implementation Templates
+
+If you don't have access to Core-Frontend, use these templates to build similar components. All examples use CSS variables from the design system (`ui-coding.md`).
+
+### Button Template
+
+```jsx
+export function Button({ children, variant = 'primary', disabled = false, onClick }) {
+  return (
+    <button
+      className={`button button--${variant}`}
+      disabled={disabled}
+      onClick={onClick}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 'var(--radius-m)',
+        border: 'none',
+        height: '48px',
+        padding: '12px 16px',
+        cursor: disabled ? 'default' : 'pointer',
+        backgroundColor: variant === 'primary' 
+          ? 'var(--surface-primary-3)' 
+          : 'var(--surface-neutral-4)',
+        color: 'var(--content-primary-3)',
+        opacity: disabled ? 0.3 : 1,
+        transition: '0.2s',
+        minWidth: '80px',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+```
+
+**CSS:**
+```css
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-m);
+  border: none;
+  height: 48px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.button:disabled {
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+.button--primary {
+  background-color: var(--surface-primary-3);
+  color: var(--content-primary-3);
+}
+
+.button--primary:hover {
+  background-color: var(--surface-primary-4);
+}
+
+.button--secondary {
+  background-color: var(--surface-neutral-4);
+  color: var(--content-neutral-3);
+}
+```
+
+### Toggle/Switch Template
+
+```jsx
+export function Toggle({ checked = false, onChange }) {
+  return (
+    <label style={{ position: 'relative', display: 'inline-block' }}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        style={{
+          position: 'absolute',
+          visibility: 'hidden',
+        }}
+      />
+      <div
+        style={{
+          width: '40px',
+          height: '25px',
+          borderRadius: '20px',
+          backgroundColor: checked 
+            ? 'var(--surface-neutral-5)' 
+            : 'var(--surface-neutral-3)',
+          cursor: 'pointer',
+          transition: 'background-color 0.2s',
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+        }}
+      >
+        <div
+          style={{
+            width: '21px',
+            height: '21px',
+            borderRadius: '50%',
+            backgroundColor: checked 
+              ? 'var(--surface-primary-3)' 
+              : 'var(--content-neutral-2)',
+            position: 'absolute',
+            left: checked ? '17px' : '2px',
+            transition: '0.2s',
+          }}
+        />
+      </div>
+    </label>
+  );
+}
+```
+
+### Input Template
+
+```jsx
+export function Input({ 
+  placeholder, 
+  value = '', 
+  onChange, 
+  disabled = false,
+  error = false 
+}) {
+  return (
+    <input
+      type="text"
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      disabled={disabled}
+      style={{
+        width: '100%',
+        height: '48px',
+        padding: '12px 16px',
+        borderRadius: 'var(--radius-xs)',
+        border: error 
+          ? '1px solid var(--accent-danger-2)' 
+          : 'none',
+        backgroundColor: 'var(--surface-neutral-4)',
+        color: 'var(--content-neutral-3)',
+        fontFamily: "'Barlow Semi Condensed', Arial, sans-serif",
+        fontSize: '16px',
+        opacity: disabled ? 0.3 : 1,
+        transition: 'border 0.2s',
+      }}
+    />
+  );
+}
+```
+
+**CSS:**
+```css
+.input {
+  width: 100%;
+  height: 48px;
+  padding: 12px 16px;
+  border-radius: var(--radius-xs);
+  border: none;
+  background-color: var(--surface-neutral-4);
+  color: var(--content-neutral-3);
+  font-family: 'Barlow Semi Condensed', Arial, sans-serif;
+  font-size: 16px;
+}
+
+.input:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.input.error {
+  outline: 1px solid var(--accent-danger-2);
+  outline-offset: -1px;
+}
+
+.input::placeholder {
+  color: var(--content-neutral-1);
+}
+```
+
+### Progress Bar Template
+
+```jsx
+export function ProgressBar({ percentage = 0 }) {
+  return (
+    <div
+      style={{
+        width: '100%',
+        height: '8px',
+        backgroundColor: 'var(--surface-neutral-4)',
+        borderRadius: 'var(--radius-s)',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          height: '100%',
+          width: `${Math.max(percentage, 1.5)}%`,
+          backgroundColor: 'var(--surface-primary-3)',
+          transition: 'width 0.4s ease-in-out',
+        }}
+      />
+    </div>
+  );
+}
+```
+
+### Typography Template
+
+```jsx
+export function Typography({ 
+  variant = 'body-m', 
+  children,
+  color = 'var(--content-primary-3)'
+}) {
+  const styles = {
+    'title-l': {
+      fontSize: '40px',
+      fontWeight: 500,
+      lineHeight: '48px',
+    },
+    'title-m': {
+      fontSize: '24px',
+      fontWeight: 500,
+      lineHeight: '32px',
+    },
+    'body-m': {
+      fontSize: '20px',
+      fontWeight: 400,
+      lineHeight: '28px',
+    },
+    'body-s': {
+      fontSize: '16px',
+      fontWeight: 400,
+      lineHeight: '24px',
+    },
+    'label-s': {
+      fontSize: '16px',
+      fontWeight: 500,
+      textTransform: 'uppercase',
+      letterSpacing: '0.02em',
+    },
+  };
+
+  return (
+    <div
+      style={{
+        fontFamily: "'Barlow Semi Condensed', Arial, sans-serif",
+        color,
+        ...styles[variant],
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+```
 
 ---
 
