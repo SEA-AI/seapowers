@@ -46,13 +46,17 @@ a distinct DARK theme — this is the one place where dark backgrounds are the s
 
 ## Typography for UI
 
+**Font: Saira Medium** (UI only — distinct from Barlow Semi Condensed used in documents)
+- Files: Google Fonts `https://fonts.googleapis.com/css2?family=Saira:wght@400;500&display=swap`
+- Fallback: `Arial, sans-serif`
+
 ```css
-font-family: 'Barlow Semi Condensed', 'Arial Narrow', Arial, sans-serif;
-/* Note: product UI uses Barlow Semi Condensed, not Gravur Condensed */
+font-family: 'Saira', Arial, sans-serif;
+font-weight: 500;  /* medium weight */
 ```
 
-The condensed letterform is a density strategy — instrument-panel readouts at large
-sizes, more data at legible sizes without reducing font size.
+Medium letterform provides clarity at all sizes for instrument-panel readouts and dashboards.
+**Note: Do NOT use Barlow in UI code. Barlow is for brand documents and presentations only.**
 
 ```css
 /* main-* classes: sentence case, prose */
@@ -144,7 +148,7 @@ export default function SeaAICard({ title, value, status }) {
       border: 'none',
     }}>
       <span style={{ color: '#7B9194', fontSize: 12, textTransform: 'uppercase',
-        letterSpacing: '0.02em', fontFamily: "'Barlow Semi Condensed', 'Arial Narrow'" }}>
+        letterSpacing: '0.02em', fontFamily: "'Saira', Arial", fontWeight: 500 }}>
         {title}
       </span>
       <div style={{ color: '#F0F2F4', fontSize: 24, fontWeight: 500, marginTop: 4 }}>
@@ -161,7 +165,7 @@ export default function SeaAICard({ title, value, status }) {
 ✅ DARK theme by default (surface-neutral-1 outermost)
 ✅ Depth from background contrast only — no shadows, no borders
 ✅ Color = state (only 4 semantic colors)
-✅ Barlow Semi Condensed for UI typography
+✅ Saira Medium for UI typography (not Barlow — Barlow is for docs only)
 ✅ Minimum 40px touch targets
 ❌ No decorative shadows or borders
 ❌ No entrance animations

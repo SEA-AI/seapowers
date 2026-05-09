@@ -72,16 +72,19 @@ BLACK (#000000) — default body text
 
 ### Typography
 
-**Font: Barlow Semi Condensed** (Google Fonts)
+**Two fonts for two contexts:**
+
+**Documents & Presentations: Barlow Semi Condensed** (Google Fonts)
 - Files: `assets/BarlowSemiCondensed-Bold.ttf`, `assets/BarlowSemiCondensed-Regular.ttf`
 - Web: `https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;700&display=swap`
 - Fallback for code/PPTX: `Arial Narrow`
 - Fallback for system rendering: `DejaVu Sans Condensed`
+- Usage: Bold (700) for labels/headings, Regular (400) for body text
 
-```
-Bold (700)   → Section labels, headings, table headers, emphasis
-Regular (400) → Body text, captions, descriptions
-```
+**Product UI Code: Saira Medium** (Google Fonts)
+- Web: `https://fonts.googleapis.com/css2?family=Saira:wght@400;500&display=swap`
+- Fallback: `Arial, sans-serif`
+- Usage: Weight 500 (medium) for all UI typography
 
 **Case rules:**
 - Short headlines: ALL CAPS
