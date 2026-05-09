@@ -9,23 +9,26 @@ description: >
   Covers ALL output types — if it carries the SEA.AI brand, use this skill.
 creator: Philipp Stampfl
 date: 2026-05-09
-release: "2.2.0"
 ---
 
 # SEA.AI Brand Skill
 
 Source of truth: **Brand Book 2025** (stored at `Brand info alt/Brand Book 2025.pdf`)
 
-## Quick-start: Read the right reference file
+## 🧭 Quick Router — Find Your Reference File
 
-| Task | Read |
-|------|------|
-| Diagram / infographic / chart (PNG/SVG) | `references/diagrams.md` |
-| PDF document / one-pager / spec sheet | `references/documents-pdf.md` |
-| PowerPoint presentation (PPTX) | `references/presentations-pptx.md` |
-| Web UI / React / HTML component | `references/ui-coding.md` + `references/frontend-components.md` |
+**What are you building?** Find your row, open the reference file, then read the full guide:
 
-**Always read the relevant reference file before starting work.**
+| Output type | Reference file | Technology |
+|---|---|---|
+| 📊 Diagram / chart / infographic | `references/diagrams.md` | Python / Pillow |
+| 📄 PDF document | `references/documents.md` | WeasyPrint / ReportLab |
+| 📄 Word document (.docx) | `references/documents.md` | python-docx |
+| 📄 Excel spreadsheet (.xlsx) | `references/documents.md` | openpyxl |
+| 🎤 Presentation (.pptx) | `references/presentations-pptx.md` | pptxgenjs |
+| 💻 Web / frontend component | `references/frontend.md` | React / HTML |
+
+**⚠️ Before you start:** Read the relevant reference file + the "Core Brand" section below (colors, fonts, rules).
 
 ---
 
@@ -126,10 +129,10 @@ Regular (400) → Body text, captions, descriptions
 ## Asset Paths
 
 ```
-assets/BarlowSemiCondensed-Bold.ttf        ← always use for Python/Pillow rendering
-assets/BarlowSemiCondensed-Regular.ttf     ← always use for Python/Pillow rendering
-assets/Logo SEA.AI black RGB.jpg        ← on white/light backgrounds
-assets/Logo SEA.AI White RGB.svg        ← on dark backgrounds
+assets/BarlowSemiCondensed-Bold.ttf    ← always use for Python/Pillow rendering
+assets/BarlowSemiCondensed-Regular.ttf ← always use for Python/Pillow rendering
+assets/Logo SEA.AI black RGB.jpg       ← on white/light backgrounds
+assets/Logo SEA.AI White RGB.svg       ← on dark backgrounds
 ```
 
 Paths are relative to the skill folder. Resolve to absolute when using in scripts.

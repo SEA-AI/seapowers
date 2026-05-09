@@ -1,11 +1,11 @@
 # seapowers
 
 [![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-7c3aed?logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQyIDAtOC0zLjU4LTgtOHMzLjU4LTggOC04IDggMy41OCA4IDgtMy41OCA4LTggOHoiLz48L3N2Zz4=&style=flat-square)](https://docs.anthropic.com/en/docs/claude-code/skills)
-[![Skills & Plugins](https://img.shields.io/badge/Skills%20%26%20Plugins-4-blue?style=flat-square)](#-available-skills-and-plugins)
+[![Skills & Plugins](https://img.shields.io/badge/Skills%20%26%20Plugins-3-blue?style=flat-square)](#-available-skills-and-plugins)
 [![Upstream Sync](https://img.shields.io/github/actions/workflow/status/SEA-AI/seapowers/sync-upstream-skills.yml?label=Upstream%20Sync&style=flat-square)](https://github.com/SEA-AI/seapowers/actions/workflows/sync-upstream-skills.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
-✨ **Shared Claude Code skills, plugins, and workflows for the SEA.AI team** ✨
+✨ **Shared Claude Code skills, agents, plugins, and workflows for the SEA.AI team** ✨
 
 ## 🧩 Available Skills and Plugins
 
@@ -15,6 +15,7 @@
 |-------|-------------|--------|
 | 📝 `pull-request` | SEA.AI PR template with What/Why/How/Testing sections | Internal |
 | ⚛️ `react-best-practices` | React & Next.js performance optimization (57 rules across 8 categories) | [Vercel Labs](https://github.com/vercel-labs/agent-skills) |
+| 🎨 `sea-ai-brand` | Brand guidelines for all SEA.AI outputs (docs, diagrams, UI, presentations) | Internal |
 
 ### Plugins
 
@@ -149,7 +150,8 @@ The [sync workflow](.github/workflows/sync-upstream-skills.yml) runs weekly and 
 
 1. Create a new directory in `seapowers/skills/` with a `SKILL.md` file
 2. Follow the [skill format](https://docs.anthropic.com/en/docs/claude-code/skills) from the Claude Code docs
-3. Open a PR and let the team review
+3. Bump the plugin version in `seapowers/.claude-plugin/plugin.json` (the version check workflow will catch it if you don't!)
+4. Open a PR and let the team review
 
 Got a workflow that saves you time? A prompt pattern that keeps Claude on track? Ship it! The bar is low — if it helped you twice, it'll help someone else too.
 

@@ -1,0 +1,103 @@
+name: Version Check
+
+on:
+  pull_request:
+    paths:
+      - 'seapowers/skills/**'
+      - '.claude-plugin/marketplace.json'
+      - 'seapowers/.claude-plugin/plugin.json'
+
+jobs:
+  version-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed files
+        id: changes
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            skills:
+              - 'seapowers/skills/**'
+            marketplace:
+              - '.claude-plugin/marketplace.json'
+
+      - name: Check plugin version if skills changed
+        if: steps.changes.outputs.skills == 'true'
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          base_version=$(git show origin/${{ github.base_ref }}:seapowers/.claude-plugin/plugin.json | jq -r '.version')
+          new_version=$(jq -r '.version' seapowers/.claude-plugin/plugin.json)
+
+          if [ "$base_version" == "$new_version" ]; then
+            echo "❌ Skills were modified but seapowers/.claude-plugin/plugin.json version was not bumped"
+            echo "Base version: $base_version"
+            echo "PR version: $new_version"
+            exit 1
+          fi
+          echo "✅ Plugin version correctly bumped: $base_version → $new_version"
+
+      - name: Check marketplace version if plugins changed
+        if: steps.changes.outputs.marketplace == 'true'
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          base_version=$(git show origin/${{ github.base_ref }}:.claude-plugin/marketplace.json | jq -r '.metadata.version')
+          new_version=$(jq -r '.metadata.version' .claude-plugin/marketplace.json)
+
+          if [ "$base_version" == "$new_version" ]; then
+            echo "❌ Marketplace was modified but .claude-plugin/marketplace.json version was not bumped"
+            echo "Base version: $base_version"
+            echo "PR version: $new_version"
+            exit 1
+          fi
+          echo "✅ Marketplace version correctly bumped: $base_version → $new_version"
+
+      - name: Validate semantic versioning format
+        run: |
+          plugin_version=$(jq -r '.version' seapowers/.claude-plugin/plugin.json)
+          market_version=$(jq -r '.metadata.version' .claude-plugin/marketplace.json)
+
+          semver_regex='^[0-9]+\.[0-9]+\.[0-9]+$'
+
+          if ! [[ $plugin_version =~ $semver_regex ]]; then
+            echo "❌ Invalid semver in seapowers/.claude-plugin/plugin.json: $plugin_version"
+            exit 1
+          fi
+
+          if ! [[ $market_version =~ $semver_regex ]]; then
+            echo "❌ Invalid semver in .claude-plugin/marketplace.json: $market_version"
+            exit 1
+          fi
+
+          echo "✅ All versions use valid semver format"
+
+      - name: Post version check failure comment
+        if: failure()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: version-check
+          message: |
+            ❌ **Version Check Failed**
+
+            Please update versions according to your changes:
+            - **Skills modified?** Bump `seapowers/.claude-plugin/plugin.json` version
+            - **Marketplace modified?** Bump `.claude-plugin/marketplace.json` version
+            - **Format:** Use semantic versioning (X.Y.Z)
+
+            **Semver Guidelines:**
+            - `PATCH` (1.1.x) — bug fixes, formatting, small improvements
+            - `MINOR` (1.x.0) — new features, new capabilities
+            - `MAJOR` (x.0.0) — breaking changes
+
+      - name: Post version check success comment
+        if: success()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: version-check
+          message: |
+            ✅ **Version Check Passed**
+
+            All versions are correctly updated and follow semantic versioning. Ready to merge!

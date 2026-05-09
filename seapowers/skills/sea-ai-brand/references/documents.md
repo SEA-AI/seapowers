@@ -1,12 +1,4 @@
----
-File: sea-ai-brand
-Description: SEA.AI Brand Skill — Single source of truth for brand-compliant outputs across all media.
-Creator: Philipp Stampfl
-Date: 2025-04-30
-Release: 2.0
----
-
-# SEA.AI Documents & PDFs
+# SEA.AI Documents (PDF, Word, Excel)
 
 For one-pagers, spec sheets, reports, technical documents rendered with WeasyPrint or ReportLab.
 
