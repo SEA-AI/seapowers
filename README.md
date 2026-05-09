@@ -152,8 +152,6 @@ The [sync workflow](.github/workflows/sync-upstream-skills.yml) runs weekly and 
 3. Bump the plugin version in `seapowers/.claude-plugin/plugin.json` (the version check workflow will catch it if you don't!)
 4. Open a PR and let the team review
 
-See @AGENTS.md for more detailed contribution guidelines on adding agents and plugins.
-
 Got a workflow that saves you time? A prompt pattern that keeps Claude on track? Ship it! The bar is low — if it helped you twice, it'll help someone else too.
 
 ## 🤷 Why?
