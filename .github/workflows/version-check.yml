@@ -27,19 +27,18 @@ jobs:
 
       - name: Check plugin version if skills changed
         if: steps.changes.outputs.skills == 'true'
-        id: plugin-check
         run: |
           git fetch origin ${{ github.base_ref }}
           base_version=$(git show origin/${{ github.base_ref }}:seapowers/.claude-plugin/plugin.json | jq -r '.version')
           new_version=$(jq -r '.version' seapowers/.claude-plugin/plugin.json)
 
           if [ "$base_version" == "$new_version" ]; then
-            echo "version_bumped=false" >> $GITHUB_OUTPUT
+            echo "❌ Skills were modified but seapowers/.claude-plugin/plugin.json version was not bumped"
+            echo "Base version: $base_version"
+            echo "PR version: $new_version"
             exit 1
           fi
-          echo "version_bumped=true" >> $GITHUB_OUTPUT
           echo "✅ Plugin version correctly bumped: $base_version → $new_version"
-        continue-on-error: true
 
       - name: Check marketplace version if plugins changed
         if: steps.changes.outputs.marketplace == 'true'
@@ -57,7 +56,6 @@ jobs:
           echo "✅ Marketplace version correctly bumped: $base_version → $new_version"
 
       - name: Validate semantic versioning format
-        id: semver-check
         run: |
           plugin_version=$(jq -r '.version' seapowers/.claude-plugin/plugin.json)
           market_version=$(jq -r '.metadata.version' .claude-plugin/marketplace.json)
@@ -65,27 +63,26 @@ jobs:
           semver_regex='^[0-9]+\.[0-9]+\.[0-9]+$'
 
           if ! [[ $plugin_version =~ $semver_regex ]]; then
-            echo "semver_valid=false" >> $GITHUB_OUTPUT
+            echo "❌ Invalid semver in seapowers/.claude-plugin/plugin.json: $plugin_version"
             exit 1
           fi
 
           if ! [[ $market_version =~ $semver_regex ]]; then
-            echo "semver_valid=false" >> $GITHUB_OUTPUT
+            echo "❌ Invalid semver in .claude-plugin/marketplace.json: $market_version"
             exit 1
           fi
 
-          echo "semver_valid=true" >> $GITHUB_OUTPUT
           echo "✅ All versions use valid semver format"
-        continue-on-error: true
 
-      - name: Post PR comment if checks failed
+      - name: Post version check failure comment
         if: failure()
-        uses: actions/github-script@v7
+        uses: marocchino/sticky-pull-request-comment@v2
         with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `❌ **Version Check Failed**\n\nPlease update versions according to your changes:\n- **Skills modified?** Bump \`seapowers/.claude-plugin/plugin.json\` version\n- **Marketplace modified?** Bump \`.claude-plugin/marketplace.json\` version\n- **Format:** Use semantic versioning (X.Y.Z)`
-            })
+          header: version-check
+          message: |
+            ❌ **Version Check Failed**
+
+            Please update versions according to your changes:
+            - **Skills modified?** Bump `seapowers/.claude-plugin/plugin.json` version
+            - **Marketplace modified?** Bump `.claude-plugin/marketplace.json` version
+            - **Format:** Use semantic versioning (X.Y.Z)
