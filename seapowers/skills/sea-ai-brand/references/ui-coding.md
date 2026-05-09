@@ -48,11 +48,9 @@ a distinct DARK theme — this is the one place where dark backgrounds are the s
 
 ```css
 font-family: 'Barlow Semi Condensed', 'Arial Narrow', Arial, sans-serif;
-/* Note: product UI uses Barlow Semi Condensed, not Gravur Condensed */
 ```
 
-The condensed letterform is a density strategy — instrument-panel readouts at large
-sizes, more data at legible sizes without reducing font size.
+Condensed letterform for clarity at all sizes — instrument-panel readouts and dashboards benefit from the letterform density.
 
 ```css
 /* main-* classes: sentence case, prose */
@@ -132,16 +130,6 @@ transition: all 0.4s linear;         /* continuous indicators */
 
 Minimum interactive target height: **40px**.
 
-## Component Reference
-
-For specific components, read these files in the sea-ai-design skill:
-- `sea-ai-design/components/button.md`
-- `sea-ai-design/components/modal.md`
-- `sea-ai-design/components/typography.md`
-- `sea-ai-design/components/pill.md`
-- `sea-ai-design/components/toggle.md`
-- `sea-ai-design/components/progress-bar.md`
-
 ## React Template
 
 ```jsx
@@ -176,6 +164,5 @@ export default function SeaAICard({ title, value, status }) {
 ❌ No decorative shadows or borders
 ❌ No entrance animations
 ❌ No color for emphasis — only for state
-❌ Do not use Barlow Semi Condensed in UI (that's for brand documents)
 ❌ Do not use UI surface colors (#101214 etc.) in documents/diagrams
 ```
