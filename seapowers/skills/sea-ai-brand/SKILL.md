@@ -18,13 +18,17 @@ Source of truth: **Brand Book 2025** (stored at `Brand info alt/Brand Book 2025.
 
 ## 🧭 Quick Router — Find Your Reference File
 
-**What are you building?** Pick the reference file below, then read the full guide:
+**What are you building?** Find your row, open the reference file, then read the full guide:
 
-| 📊 Diagrams & Charts | 📄 Documents (PDF/Word/Excel) | 🎤 Presentations | 💻 Web UI & Components |
-|---|---|---|---|
-| `references/diagrams.md` | `references/documents.md` | `references/presentations-pptx.md` | `references/ui-coding.md` |
-| Python/Pillow, PNG | PDF: WeasyPrint/ReportLab<br>Word: python-docx<br>Excel: openpyxl | PowerPoint (pptxgenjs) | React/HTML, DARK theme |
-| | | | + `references/frontend-components.md` |
+| Output type | Reference file | Technology |
+|---|---|---|
+| 📊 Diagram / chart / infographic | `references/diagrams.md` | Python / Pillow |
+| 📄 PDF document | `references/documents.md` | WeasyPrint / ReportLab |
+| 📄 Word document (.docx) | `references/documents.md` | python-docx |
+| 📄 Excel spreadsheet (.xlsx) | `references/documents.md` | openpyxl |
+| 🎤 Presentation (.pptx) | `references/presentations-pptx.md` | pptxgenjs |
+| 💻 Web UI / React component | `references/ui-coding.md` | React / HTML, dark theme |
+| 💻 UI component snippets | `references/frontend-components.md` | CSS / HTML |
 
 **⚠️ Before you start:** Read the relevant reference file + the "Core Brand" section below (colors, fonts, rules).
 
