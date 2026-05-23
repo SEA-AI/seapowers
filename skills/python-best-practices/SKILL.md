@@ -24,44 +24,40 @@ When in doubt, ask which option reads most clearly six months from now.
 ## Project Setup — use the Astral stack
 
 ```bash
-uv init my-project        # pyproject.toml + uv.lock + .venv
-uv add httpx              # runtime dep
+uv init my-project           # pyproject.toml + uv.lock + .venv
+uv add httpx                 # runtime dep
 uv add --dev pytest ruff ty  # dev deps
-uv sync                   # install from lockfile (CI / fresh clone)
-uv run pytest             # run inside managed env
+uv sync                      # install from lockfile (CI / fresh clone)
+uv run pytest                # run inside managed env
 ```
 
 Commit both `pyproject.toml` and `uv.lock`. Never run bare `pip install`.
 
-**Linting & formatting — ruff:** keep config in a dedicated `ruff.toml` at the project root (not buried in `pyproject.toml`):
+`uvx` (`uv tool run`) runs a tool in a temporary isolated environment without installing it permanently — useful for one-off or CI invocations: `uvx ruff check`, `uvx ruff format`, `uvx ty check`.
 
-```toml
-line-length = 88
+**Linting & formatting — ruff:** keep config in a dedicated `ruff.toml` at the project root. Rules reference: [docs.astral.sh/ruff/rules](https://docs.astral.sh/ruff/rules/).
 
-[lint]
-select = ["E", "F", "I", "UP", "B", "SIM"]
-```
-
-**Type checking — ty** (Astral, Rust-based, 10-100× faster than mypy): `uv run ty check`. Still in beta — fall back to `mypy --strict` if you need plugins (Django ORM, SQLAlchemy).
+**Type checking — ty** (Astral, Rust-based, 10-100× faster than mypy): `uvx ty check`. Still in beta (0.0.x) — fall back to `mypy --strict` if you need plugins (Django ORM, SQLAlchemy). Rules reference: [docs.astral.sh/ty/rules](https://docs.astral.sh/ty/rules/).
 
 ## Project Layout
 
-Name the package directory after the package — no extra `src/` wrapper:
+Both layouts are valid — ask the user which they prefer when setting up a new project:
 
 ```
 my-project/
-├── my_package/
-│   ├── __init__.py
-│   └── ...
+├── my_package/   ← flat (package named after project, simpler)
+│   or src/       ← src layout (extra wrapper, prevents accidental imports without install)
 ├── tests/
 ├── pyproject.toml
 ├── ruff.toml
 └── uv.lock
 ```
 
-Tests always live outside the package.
+Tests always live outside the package directory.
 
 ## Design Decisions
+
+Follow existing codebase conventions first. Introduce a different pattern only when it clearly reduces complexity — and flag it rather than applying it silently.
 
 **Dataclasses vs Pydantic** — ask: *has this data been validated yet?*
 - **No** (HTTP body, config file, env vars, anything external) → `pydantic.BaseModel`
@@ -71,7 +67,7 @@ Use `frozen=True` on value objects (coordinates, IDs, measurements).
 
 **Functions vs classes** — default to functions. Add a class only when you need shared state across calls, a concrete interface implementation, or lifecycle management (`__enter__`/`__exit__`).
 
-**Composition over inheritance.** Follow the existing codebase's conventions first; introduce new patterns only when they clearly reduce complexity.
+**Composition over inheritance** — build behaviour by combining small focused pieces rather than extending base classes. Inherit only for genuine "is-a" relationships with shared implementation; keep hierarchies shallow.
 
 **Return early.** Handle error/edge cases at the top with guard clauses. Keep the happy path at the bottom, unnested.
 
@@ -79,20 +75,12 @@ Use `frozen=True` on value objects (coordinates, IDs, measurements).
 
 Stick to pytest idioms throughout. Do **not** mix in `unittest.TestCase`, `self.assert*`, or `setUp`/`tearDown` — pytest fixtures replace all of that cleanly.
 
-**Do:**
-- Structure every test: Arrange → Act → Assert, one behaviour per test
-- Name tests after behaviour: `test_<what>_when_<condition>_<expected>`
-- Use fixtures for shared setup; scope them (`function` / `module` / `session`)
-- Use `@pytest.mark.parametrize` for input variations
+Structure every test: Arrange → Act → Assert, one behaviour per test. Use fixtures for shared setup, `@pytest.mark.parametrize` for input variations, and mock all external I/O. Mark slow tests `@pytest.mark.slow`.
 
 **Avoid:**
-- `if` / `for` inside test bodies — a conditional assertion that never runs is a silent false positive; use `parametrize` or split into separate tests
-- Assertions inside helper functions — failures show the wrong location
-- Testing implementation details — test observable behaviour, not internal state
-- Over-mocking — mock at boundaries (HTTP, DB, filesystem), not deep inside your own code
-- `assert something is True` — write a meaningful assertion that shows what went wrong
-
-Mock all external I/O. Mark genuinely slow tests `@pytest.mark.slow`.
+- Testing implementation details — test observable behaviour, not internal state; tests that mirror the implementation break on every refactor
+- Over-mocking — mock at boundaries (HTTP, DB, filesystem), not deep inside your own code; excessive mocks test the mocks, not the logic
+- `if` / `for` inside test bodies — a conditional assertion that never executes is a silent false positive
 
 ## Prefer Existing Libraries
 
