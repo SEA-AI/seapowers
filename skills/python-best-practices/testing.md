@@ -81,16 +81,21 @@ Use `pytest.param(..., id="descriptive-name")` to give cases readable names in t
 ## Mock external I/O at the boundary
 
 Mock at the edge of your system (HTTP calls, DB queries, filesystem), not deep inside
-your own logic. Use `monkeypatch` for simple cases; `unittest.mock.patch` for more complex ones.
+your own logic. Use `monkeypatch` for simple attribute/env patches; use `pytest-mock`
+(`uv add --dev pytest-mock`) for richer mocking — it provides a `mocker` fixture that
+is pytest-native and auto-cleans up after each test.
 
 ```python
+# Simple patch with monkeypatch
 def test_fetch_vessel_returns_name(monkeypatch):
-    def fake_get(url, **_):
-        m = MagicMock()
-        m.json.return_value = {"name": "EVER GIVEN"}
-        return m
+    monkeypatch.setattr("mypackage.vessels.httpx.get", lambda url, **_: 
+        type("R", (), {"json": lambda self: {"name": "EVER GIVEN"}})())
+    assert fetch_vessel("123456789")["name"] == "EVER GIVEN"
 
-    monkeypatch.setattr("mypackage.vessels.httpx.get", fake_get)
+# Richer mock with pytest-mock
+def test_fetch_vessel_returns_name(mocker):
+    mock_get = mocker.patch("mypackage.vessels.httpx.get")
+    mock_get.return_value.json.return_value = {"name": "EVER GIVEN"}
     assert fetch_vessel("123456789")["name"] == "EVER GIVEN"
 ```
 
