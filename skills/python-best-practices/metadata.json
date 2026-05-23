@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0",
+  "organization": "SEA.AI",
+  "date": "May 2026",
+  "abstract": "Python best practices for modern projects. 20 rules across 6 categories covering uv-based project setup, design decisions (dataclasses vs Pydantic, functions vs classes), pytest testing patterns, type safety, Python idioms, and async. Prioritized by impact to guide agents toward correct defaults without excessive context.",
+  "references": [
+    "https://docs.astral.sh/uv/",
+    "https://docs.pytest.org/",
+    "https://mypy.readthedocs.io/",
+    "https://docs.pydantic.dev/",
+    "https://docs.python.org/3/library/dataclasses.html",
+    "https://docs.python.org/3/library/typing.html",
+    "https://docs.python.org/3/library/asyncio.html",
+    "https://peps.python.org/pep-0544/"
+  ]
+}
