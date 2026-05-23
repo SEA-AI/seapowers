@@ -11,10 +11,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check SKILL.md frontmatter description length
+      - name: Measure SKILL.md budgets
+        id: report
         run: |
-          set -e
+          set +e
           fail=0
+          {
+            echo "| Skill | Description (chars / 1024) | Body (tokens / 5000) | Status |"
+            echo "|---|---|---|---|"
+          } > report.md
+
           while IFS= read -r -d '' file; do
             description=$(awk '
               /^---[[:space:]]*$/ { fm++; next }
@@ -29,37 +35,44 @@ jobs:
                 }
               }
             ' "$file")
-            length=${#description}
-            if [ "$length" -gt 1024 ]; then
-              echo "❌ $file: description is $length chars (max 1024)"
+            desc_len=${#description}
+
+            body=$(awk '/^---[[:space:]]*$/ { fm++; next } fm >= 2 { print }' "$file")
+            body_chars=${#body}
+            body_tokens=$(( body_chars / 4 ))
+
+            status="✅"
+            if [ "$desc_len" -gt 1024 ] || [ "$body_tokens" -gt 5000 ]; then
+              status="❌"
               fail=1
-            else
-              echo "✅ $file: description is $length chars"
             fi
+
+            echo "| \`$file\` | $desc_len | $body_tokens | $status |" >> report.md
           done < <(find skills -name SKILL.md -print0)
+
+          cat report.md
+          {
+            echo 'table<<EOF'
+            cat report.md
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+          echo "fail=$fail" >> "$GITHUB_OUTPUT"
           exit $fail
 
-      - name: Check SKILL.md body token count
-        id: body-guard
-        uses: cuttlesoft/token-guard@v1
-        with:
-          patterns: |
-            skills/**/SKILL.md
-          max_tokens: "5000"
-
-      - name: Post token check failure comment
-        if: failure()
+      - name: Post failure comment
+        if: failure() && steps.report.outputs.fail == '1'
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: skill-token-check
           message: |
             ❌ **Skill Token Check Failed**
 
-            One or more `SKILL.md` files exceed Anthropic's recommended limits.
+            ${{ steps.report.outputs.table }}
 
-            **Anthropic guidelines** ([source](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices)):
-            - **Frontmatter `description`:** max **1024 characters** (hard cap)
-            - **SKILL.md body:** under **500 lines / ~5000 tokens** (recommended)
+            **Limits** ([Anthropic best practices](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices)):
+            - Frontmatter `description`: ≤ **1024 characters** (hard cap)
+            - `SKILL.md` body: ≤ **~5000 tokens** (estimated as chars / 4)
 
             **How to fix:**
             - Trim verbose explanations — Claude already knows common concepts
@@ -67,7 +80,7 @@ jobs:
             - Use progressive disclosure: link from `SKILL.md` to deeper docs
             - Keep references one level deep from `SKILL.md`
 
-      - name: Post token check success comment
+      - name: Post success comment
         if: success()
         uses: marocchino/sticky-pull-request-comment@v2
         with:
@@ -75,4 +88,6 @@ jobs:
           message: |
             ✅ **Skill Token Check Passed**
 
-            All `SKILL.md` files are within Anthropic's recommended token budget (≤5000 tokens body, ≤1024 char description).
+            ${{ steps.report.outputs.table }}
+
+            Limits: description ≤ 1024 chars, body ≤ ~5000 tokens (chars / 4).
