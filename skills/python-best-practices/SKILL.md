@@ -37,7 +37,7 @@ Commit both `pyproject.toml` and `uv.lock`. Never run bare `pip install`.
 
 **Linting & formatting — ruff:** keep config in a dedicated `ruff.toml` at the project root. Rules reference: [docs.astral.sh/ruff/rules](https://docs.astral.sh/ruff/rules/).
 
-**Type checking — ty** (Astral, Rust-based, 10-100× faster than mypy): `uvx ty check`. Still in beta (0.0.x) — fall back to `mypy --strict` if you need plugins (Django ORM, SQLAlchemy). Rules reference: [docs.astral.sh/ty/rules](https://docs.astral.sh/ty/rules/).
+**Type checking — ty** (Astral, Rust-based, 10-100× faster than mypy): `uvx ty check`. Fall back to `mypy --strict` if you need plugins (Django ORM, SQLAlchemy). Rules reference: [docs.astral.sh/ty/rules](https://docs.astral.sh/ty/rules/).
 
 ## Project Layout
 
