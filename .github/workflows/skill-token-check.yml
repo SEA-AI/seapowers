@@ -2,8 +2,8 @@ name: Skill Token Check
 
 on:
   pull_request:
-    paths:
-      - 'skills/**/SKILL.md'
+  # paths:
+  #   - 'skills/**/SKILL.md'
 
 jobs:
   token-check:
