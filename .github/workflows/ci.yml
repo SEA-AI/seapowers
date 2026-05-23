@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  pull_request:
+    paths:
+      - 'skills/**'
+      - '.claude-plugin/**'
+
+jobs:
+  version-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check version bumps and semver
+        id: check
+        run: |
+          set -e
+          base="origin/${{ github.base_ref }}"
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          changed=$(git diff --name-only "$base"...HEAD)
+
+          check_bump() {
+            local file=$1 jq_path=$2 label=$3 pattern=$4
+            if ! echo "$changed" | grep -qE "$pattern"; then return 0; fi
+            local old new
+            old=$(git show "$base:$file" | jq -r "$jq_path")
+            new=$(jq -r "$jq_path" "$file")
+            if [ "$old" = "$new" ]; then
+              echo "❌ $label changed but $file version not bumped ($old)"
+              return 1
+            fi
+            echo "✅ $label: $old → $new"
+          }
+
+          check_bump .claude-plugin/plugin.json .version       "Skills"      '^skills/'
+          check_bump .claude-plugin/marketplace.json .metadata.version "Marketplace" '^\.claude-plugin/marketplace\.json$'
+
+          semver='^[0-9]+\.[0-9]+\.[0-9]+$'
+          for spec in ".claude-plugin/plugin.json:.version" \
+                      ".claude-plugin/marketplace.json:.metadata.version"; do
+            file=${spec%%:*}; path=${spec##*:}
+            v=$(jq -r "$path" "$file")
+            [[ $v =~ $semver ]] || { echo "❌ Invalid semver in $file: $v"; exit 1; }
+          done
+          echo "✅ All versions use valid semver"
+
+      - name: Post version-check result
+        if: always()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: version-check
+          message: |
+            ${{ job.status == 'success' && '✅ **Version Check Passed**' || '❌ **Version Check Failed**' }}
+
+            **Bump rules:**
+            - Skills modified → bump `.claude-plugin/plugin.json` version
+            - Marketplace modified → bump `.claude-plugin/marketplace.json` version
+            - Format: semantic versioning (`X.Y.Z`)
+
+            **Semver guide:** `PATCH` = fixes · `MINOR` = features · `MAJOR` = breaking
+
+  token-budget:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Measure SKILL.md budgets
+        id: report
+        run: |
+          set +e
+          fail=0
+          {
+            echo "| Skill | Description (chars / 1024) | Body (tokens / 5000) | Status |"
+            echo "|---|---|---|---|"
+          } > report.md
+
+          while IFS= read -r -d '' file; do
+            description=$(awk '
+              /^---[[:space:]]*$/ { fm++; next }
+              fm == 1 {
+                if (/^description:[[:space:]]*[|>]/) { collect=1; next }
+                if (collect && /^[a-zA-Z_-]+:/) { collect=0 }
+                if (collect) { print; next }
+                if (/^description:[[:space:]]*/) {
+                  sub(/^description:[[:space:]]*/, "")
+                  gsub(/^["'"'"']|["'"'"']$/, "")
+                  print
+                }
+              }
+            ' "$file")
+            desc_len=${#description}
+
+            body=$(awk '/^---[[:space:]]*$/ { fm++; next } fm >= 2 { print }' "$file")
+            body_tokens=$(( ${#body} / 4 ))
+
+            status="✅"
+            if [ "$desc_len" -gt 1024 ] || [ "$body_tokens" -gt 5000 ]; then
+              status="❌"; fail=1
+            fi
+            echo "| \`$file\` | $desc_len | $body_tokens | $status |" >> report.md
+          done < <(find skills -name SKILL.md -print0)
+
+          cat report.md
+          { echo 'table<<EOF'; cat report.md; echo 'EOF'; } >> "$GITHUB_OUTPUT"
+          exit $fail
+
+      - name: Post token-budget result
+        if: always()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: token-budget
+          message: |
+            ${{ job.status == 'success' && '✅ **Skill Token Budget Passed**' || '❌ **Skill Token Budget Failed**' }}
+
+            ${{ steps.report.outputs.table }}
+
+            **Limits** ([Anthropic best practices](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices)):
+            description ≤ 1024 chars · body ≤ ~5000 tokens (chars / 4)
