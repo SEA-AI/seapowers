@@ -1,0 +1,50 @@
+name: Skill Token Check
+
+on:
+  pull_request:
+    paths:
+      - 'skills/**/SKILL.md'
+
+jobs:
+  token-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check SKILL.md body token count
+        id: body-guard
+        uses: cuttlesoft/token-guard@v1
+        with:
+          patterns: |
+            skills/**/SKILL.md
+          max_tokens: "5000"
+
+      - name: Post token check failure comment
+        if: failure()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: skill-token-check
+          message: |
+            ❌ **Skill Token Check Failed**
+
+            One or more `SKILL.md` files exceed Anthropic's recommended limits.
+
+            **Anthropic guidelines** ([source](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices)):
+            - **Frontmatter `description`:** max **1024 characters** (hard cap)
+            - **SKILL.md body:** under **500 lines / ~5000 tokens** (recommended)
+
+            **How to fix:**
+            - Trim verbose explanations — Claude already knows common concepts
+            - Move detailed reference material into separate files (e.g. `reference/*.md`)
+            - Use progressive disclosure: link from `SKILL.md` to deeper docs
+            - Keep references one level deep from `SKILL.md`
+
+      - name: Post token check success comment
+        if: success()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: skill-token-check
+          message: |
+            ✅ **Skill Token Check Passed**
+
+            All `SKILL.md` files are within Anthropic's recommended token budget (≤5000 tokens body, ≤1024 char description).
