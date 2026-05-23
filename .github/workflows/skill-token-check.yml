@@ -11,6 +11,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check SKILL.md frontmatter description length
+        run: |
+          set -e
+          fail=0
+          while IFS= read -r -d '' file; do
+            description=$(awk '
+              /^---[[:space:]]*$/ { fm++; next }
+              fm == 1 {
+                if (/^description:[[:space:]]*[|>]/) { collect=1; next }
+                if (collect && /^[a-zA-Z_-]+:/) { collect=0 }
+                if (collect) { print; next }
+                if (/^description:[[:space:]]*/) {
+                  sub(/^description:[[:space:]]*/, "")
+                  gsub(/^["'"'"']|["'"'"']$/, "")
+                  print
+                }
+              }
+            ' "$file")
+            length=${#description}
+            if [ "$length" -gt 1024 ]; then
+              echo "❌ $file: description is $length chars (max 1024)"
+              fail=1
+            else
+              echo "✅ $file: description is $length chars"
+            fi
+          done < <(find skills -name SKILL.md -print0)
+          exit $fail
+
       - name: Check SKILL.md body token count
         id: body-guard
         uses: cuttlesoft/token-guard@v1
