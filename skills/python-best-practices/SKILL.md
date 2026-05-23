@@ -1,89 +1,68 @@
 ---
 name: python-best-practices
 description: >
-  Python best practices for modern projects. Use when writing, reviewing, or refactoring
-  Python code to ensure correct tooling, idiomatic patterns, and sound design decisions.
-  Triggers on tasks involving Python project setup (uv), testing (pytest), type annotations,
-  async code, and design questions like dataclasses vs Pydantic or functions vs classes.
+  Modern Python best practices. Use when writing, reviewing, or refactoring Python code,
+  setting up a project, choosing between design patterns (dataclasses vs Pydantic,
+  functions vs classes), writing tests, or working with async code.
 license: MIT
-metadata:
-  author: SEA.AI
-  version: "1.0.0"
 ---
 
 # Python Best Practices
 
-Modern Python development guide for AI agents. Covers tooling, design decisions, testing,
-types, idioms, and async — prioritized by impact to steer toward correct defaults.
+## Project Setup — always use uv
 
-## Core Philosophy
+```bash
+uv init my-project          # new project (creates pyproject.toml + uv.lock + .venv)
+uv add httpx                # add runtime dep
+uv add --dev pytest ruff mypy  # add dev deps
+uv sync                     # install from lockfile (CI / fresh clone)
+uv run pytest               # run inside managed env
+```
 
-- **Explicit over implicit** — name things clearly, annotate types, avoid magic
-- **Simple over clever** — the right solution is usually the boring one
-- **Flat is better than nested** — early returns, small functions, no deep hierarchies
-- **Boundaries get validation, internals get speed** — Pydantic at the edges, dataclasses inside
+- Never run bare `pip install`. Commit both `pyproject.toml` **and** `uv.lock`.
+- All tool config (ruff, mypy, pytest) goes in `pyproject.toml` — no separate `.flake8`, `mypy.ini`, `pytest.ini`.
+- Use `src/` layout for installable packages; flat layout is fine for internal tools.
 
-## When to Apply
+## Design Decisions
 
-Reference these guidelines when:
-- Starting a new Python project or adding dependencies
-- Choosing between design patterns (classes vs functions, dataclasses vs Pydantic)
-- Writing or reviewing tests
-- Handling async code
-- Unsure about idiomatic Python
+**Dataclasses vs Pydantic** — ask: *has this data been validated yet?*
+- **No** (external input: HTTP body, config file, env vars) → `pydantic.BaseModel` — it validates and coerces
+- **Yes** (internal domain objects, already-clean data) → `@dataclass` — fast, zero overhead, works with mypy
 
-## Rule Categories by Priority
+Use `frozen=True` on dataclasses that represent value objects (coordinates, IDs, measurements).
 
-| Priority | Category | Impact | Prefix |
-|----------|----------|--------|--------|
-| 1 | Project Setup (uv) | CRITICAL | `setup-` |
-| 2 | Design Decisions | HIGH | `design-` |
-| 3 | Testing with pytest | HIGH | `test-` |
-| 4 | Type Safety | HIGH | `types-` |
-| 5 | Python Idioms | MEDIUM | `idiom-` |
-| 6 | Async Patterns | MEDIUM | `async-` |
+**Functions vs Classes** — default to functions. Add a class only when you need:
+1. Shared mutable state across multiple calls
+2. A concrete implementation of a `Protocol`
+3. Lifecycle management (`__enter__`/`__exit__`)
 
-## Quick Reference
+**Composition over inheritance** — define interfaces with `typing.Protocol` (structural typing, no coupling). Avoid deep class hierarchies; cap inheritance at one level.
 
-### 1. Project Setup with uv (CRITICAL)
+**Return early** — handle error/edge cases at the top with guard clauses. Keep the happy path at the bottom, unnested.
 
-- `setup-uv-commands` — Use uv for all project and dependency management
-- `setup-pyproject-only` — All config lives in pyproject.toml; no requirements.txt, no setup.py
-- `setup-project-layout` — Use src/ layout for installable packages; flat layout for scripts/tools
+## Testing — pytest
 
-### 2. Design Decisions (HIGH)
+- Structure every test: **Arrange → Act → Assert**, one behaviour per test.
+- Name tests after behaviour: `test_<what>_when_<condition>_returns_<expected>`.
+- Use **fixtures** for shared setup; scope them (`function` / `module` / `session`) to avoid recreating expensive objects.
+- Use `@pytest.mark.parametrize` for input variations — never loop inside a test.
+- No `if` or `for` inside test bodies. A conditional assertion that never runs is a silent false positive.
+- Mock all external I/O (`monkeypatch` or `unittest.mock`). Mark slow tests `@pytest.mark.slow`.
 
-- `design-dataclass-vs-pydantic` — Dataclasses for internal data; Pydantic at trust boundaries
-- `design-functions-vs-classes` — Prefer functions; use classes only when you need shared mutable state or a clean interface
-- `design-composition-over-inheritance` — Favour composition and Protocol; avoid deep class hierarchies
-- `design-early-returns` — Return early to eliminate nesting; keep the happy path at the bottom
+## Type Safety
 
-### 3. Testing with pytest (HIGH)
+- Annotate every function signature (parameters + return type). Run `mypy --strict`.
+- Avoid `Any` — it silently disables type checking for everything it touches. Use `object`, a `Protocol`, or a `TypedDict` instead.
+- Use `typing.Protocol` to define interfaces; it requires no imports in implementing classes and makes test doubles trivial.
 
-- `test-arrange-act-assert` — Structure every test with clear AAA sections
-- `test-fixtures` — Use fixtures for shared setup; scope them correctly
-- `test-parametrize` — Use `@pytest.mark.parametrize` instead of loops inside tests
-- `test-no-logic` — Tests must not contain branching logic or assertions in loops
-- `test-fast-and-isolated` — Tests must be fast and hermetic; mock all external I/O
+## Python Idioms
 
-### 4. Type Safety (HIGH)
+- Prefer list/dict/set comprehensions over `map`/`filter`. Use generator expressions (`sum(x for x in ...)`) when you only iterate once.
+- Always use `with` for resources (files, connections, locks). Use `contextlib.contextmanager` to write your own.
+- Unpack tuples by name (`x, y = point`) instead of indexing (`point[0]`).
 
-- `types-always-annotate` — Annotate every function signature; skip bodies only when obvious
-- `types-avoid-any` — Replace `Any` with `Unknown`, `object`, `Protocol`, or proper generics
-- `types-use-protocol` — Define interfaces with `Protocol`, not base classes
+## Async
 
-### 5. Python Idioms (MEDIUM)
-
-- `idiom-comprehensions` — Prefer comprehensions over `map`/`filter`; generator expressions for large sequences
-- `idiom-context-managers` — Always use `with` for resources; write `__enter__`/`__exit__` or use `contextlib`
-- `idiom-unpacking` — Use tuple unpacking and `*`-spread instead of index access
-
-### 6. Async Patterns (MEDIUM)
-
-- `async-io-only` — Use `async`/`await` only for I/O-bound work; use `ProcessPoolExecutor` for CPU
-- `async-gather` — Use `asyncio.gather` or `TaskGroup` for concurrent independent I/O
-- `async-avoid-blocking` — Never call blocking code inside an async function
-
-## Full Compiled Document
-
-For all rules expanded in one document: `AGENTS.md`
+- Use `async`/`await` only for **I/O-bound** work. For CPU-bound work use `ProcessPoolExecutor`.
+- Run independent I/O concurrently: `asyncio.TaskGroup` (Python 3.11+, preferred) or `asyncio.gather`.
+- Never call blocking code inside an async function (`time.sleep`, `requests.get`, synchronous file I/O). Use async equivalents or `loop.run_in_executor`.
