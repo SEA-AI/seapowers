@@ -33,27 +33,13 @@ uv run pytest                # run inside managed env
 
 Commit both `pyproject.toml` and `uv.lock`. Never run bare `pip install`.
 
-`uvx` (`uv tool run`) runs a tool in a temporary isolated environment without installing it permanently — useful for one-off or CI invocations: `uvx ruff check`, `uvx ruff format`, `uvx ty check`.
+`uvx` (`uv tool run`) runs a tool in a temporary isolated environment — useful for one-off or CI invocations without permanent installation: `uvx ruff check`, `uvx ruff format`, `uvx ty check`.
 
-**Linting & formatting — ruff:** keep config in a dedicated `ruff.toml` at the project root. Rules reference: [docs.astral.sh/ruff/rules](https://docs.astral.sh/ruff/rules/).
+**Linting & formatting — ruff:** config lives in a dedicated `ruff.toml` at the project root. Rules: [docs.astral.sh/ruff/rules](https://docs.astral.sh/ruff/rules/).
 
-**Type checking — ty** (Astral, Rust-based, 10-100× faster than mypy): `uvx ty check`. Fall back to `mypy --strict` if you need plugins (Django ORM, SQLAlchemy). Rules reference: [docs.astral.sh/ty/rules](https://docs.astral.sh/ty/rules/).
+**Type checking — ty** (Astral, Rust-based, 10-100× faster than mypy): `uvx ty check`. Fall back to `mypy --strict` if you need plugins (Django ORM, SQLAlchemy). Rules: [docs.astral.sh/ty/rules](https://docs.astral.sh/ty/rules/).
 
-## Project Layout
-
-Both layouts are valid — ask the user which they prefer when setting up a new project:
-
-```
-my-project/
-├── my_package/   ← flat (package named after project, simpler)
-│   or src/       ← src layout (extra wrapper, prevents accidental imports without install)
-├── tests/
-├── pyproject.toml
-├── ruff.toml
-└── uv.lock
-```
-
-Tests always live outside the package directory.
+**Project layout:** See [project-layout.md](project-layout.md).
 
 ## Design Decisions
 
@@ -73,14 +59,7 @@ Use `frozen=True` on value objects (coordinates, IDs, measurements).
 
 ## Testing — pytest only
 
-Stick to pytest idioms throughout. Do **not** mix in `unittest.TestCase`, `self.assert*`, or `setUp`/`tearDown` — pytest fixtures replace all of that cleanly.
-
-Structure every test: Arrange → Act → Assert, one behaviour per test. Use fixtures for shared setup, `@pytest.mark.parametrize` for input variations, and mock all external I/O. Mark slow tests `@pytest.mark.slow`.
-
-**Avoid:**
-- Testing implementation details — test observable behaviour, not internal state; tests that mirror the implementation break on every refactor
-- Over-mocking — mock at boundaries (HTTP, DB, filesystem), not deep inside your own code; excessive mocks test the mocks, not the logic
-- `if` / `for` inside test bodies — a conditional assertion that never executes is a silent false positive
+See [testing.md](testing.md) for full guidelines. Short version: pytest only, no `unittest.TestCase` mixing, Arrange → Act → Assert, mock all external I/O.
 
 ## Prefer Existing Libraries
 
