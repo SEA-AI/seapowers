@@ -103,13 +103,17 @@ jobs:
 
   check-tokens:
     runs-on: ubuntu-latest
-    env:
-      BASE_REF: ${{ github.base_ref }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Get changed markdown files
+        id: changed
+        uses: tj-actions/changed-files@v47
+        with:
+          files: '**/*.md'
 
       - uses: astral-sh/setup-uv@v5
 
@@ -119,12 +123,8 @@ jobs:
           set +e
           fail=0
 
-          git fetch origin "$BASE_REF" --depth=1
-
           # All modified (non-deleted) .md files in this PR
-          mapfile -t md_files < <(
-            git diff --diff-filter=d --name-only "origin/$BASE_REF"...HEAD | grep '\.md$'
-          )
+          IFS=' ' read -ra md_files <<< "${{ steps.changed.outputs.all_changed_files }}"
 
           if [ ${#md_files[@]} -eq 0 ]; then
             echo "No markdown files modified."
