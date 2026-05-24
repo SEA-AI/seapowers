@@ -23,30 +23,20 @@ jobs:
           git fetch origin "${{ github.base_ref }}" --depth=1
           changed=$(git diff --name-only "$base"...HEAD)
 
-          check_bump() {
+          semver='^[0-9]+\.[0-9]+\.[0-9]+$'
+          check() {
             local file=$1 jq_path=$2 label=$3 pattern=$4
-            if ! echo "$changed" | grep -qE "$pattern"; then return 0; fi
-            local old new
-            old=$(git show "$base:$file" | jq -r "$jq_path")
+            local new old
             new=$(jq -r "$jq_path" "$file")
-            if [ "$old" = "$new" ]; then
-              echo "❌ $label changed but $file version not bumped ($old)"
-              return 1
-            fi
+            [[ $new =~ $semver ]] || { echo "❌ Invalid semver in $file: $new"; return 1; }
+            echo "$changed" | grep -qE "$pattern" || return 0
+            old=$(git show "$base:$file" | jq -r "$jq_path")
+            [ "$old" != "$new" ] || { echo "❌ $label changed but $file version not bumped ($old)"; return 1; }
             echo "✅ $label: $old → $new"
           }
 
-          check_bump .claude-plugin/plugin.json .version       "Skills"      '^skills/'
-          check_bump .claude-plugin/marketplace.json .metadata.version "Marketplace" '^\.claude-plugin/marketplace\.json$'
-
-          semver='^[0-9]+\.[0-9]+\.[0-9]+$'
-          for spec in ".claude-plugin/plugin.json:.version" \
-                      ".claude-plugin/marketplace.json:.metadata.version"; do
-            file=${spec%%:*}; path=${spec##*:}
-            v=$(jq -r "$path" "$file")
-            [[ $v =~ $semver ]] || { echo "❌ Invalid semver in $file: $v"; exit 1; }
-          done
-          echo "✅ All versions use valid semver"
+          check .claude-plugin/plugin.json       .version              "Skills"      '^skills/'
+          check .claude-plugin/marketplace.json  .metadata.version     "Marketplace" '^\.claude-plugin/marketplace\.json$'
 
       - name: Post version-check result
         if: always()
@@ -81,22 +71,9 @@ jobs:
           } > report.md
 
           while IFS= read -r -d '' file; do
-            description=$(awk '
-              /^---[[:space:]]*$/ { fm++; next }
-              fm == 1 {
-                if (/^description:[[:space:]]*[|>]/) { collect=1; next }
-                if (collect && /^[a-zA-Z_-]+:/) { collect=0 }
-                if (collect) { print; next }
-                if (/^description:[[:space:]]*/) {
-                  sub(/^description:[[:space:]]*/, "")
-                  gsub(/^["'"'"']|["'"'"']$/, "")
-                  print
-                }
-              }
-            ' "$file")
-            desc_len=${#description}
-
-            body=$(awk '/^---[[:space:]]*$/ { fm++; next } fm >= 2 { print }' "$file")
+            frontmatter=$(awk '/^---[[:space:]]*$/ { c++; next } c == 1' "$file")
+            body=$(awk '/^---[[:space:]]*$/ { c++; next } c >= 2' "$file")
+            desc_len=$(echo "$frontmatter" | yq -r '.description // ""' | tr -d '\n' | wc -c)
             body_tokens=$(( ${#body} / 4 ))
 
             status="✅"
