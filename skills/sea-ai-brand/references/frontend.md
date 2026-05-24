@@ -21,9 +21,6 @@ a distinct DARK theme — this is the one place where dark backgrounds are the s
 --surface-primary-3:  #0A67C2;  /* active/selected/in-progress */
 --surface-danger-3:   #C20A20;  /* error/critical/alert */
 --surface-warning-3:  #F1B80D;  /* caution/approaching limit */
---surface-success-3:  #2DA84F;  /* complete/confirmed/nominal */
-/* ⚠️ --surface-success-3 is not in tokens.css — define it locally until
-   a success scale is added to the design system. */
 
 /* Text on colored surfaces */
 --content-primary-2:  #CFE5FC;
@@ -81,14 +78,13 @@ Depth comes from surface value contrast only — no shadows, no borders:
 .grid { gap: 8px; padding: 16px; background: var(--surface-neutral-3); }
 ```
 
-## Semantic Color — 4 Roles Only
+## Semantic Color — 3 Roles
 
 | Color | Signal | Use |
 |-------|--------|-----|
 | Primary blue | Active / selected / in progress | Running state, active tab |
 | Danger red | Error / critical / destructive | Alert, failure, expiry |
 | Warning amber | Caution / near limit | Pending, near-threshold |
-| Success green | Complete / confirmed | Done, connected |
 
 Neutral grey is the surface system, not a semantic role — use it for idle, secondary, and dividers.
 
@@ -323,7 +319,6 @@ export default function SeaAICard({ title, value, status }) {
 ### Pill
 
 ```html
-<span class="pill pill--connected">Connected</span>
 <span class="pill pill--disconnected">Not Connected</span>
 <span class="pill pill--connecting">Connecting</span>
 ```
@@ -341,7 +336,6 @@ export default function SeaAICard({ title, value, status }) {
   letter-spacing: 0.04em;
 }
 
-.pill--connected    { background: var(--surface-success-3); color: #fff; }
 .pill--disconnected { background: var(--surface-danger-3);  color: #fff; }
 .pill--connecting   { background: var(--surface-warning-3); color: #000; }
 ```
