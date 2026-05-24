@@ -6,9 +6,6 @@ permissions:
 
 on:
   pull_request:
-    paths:
-      - 'skills/**'
-      - '.claude-plugin/**'
 
 jobs:
   version-check:
@@ -18,7 +15,16 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Get changed files
+        id: changed
+        uses: tj-actions/changed-files@v47
+        with:
+          files: |
+            skills/**
+            .claude-plugin/**
+
       - name: Check version bumps and semver
+        if: steps.changed.outputs.any_changed == 'true'
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
@@ -43,7 +49,7 @@ jobs:
           check .claude-plugin/marketplace.json  .metadata.version "Marketplace" '^\.claude-plugin/marketplace\.json$'
 
       - name: Post version-check result
-        if: always()
+        if: always() && steps.changed.outputs.any_changed == 'true'
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: version-check
@@ -65,16 +71,27 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Get changed markdown files
+      - name: Get changed files
         id: changed
+        uses: tj-actions/changed-files@v47
+        with:
+          files: |
+            skills/**
+            .claude-plugin/**
+
+      - name: Get changed markdown files
+        id: changed-md
+        if: steps.changed.outputs.any_changed == 'true'
         uses: tj-actions/changed-files@v47
         with:
           files: '**/*.md'
 
       - uses: astral-sh/setup-uv@v5
+        if: steps.changed.outputs.any_changed == 'true'
 
       - name: Check descriptions
         id: descriptions
+        if: steps.changed.outputs.any_changed == 'true'
         continue-on-error: true
         run: |
           {
@@ -96,9 +113,10 @@ jobs:
 
       - name: Check tokens
         id: tokens
+        if: steps.changed.outputs.any_changed == 'true'
         continue-on-error: true
         run: |
-          IFS=' ' read -ra md_files <<< "${{ steps.changed.outputs.all_changed_files }}"
+          IFS=' ' read -ra md_files <<< "${{ steps.changed-md.outputs.all_changed_files }}"
 
           if [ ${#md_files[@]} -eq 0 ]; then
             echo 'table=_No markdown files modified._' >> "$GITHUB_OUTPUT"
@@ -128,7 +146,7 @@ jobs:
           exit $fail
 
       - name: Post skill-lint result
-        if: always()
+        if: always() && steps.changed.outputs.any_changed == 'true'
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: skill-lint
@@ -144,7 +162,7 @@ jobs:
             _`description` ≤ 1024 chars · `SKILL.md` body ≤ 5000 tokens via `tiktoken cl100k_base` · [Anthropic best practices](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices)_
 
       - name: Evaluate
-        if: always()
+        if: always() && steps.changed.outputs.any_changed == 'true'
         run: |
           [[ "${{ steps.descriptions.outcome }}" != "failure" && \
              "${{ steps.tokens.outcome }}"       != "failure" ]] || exit 1
