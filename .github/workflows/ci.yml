@@ -105,15 +105,7 @@ jobs:
         env:
           CHANGED_SKILLS: ${{ steps.changed-skills.outputs.all_changed_files }}
         run: |
-          echo "::group::DEBUG CHANGED_SKILLS"
-          echo "raw value: [$CHANGED_SKILLS]"
-          echo "hex dump:"
-          echo "$CHANGED_SKILLS" | xxd | head -20
-          echo "::endgroup::"
-
           mapfile -t skill_files < <(jq -r '.[]' <<< "${CHANGED_SKILLS//\\\"/\"}")
-          echo "parsed skill_files (${#skill_files[@]} entries):"
-          printf '  [%s]\n' "${skill_files[@]}"
 
           {
             echo "| Skill | Description (chars / 1024) | Status |"
@@ -139,15 +131,7 @@ jobs:
         env:
           CHANGED_MD: ${{ steps.changed-md.outputs.all_changed_files }}
         run: |
-          echo "::group::DEBUG CHANGED_MD"
-          echo "raw value: [$CHANGED_MD]"
-          echo "hex dump:"
-          echo "$CHANGED_MD" | xxd | head -20
-          echo "::endgroup::"
-
           mapfile -t md_files < <(jq -r '.[]' <<< "${CHANGED_MD//\\\"/\"}")
-          echo "parsed md_files (${#md_files[@]} entries):"
-          printf '  [%s]\n' "${md_files[@]}"
 
           if [ ${#md_files[@]} -eq 0 ]; then
             echo 'table=_No markdown files modified._' >> "$GITHUB_OUTPUT"
