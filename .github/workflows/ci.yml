@@ -6,9 +6,9 @@ permissions:
 
 on:
   pull_request:
-  # paths:
-  #   - 'skills/**'
-  #   - '.claude-plugin/**'
+    paths:
+      - 'skills/**'
+      - '.claude-plugin/**'
 
 jobs:
   version-check:
