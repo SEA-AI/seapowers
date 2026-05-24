@@ -85,7 +85,7 @@ jobs:
         uses: tj-actions/changed-files@v47
         with:
           files: 'skills/**/SKILL.md'
-          separator: "\n"
+          json: "true"
 
       - name: Get changed markdown files
         id: changed-md
@@ -93,7 +93,7 @@ jobs:
         uses: tj-actions/changed-files@v47
         with:
           files: '**/*.md'
-          separator: "\n"
+          json: "true"
 
       - uses: astral-sh/setup-uv@v5
         if: steps.changed.outputs.any_changed == 'true'
@@ -103,7 +103,7 @@ jobs:
         if: steps.changed-skills.outputs.any_changed == 'true'
         continue-on-error: true
         run: |
-          mapfile -t skill_files <<< "${{ steps.changed-skills.outputs.all_changed_files }}"
+          mapfile -t skill_files < <(jq -r '.[]' <<< '${{ steps.changed-skills.outputs.all_changed_files }}')
 
           {
             echo "| Skill | Description (chars / 1024) | Status |"
@@ -127,7 +127,7 @@ jobs:
         if: steps.changed.outputs.any_changed == 'true'
         continue-on-error: true
         run: |
-          mapfile -t md_files <<< "${{ steps.changed-md.outputs.all_changed_files }}"
+          mapfile -t md_files < <(jq -r '.[]' <<< '${{ steps.changed-md.outputs.all_changed_files }}')
 
           if [ ${#md_files[@]} -eq 0 ]; then
             echo 'table=_No markdown files modified._' >> "$GITHUB_OUTPUT"
