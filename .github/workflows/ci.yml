@@ -16,11 +16,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
           persist-credentials: false
 
       - name: Check version bumps and semver
-        id: check
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
@@ -93,7 +91,6 @@ jobs:
             echo "| \`$file\` | $desc_len | $status |" >> descriptions.md
           done < <(find skills -name SKILL.md -print0)
 
-          cat descriptions.md
           { echo 'table<<EOF'; cat descriptions.md; echo 'EOF'; } >> "$GITHUB_OUTPUT"
           exit $fail
 
@@ -127,7 +124,6 @@ jobs:
             fi
           done
 
-          cat tokens.md
           { echo 'table<<EOF'; cat tokens.md; echo 'EOF'; } >> "$GITHUB_OUTPUT"
           exit $fail
 
