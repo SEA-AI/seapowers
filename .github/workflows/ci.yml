@@ -41,8 +41,8 @@ jobs:
             echo "✅ $label: $old → $new"
           }
 
-          check .claude-plugin/plugin.json       .version              "Skills"      '^skills/'
-          check .claude-plugin/marketplace.json  .metadata.version     "Marketplace" '^\.claude-plugin/marketplace\.json$'
+          check .claude-plugin/plugin.json       .version          "Skills"      '^skills/'
+          check .claude-plugin/marketplace.json  .metadata.version "Marketplace" '^\.claude-plugin/marketplace\.json$'
 
       - name: Post version-check result
         if: always()
@@ -59,68 +59,114 @@ jobs:
 
             **Semver guide:** `PATCH` = fixes · `MINOR` = features · `MAJOR` = breaking
 
-  token-budget:
+  check-descriptions:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
 
-      - uses: astral-sh/setup-uv@v5
-
-      - name: Measure SKILL.md budgets
+      - name: Check SKILL.md description lengths
         id: report
         run: |
           set +e
           fail=0
           {
-            echo "| Skill | Description (chars / 1024) | Body (tokens / 5000) | Status |"
-            echo "|---|---|---|---|"
+            echo "| Skill | Description (chars / 1024) | Status |"
+            echo "|---|---|---|"
           } > report.md
 
-          # PEP 723 inline-dep script — uv resolves tiktoken, cached after first run
-          cat > /tmp/count_tokens.py << 'PYEOF'
-# /// script
-# dependencies = ["tiktoken"]
-# ///
-import sys, tiktoken
-enc = tiktoken.get_encoding("cl100k_base")
-for path in sys.argv[1:]:
-    text = open(path).read()
-    parts = text.split("---\n", 2)
-    body = parts[2] if len(parts) >= 3 else text
-    print(len(enc.encode(body)))
-PYEOF
-
-          mapfile -d '' files < <(find skills -name SKILL.md -print0)
-          readarray -t token_counts < <(uv run /tmp/count_tokens.py "${files[@]}")
-
-          for i in "${!files[@]}"; do
-            file="${files[$i]}"
-            body_tokens="${token_counts[$i]}"
+          while IFS= read -r -d '' file; do
             frontmatter=$(awk '/^---[[:space:]]*$/ { c++; next } c == 1' "$file")
             desc_len=$(echo "$frontmatter" | yq -r '.description // ""' | tr -d '\n' | wc -c)
 
             status="✅"
-            if [ "$desc_len" -gt 1024 ] || [ "$body_tokens" -gt 5000 ]; then
-              status="❌"; fail=1
+            [ "$desc_len" -le 1024 ] || { status="❌"; fail=1; }
+            echo "| \`$file\` | $desc_len | $status |" >> report.md
+          done < <(find skills -name SKILL.md -print0)
+
+          cat report.md
+          { echo 'table<<EOF'; cat report.md; echo 'EOF'; } >> "$GITHUB_OUTPUT"
+          exit $fail
+
+      - name: Post description-check result
+        if: always()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: check-descriptions
+          message: |
+            ${{ job.status == 'success' && '✅ **Description Check Passed**' || '❌ **Description Check Failed**' }}
+
+            ${{ steps.report.outputs.table }}
+
+            Frontmatter `description` must be ≤ 1024 characters ([hard cap](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices)).
+
+  check-tokens:
+    runs-on: ubuntu-latest
+    env:
+      BASE_REF: ${{ github.base_ref }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Count tokens in modified markdown files
+        id: report
+        run: |
+          set +e
+          fail=0
+
+          git fetch origin "$BASE_REF" --depth=1
+
+          # All modified (non-deleted) .md files in this PR
+          mapfile -t md_files < <(
+            git diff --diff-filter=d --name-only "origin/$BASE_REF"...HEAD | grep '\.md$'
+          )
+
+          if [ ${#md_files[@]} -eq 0 ]; then
+            echo "No markdown files modified."
+            echo 'table=No markdown files modified.' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          {
+            echo "| File | Tokens | Limit | Status |"
+            echo "|---|---|---|---|"
+          } > report.md
+
+          readarray -t token_counts < <(uv run .github/scripts/count_tokens.py "${md_files[@]}")
+
+          for i in "${!md_files[@]}"; do
+            file="${md_files[$i]}"
+            tokens="${token_counts[$i]}"
+
+            if [[ "$file" == */SKILL.md ]]; then
+              if [ "$tokens" -gt 5000 ]; then
+                status="❌"; fail=1
+              else
+                status="✅"
+              fi
+              echo "| \`$file\` | $tokens | 5000 | $status |" >> report.md
+            else
+              echo "| \`$file\` | $tokens | — | ℹ️ |" >> report.md
             fi
-            echo "| \`$file\` | $desc_len | $body_tokens | $status |" >> report.md
           done
 
           cat report.md
           { echo 'table<<EOF'; cat report.md; echo 'EOF'; } >> "$GITHUB_OUTPUT"
           exit $fail
 
-      - name: Post token-budget result
+      - name: Post token-check result
         if: always()
         uses: marocchino/sticky-pull-request-comment@v2
         with:
-          header: token-budget
+          header: check-tokens
           message: |
-            ${{ job.status == 'success' && '✅ **Skill Token Budget Passed**' || '❌ **Skill Token Budget Failed**' }}
+            ${{ job.status == 'success' && '✅ **Token Check Passed**' || '❌ **Token Check Failed**' }}
 
             ${{ steps.report.outputs.table }}
 
-            **Limits** ([Anthropic best practices](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices)):
-            description ≤ 1024 chars · body ≤ 5000 tokens (via tiktoken `cl100k_base`)
+            `SKILL.md` body must be ≤ 5000 tokens · other `.md` files shown for reference · counted via `tiktoken cl100k_base`
