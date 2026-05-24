@@ -59,49 +59,7 @@ jobs:
 
             **Semver guide:** `PATCH` = fixes · `MINOR` = features · `MAJOR` = breaking
 
-  check-descriptions:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Check SKILL.md description lengths
-        id: report
-        run: |
-          set +e
-          fail=0
-          {
-            echo "| Skill | Description (chars / 1024) | Status |"
-            echo "|---|---|---|"
-          } > report.md
-
-          while IFS= read -r -d '' file; do
-            frontmatter=$(awk '/^---[[:space:]]*$/ { c++; next } c == 1' "$file")
-            desc_len=$(echo "$frontmatter" | yq -r '.description // ""' | tr -d '\n' | wc -c)
-
-            status="✅"
-            [ "$desc_len" -le 1024 ] || { status="❌"; fail=1; }
-            echo "| \`$file\` | $desc_len | $status |" >> report.md
-          done < <(find skills -name SKILL.md -print0)
-
-          cat report.md
-          { echo 'table<<EOF'; cat report.md; echo 'EOF'; } >> "$GITHUB_OUTPUT"
-          exit $fail
-
-      - name: Post description-check result
-        if: always()
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          header: check-descriptions
-          message: |
-            ${{ job.status == 'success' && '✅ **Description Check Passed**' || '❌ **Description Check Failed**' }}
-
-            ${{ steps.report.outputs.table }}
-
-            Frontmatter `description` must be ≤ 1024 characters ([hard cap](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices)).
-
-  check-tokens:
+  skill-lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -117,56 +75,80 @@ jobs:
 
       - uses: astral-sh/setup-uv@v5
 
-      - name: Count tokens in modified markdown files
-        id: report
+      - name: Check descriptions
+        id: descriptions
+        continue-on-error: true
         run: |
-          set +e
-          fail=0
+          {
+            echo "| Skill | Description (chars / 1024) | Status |"
+            echo "|---|---|---|"
+          } > descriptions.md
 
-          # All modified (non-deleted) .md files in this PR
+          fail=0
+          while IFS= read -r -d '' file; do
+            frontmatter=$(awk '/^---[[:space:]]*$/ { c++; next } c == 1' "$file")
+            desc_len=$(echo "$frontmatter" | yq -r '.description // ""' | tr -d '\n' | wc -c)
+            status="✅"
+            [ "$desc_len" -le 1024 ] || { status="❌"; fail=1; }
+            echo "| \`$file\` | $desc_len | $status |" >> descriptions.md
+          done < <(find skills -name SKILL.md -print0)
+
+          cat descriptions.md
+          { echo 'table<<EOF'; cat descriptions.md; echo 'EOF'; } >> "$GITHUB_OUTPUT"
+          exit $fail
+
+      - name: Check tokens
+        id: tokens
+        continue-on-error: true
+        run: |
           IFS=' ' read -ra md_files <<< "${{ steps.changed.outputs.all_changed_files }}"
 
           if [ ${#md_files[@]} -eq 0 ]; then
-            echo "No markdown files modified."
-            echo 'table=No markdown files modified.' >> "$GITHUB_OUTPUT"
+            echo 'table=_No markdown files modified._' >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           {
             echo "| File | Tokens | Limit | Status |"
             echo "|---|---|---|---|"
-          } > report.md
+          } > tokens.md
 
+          fail=0
           readarray -t token_counts < <(uv run .github/scripts/count_tokens.py "${md_files[@]}")
 
           for i in "${!md_files[@]}"; do
             file="${md_files[$i]}"
             tokens="${token_counts[$i]}"
-
             if [[ "$file" == */SKILL.md ]]; then
-              if [ "$tokens" -gt 5000 ]; then
-                status="❌"; fail=1
-              else
-                status="✅"
-              fi
-              echo "| \`$file\` | $tokens | 5000 | $status |" >> report.md
+              [ "$tokens" -le 5000 ] && status="✅" || { status="❌"; fail=1; }
+              echo "| \`$file\` | $tokens | 5000 | $status |" >> tokens.md
             else
-              echo "| \`$file\` | $tokens | — | ℹ️ |" >> report.md
+              echo "| \`$file\` | $tokens | — | ℹ️ |" >> tokens.md
             fi
           done
 
-          cat report.md
-          { echo 'table<<EOF'; cat report.md; echo 'EOF'; } >> "$GITHUB_OUTPUT"
+          cat tokens.md
+          { echo 'table<<EOF'; cat tokens.md; echo 'EOF'; } >> "$GITHUB_OUTPUT"
           exit $fail
 
-      - name: Post token-check result
+      - name: Post skill-lint result
         if: always()
         uses: marocchino/sticky-pull-request-comment@v2
         with:
-          header: check-tokens
+          header: skill-lint
           message: |
-            ${{ job.status == 'success' && '✅ **Token Check Passed**' || '❌ **Token Check Failed**' }}
+            ${{ (steps.descriptions.outcome == 'success' && steps.tokens.outcome == 'success') && '✅ **Skill Lint Passed**' || '❌ **Skill Lint Failed**' }}
 
-            ${{ steps.report.outputs.table }}
+            #### Descriptions
+            ${{ steps.descriptions.outputs.table }}
 
-            `SKILL.md` body must be ≤ 5000 tokens · other `.md` files shown for reference · counted via `tiktoken cl100k_base`
+            #### Tokens
+            ${{ steps.tokens.outputs.table }}
+
+            _`description` ≤ 1024 chars · `SKILL.md` body ≤ 5000 tokens via `tiktoken cl100k_base` · [Anthropic best practices](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices)_
+
+      - name: Evaluate
+        if: always()
+        run: |
+          [[ "${{ steps.descriptions.outcome }}" != "failure" && \
+             "${{ steps.tokens.outcome }}"       != "failure" ]] || exit 1
