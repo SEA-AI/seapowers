@@ -57,49 +57,7 @@ stay the same in DARK and LIGHT. NIGHT shifts them one step darker to reduce glo
 | `--surface-danger-3` | `#C20A20` | `#910818` |
 | `--surface-warning-3` | `#F1B80D` | `#C2940A` |
 
-### Runtime switching
-
-```jsx
-function useTheme() {
-  const [theme, setTheme] = useState('DARK');
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
-  return [theme, setTheme];
-}
-
-// Persist across reloads
-localStorage.setItem('theme', theme);
-```
-
-For auto-switching by ambient light or time of day, hook the same `setTheme` call
-to your sensor / clock source — no other code needs to change because every
-component already reads tokens.
-
-### Bootstrapping a theme block (no tokens.css)
-
-If `tokens.css` isn't available, define the theme inline. Minimum viable block:
-
-```css
-[data-theme="DARK"] {
-  --surface-neutral-1: #101214;
-  --surface-neutral-3: #202428;
-  --surface-neutral-4: #292E33;
-  --content-neutral-3: #FFFFFF;
-  --content-neutral-1: #747C84;
-  --surface-primary-3: #0A67C2;
-  --surface-danger-3:  #C20A20;
-  --surface-warning-3: #F1B80D;
-  --accent-primary-2:  #0A67C2;
-  --accent-danger-2:   #C20A20;
-  --radius-m: 8px;
-  --radius-s: 4px;
-  --opacity-disabled: 0.3;
-}
-```
-
-Repeat for `[data-theme="LIGHT"]` and `[data-theme="NIGHT"]` using the values from
-the tables above.
+To switch at runtime, set `document.documentElement.setAttribute('data-theme', 'NIGHT')` — all tokens re-resolve automatically, no per-component overrides needed.
 
 ## Theme Tokens (DARK reference)
 
