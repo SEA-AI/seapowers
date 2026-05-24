@@ -111,7 +111,7 @@ jobs:
           echo "$CHANGED_SKILLS" | xxd | head -20
           echo "::endgroup::"
 
-          mapfile -t skill_files < <(jq -r '.[]' <<< "$CHANGED_SKILLS")
+          mapfile -t skill_files < <(jq -r '.[]' <<< "${CHANGED_SKILLS//\\\"/\"}")
           echo "parsed skill_files (${#skill_files[@]} entries):"
           printf '  [%s]\n' "${skill_files[@]}"
 
@@ -145,7 +145,7 @@ jobs:
           echo "$CHANGED_MD" | xxd | head -20
           echo "::endgroup::"
 
-          mapfile -t md_files < <(jq -r '.[]' <<< "$CHANGED_MD")
+          mapfile -t md_files < <(jq -r '.[]' <<< "${CHANGED_MD//\\\"/\"}")
           echo "parsed md_files (${#md_files[@]} entries):"
           printf '  [%s]\n' "${md_files[@]}"
 
