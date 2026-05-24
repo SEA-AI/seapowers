@@ -1,39 +1,53 @@
 # SEA.AI Frontend
 
-For React components, HTML/CSS, and software interfaces. The SEA.AI product UI uses
-a distinct DARK theme — this is the one place where dark backgrounds are the standard.
+For web UI, HTML/CSS, and software interfaces. The product runs on ship bridges in
+low-light environments — dark backgrounds are the standard here, unlike all other
+SEA.AI output types which use white.
 
-> Note: The product UI (software interfaces, dashboards, detection overlays) uses
-> the DARK theme by default. Print/document outputs use WHITE. This is intentional —
-> the product runs on ship bridges in low-light environments.
+## Themes
 
-## Theme Tokens
+Apply via `data-theme` on the root element — token names stay the same, values change:
 
-```css
-/* DARK theme (default for UI) */
---surface-neutral-1: #101214;  /* outermost shell */
---surface-neutral-2: #181B1E;  /* panels */
---surface-neutral-3: #202428;  /* cards */
---surface-neutral-4: #292E33;  /* inputs, recessed */
---surface-neutral-5: #31373D;  /* elevated elements */
-
-/* Signal colors — same in DARK and LIGHT */
---surface-primary-3:  #0A67C2;  /* active/selected/in-progress */
---surface-danger-3:   #C20A20;  /* error/critical/alert */
---surface-warning-3:  #F1B80D;  /* caution/approaching limit */
-
-/* Text on colored surfaces */
---content-primary-2:  #CFE5FC;
---content-danger-1:   #FA9EA9;
---content-warning-1:  #FAE39E;
-
-/* Accent (borders, focus rings) */
---accent-primary-2: #0A67C2;
---accent-danger-2:  #C20A20;
+```html
+<html data-theme="DARK">  <!-- LIGHT / DARK / NIGHT -->
 ```
 
-> These UI surface colors (`#101214` etc.) are ONLY for the software product.
-> They are NOT the brand colors. Do not use them in documents, diagrams or presentations.
+| Theme | When to use |
+|---|---|
+| `DARK` | Default for the product UI |
+| `LIGHT` | Daytime / well-lit contexts |
+| `NIGHT` | Bridge at night — preserves night vision |
+
+Neutral surfaces and text per theme:
+
+| Token | LIGHT | DARK | NIGHT |
+|---|---|---|---|
+| `--surface-neutral-1` (shell) | `#B9BDC1` | `#101214` | `#000000` |
+| `--surface-neutral-2` | `#CBCED1` | `#181B1E` | `#08090A` |
+| `--surface-neutral-3` (panels) | `#DCDEE0` | `#202428` | `#101214` |
+| `--surface-neutral-4` (cards) | `#EEEFF0` | `#292E33` | `#181B1E` |
+| `--surface-neutral-5` (elevated) | `#FFFFFF` | `#31373D` | `#202428` |
+| `--content-neutral-1` (dim) | `#747C84` | `#747C84` | `#747C84` |
+| `--content-neutral-2` (secondary) | `#414951` | `#B9BDC1` | `#A8ADB2` |
+| `--content-neutral-3` (primary) | `#202428` | `#FFFFFF` | `#DCDEE0` |
+
+Signal colors are identical in DARK and LIGHT; NIGHT shifts one step darker:
+
+| Signal | LIGHT / DARK | NIGHT |
+|---|---|---|
+| `--surface-primary-3` | `#0A67C2` | `#084C91` |
+| `--surface-danger-3` | `#C20A20` | `#910818` |
+| `--surface-warning-3` | `#F1B80D` | `#C2940A` |
+
+Text on colored surfaces and accent tokens (same across all themes):
+
+```css
+--content-primary-2: #CFE5FC;  /* text on primary blue */
+--content-danger-1:  #FA9EA9;  /* text on danger red */
+--content-warning-1: #FAE39E;  /* text on warning amber */
+--accent-primary-2:  #0A67C2;  /* focus rings, borders */
+--accent-danger-2:   #C20A20;  /* error outlines */
+```
 
 ## Typography
 
@@ -43,8 +57,6 @@ a distinct DARK theme — this is the one place where dark backgrounds are the s
 ```css
 font-family: 'Saira Condensed', 'Arial Narrow', Arial, sans-serif;
 ```
-
-Condensed letterform for clarity at all sizes — instrument-panel readouts and dashboards benefit from the letterform density.
 
 Classes are scoped to the `.typography` base, e.g. `<p class="typography main-title-l">`:
 
@@ -135,26 +147,31 @@ Layout-scale spacing (`--space-layout-xs` … `--space-layout-3xl`, 64px → 512
 
 Minimum interactive target height: **40px**.
 
-## React Template
+## Example Component
 
-```jsx
-export default function SeaAICard({ title, value, status }) {
-  return (
-    <div style={{
-      background: 'var(--surface-neutral-4)',
-      borderRadius: 'var(--radius-m)',
-      padding: '16px',
-      border: 'none',
-    }}>
-      <span style={{ color: 'var(--content-neutral-1)', fontSize: 'var(--typography-font-size-xs)', textTransform: 'uppercase',
-        letterSpacing: '0.02em', fontFamily: "'Saira Condensed', 'Arial Narrow'" }}>
-        {title}
-      </span>
-      <div style={{ color: 'var(--content-neutral-3)', fontSize: 'var(--typography-font-size-l)', fontWeight: 500, marginTop: 4 }}>
-        {value}
-      </div>
-    </div>
-  );
+```html
+<div class="sea-card">
+  <span class="sea-card__label typography card-label-s">Wind Speed</span>
+  <div class="sea-card__value typography main-title-m">12 kn</div>
+</div>
+```
+
+```css
+.sea-card {
+  background: var(--surface-neutral-4);
+  border-radius: var(--radius-m);
+  padding: var(--space-component-l);
+  border: none;
+}
+
+.sea-card__label {
+  color: var(--content-neutral-1);
+  display: block;
+  margin-bottom: var(--space-component-xs);
+}
+
+.sea-card__value {
+  color: var(--content-neutral-3);
 }
 ```
 
@@ -166,10 +183,8 @@ export default function SeaAICard({ title, value, status }) {
 ✅ Color = state (only 3 semantic colors)
 ✅ Saira Condensed for UI typography
 ✅ Minimum 40px touch targets
-❌ No decorative shadows or borders
 ❌ No entrance animations
 ❌ No color for emphasis — only for state
-❌ Do not use UI surface colors (#101214 etc.) in documents/diagrams
 ```
 
 ---
@@ -207,7 +222,7 @@ export default function SeaAICard({ title, value, status }) {
   border: none;
   border-radius: var(--radius-m);
   font-family: 'Saira Condensed', Arial, sans-serif;
-  font-size: 16px;
+  font-size: var(--typography-font-size-s);
   cursor: pointer;
   transition: 0.2s;
   gap: 8px;
@@ -295,7 +310,7 @@ export default function SeaAICard({ title, value, status }) {
   background: var(--surface-neutral-4);
   color: var(--content-neutral-3);
   font-family: 'Saira Condensed', Arial, sans-serif;
-  font-size: 16px;
+  font-size: var(--typography-font-size-s);
 }
 
 .input::placeholder { color: var(--content-neutral-1); }
@@ -330,7 +345,7 @@ export default function SeaAICard({ title, value, status }) {
   padding: 4px 10px;
   border-radius: var(--radius-s);
   font-family: 'Saira Condensed', Arial, sans-serif;
-  font-size: 13px;
+  font-size: 13px; /* intentional: between xs(12) and s(16), compact badge size */
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.04em;
