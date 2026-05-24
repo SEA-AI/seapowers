@@ -7,8 +7,7 @@ description: >
   ALWAYS trigger when: creating diagrams, charts, infographics, any PDF or document,
   any PPTX slide deck, any HTML/React UI, any marketing or technical material for SEA.AI.
   Covers ALL output types — if it carries the SEA.AI brand, use this skill.
-  SKIP this skill when working inside the Core-Frontend repo — that repo owns its
-  own design system and tokens, this skill would only duplicate or conflict.
+  SKIP when working inside the Core-Frontend repo.
 creator: Philipp Stampfl
 date: 2026-05-09
 license: MIT
