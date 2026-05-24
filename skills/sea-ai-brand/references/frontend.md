@@ -163,7 +163,7 @@ export default function SeaAICard({ title, value, status }) {
 ```
 ✅ DARK theme by default (surface-neutral-1 outermost)
 ✅ Depth from background contrast only — no shadows, no borders
-✅ Color = state (only 4 semantic colors)
+✅ Color = state (only 3 semantic colors)
 ✅ Saira Condensed for UI typography
 ✅ Minimum 40px touch targets
 ❌ No decorative shadows or borders
