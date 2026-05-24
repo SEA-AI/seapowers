@@ -1,0 +1,14 @@
+reviews:
+  path_instructions:
+    - path: "skills/**/SKILL.md"
+      instructions: |
+        Review this skill against Anthropic's official SKILL.md best practices:
+        https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices
+
+        Key things to check:
+        - `name`: lowercase, hyphens only, ≤ 64 chars, no reserved words (anthropic, claude)
+        - `description`: ≤ 1024 chars, third-person, specific triggers, no XML tags
+        - Body: concise — avoid explaining things Claude already knows
+        - References: one level deep from SKILL.md, no deeply nested chains
+        - No time-sensitive language (dates, "before/after X release")
+        - Consistent terminology throughout
