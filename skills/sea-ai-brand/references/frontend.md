@@ -38,9 +38,8 @@ a distinct DARK theme — this is the one place where dark backgrounds are the s
 
 ## Typography
 
-> The product UI uses **Saira Condensed** (not Barlow Semi Condensed, which is the
-> brand font everywhere else). Saira is the in-product typeface; Barlow is for
-> documents, slides, diagrams.
+> The product UI uses **Saira Condensed**. Other output types (documents, slides,
+> diagrams) may use a different brand font — check the relevant reference file.
 
 ```css
 font-family: 'Saira Condensed', 'Arial Narrow', Arial, sans-serif;
@@ -167,7 +166,7 @@ export default function SeaAICard({ title, value, status }) {
 ✅ DARK theme by default (surface-neutral-1 outermost)
 ✅ Depth from background contrast only — no shadows, no borders
 ✅ Color = state (only 4 semantic colors)
-✅ Saira Condensed for UI typography (Barlow Semi Condensed everywhere else)
+✅ Saira Condensed for UI typography
 ✅ Minimum 40px touch targets
 ❌ No decorative shadows or borders
 ❌ No entrance animations
