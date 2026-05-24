@@ -38,22 +38,28 @@ a distinct DARK theme — this is the one place where dark backgrounds are the s
 
 ## Typography
 
+> The product UI uses **Saira Condensed** (not Barlow Semi Condensed, which is the
+> brand font everywhere else). Saira is the in-product typeface; Barlow is for
+> documents, slides, diagrams.
+
 ```css
-font-family: 'Barlow Semi Condensed', 'Arial Narrow', Arial, sans-serif;
+font-family: 'Saira Condensed', 'Arial Narrow', Arial, sans-serif;
 ```
 
 Condensed letterform for clarity at all sizes — instrument-panel readouts and dashboards benefit from the letterform density.
 
+Classes are scoped to the `.typography` base, e.g. `<p class="typography main-title-l">`:
+
 ```css
 /* main-* classes: sentence case, prose */
-.main-title-l  { font-size: 40px; font-weight: 500; line-height: 48px; }
-.main-title-m  { font-size: 24px; font-weight: 500; line-height: 32px; }
-.main-body-m   { font-size: 20px; font-weight: 400; line-height: 28px; }
-.main-body-s   { font-size: 16px; font-weight: 400; line-height: 24px; }
+.typography.main-title-l  { font-size: 2.5rem;  font-weight: 500; line-height: 3rem; }   /* 40/48 */
+.typography.main-title-m  { font-size: 1.5rem;  font-weight: 500; line-height: 2rem; }   /* 24/32 */
+.typography.main-body-m   { font-size: 1.25rem; font-weight: 400; line-height: 1.75rem; } /* 20/28 */
+.typography.main-body-s   { font-size: 1rem;    font-weight: 400; line-height: 1.5rem; }  /* 16/24 */
 
 /* card-* classes: UPPERCASE, data labels */
-.card-title-m  { font-size: 24px; font-weight: 400; letter-spacing: 0.02em; text-transform: uppercase; }
-.card-label-s  { font-size: 16px; font-weight: 500; text-transform: uppercase; }
+.typography.card-title-m  { font-size: 1.5rem; font-weight: 400; line-height: 2rem; letter-spacing: 0.02em; text-transform: uppercase; }
+.typography.card-label-s  { font-size: 1rem;   font-weight: 500; line-height: 100%; text-transform: uppercase; }
 ```
 
 ## Flat Surface System
@@ -82,16 +88,22 @@ Depth comes from surface value contrast only — no shadows, no borders:
 | Danger red | Error / critical / destructive | Alert, failure, expiry |
 | Warning amber | Caution / near limit | Pending, near-threshold |
 | Success green | Complete / confirmed | Done, connected |
-| Neutral grey | Inactive / secondary | Idle, secondary, dividers |
+
+Neutral grey is the surface system, not a semantic role — use it for idle, secondary, and dividers.
 
 **Color communicates state. Never for visual emphasis alone.**
 
 ## Border Radius
 
+> Note: the upstream tokens.css ships these as `--radious-*` (misspelled). Use the
+> corrected `--radius-*` names in new code and alias them to the upstream tokens
+> at the theme root.
+
 ```css
---radious-s: 4px;   /* chips, tags, tight controls */
---radious-m: 8px;   /* buttons, cards, panels */
---radious-l: 16px;  /* modals, large surfaces */
+--radius-xs: 2px;   /* hairline */
+--radius-s:  4px;   /* chips, tags, tight controls */
+--radius-m:  8px;   /* buttons, cards, panels */
+--radius-l:  16px;  /* modals, large surfaces */
 ```
 
 Adjacent components share edges (radius → 0 on shared side):
@@ -112,13 +124,17 @@ transition: all 0.4s linear;         /* continuous indicators */
 ## Spacing Tokens
 
 ```css
---space-xs:  4px;   /* tight icon gaps */
---space-s:   8px;   /* inline element gaps */
---space-m:   12px;  /* standard gap between controls */
---space-l:   16px;  /* padding inside components */
---space-2xl: 24px;  /* between sections */
---space-3xl: 32px;  /* panel internal padding */
+--space-component-xs:  4px;   /* tight icon gaps */
+--space-component-s:   8px;   /* inline element gaps */
+--space-component-m:   12px;  /* standard gap between controls */
+--space-component-l:   16px;  /* padding inside components */
+--space-component-xl:  20px;
+--space-component-2xl: 24px;  /* between sections */
+--space-component-3xl: 32px;  /* panel internal padding */
+--space-component-4xl: 48px;
 ```
+
+Layout-scale spacing (`--space-layout-xs` … `--space-layout-3xl`, 64px → 512px) is also available for page-level gutters.
 
 Minimum interactive target height: **40px**.
 
@@ -129,12 +145,12 @@ export default function SeaAICard({ title, value, status }) {
   return (
     <div style={{
       background: 'var(--surface-neutral-4)',
-      borderRadius: 'var(--radious-m)',
+      borderRadius: 'var(--radius-m)',
       padding: '16px',
       border: 'none',
     }}>
       <span style={{ color: '#7B9194', fontSize: 12, textTransform: 'uppercase',
-        letterSpacing: '0.02em', fontFamily: "'Barlow Semi Condensed', 'Arial Narrow'" }}>
+        letterSpacing: '0.02em', fontFamily: "'Saira Condensed', 'Arial Narrow'" }}>
         {title}
       </span>
       <div style={{ color: '#F0F2F4', fontSize: 24, fontWeight: 500, marginTop: 4 }}>
@@ -151,7 +167,7 @@ export default function SeaAICard({ title, value, status }) {
 ✅ DARK theme by default (surface-neutral-1 outermost)
 ✅ Depth from background contrast only — no shadows, no borders
 ✅ Color = state (only 4 semantic colors)
-✅ Barlow Semi Condensed for UI typography
+✅ Saira Condensed for UI typography (Barlow Semi Condensed everywhere else)
 ✅ Minimum 40px touch targets
 ❌ No decorative shadows or borders
 ❌ No entrance animations
@@ -193,7 +209,7 @@ export default function SeaAICard({ title, value, status }) {
   padding: 12px 16px;
   border: none;
   border-radius: var(--radius-m);
-  font-family: 'Barlow Semi Condensed', Arial, sans-serif;
+  font-family: 'Saira Condensed', Arial, sans-serif;
   font-size: 16px;
   cursor: pointer;
   transition: 0.2s;
@@ -203,8 +219,8 @@ export default function SeaAICard({ title, value, status }) {
 .btn--primary   { background: var(--surface-primary-3); color: var(--content-primary-3); }
 .btn--secondary { background: var(--surface-neutral-4); color: var(--content-neutral-3); }
 .btn--danger    { background: var(--surface-danger-3);  color: #fff; }
-.btn--ghost     { background: transparent; color: var(--content-neutral-3); border: 1px solid var(--surface-neutral-4); }
-.btn:disabled   { opacity: 0.3; pointer-events: none; }
+.btn--ghost     { background: transparent; color: var(--content-neutral-3); border: var(--stroke-thin) solid var(--surface-neutral-4); }
+.btn:disabled   { opacity: var(--opacity-disabled); pointer-events: none; }
 ```
 
 ### Toggle
@@ -258,7 +274,7 @@ export default function SeaAICard({ title, value, status }) {
 .box {
   width: 18px; height: 18px;
   border-radius: var(--radius-s);
-  border: 1.5px solid var(--surface-neutral-5);
+  border: var(--stroke-normal) solid var(--surface-neutral-5);
   background: var(--surface-neutral-4);
   transition: 0.2s;
 }
@@ -281,13 +297,13 @@ export default function SeaAICard({ title, value, status }) {
   border-radius: var(--radius-xs);
   background: var(--surface-neutral-4);
   color: var(--content-neutral-3);
-  font-family: 'Barlow Semi Condensed', Arial, sans-serif;
+  font-family: 'Saira Condensed', Arial, sans-serif;
   font-size: 16px;
 }
 
 .input::placeholder { color: var(--content-neutral-1); }
-.input:disabled     { opacity: 0.3; }
-.input.error        { outline: 1px solid var(--accent-danger-2); outline-offset: -1px; }
+.input:disabled     { opacity: var(--opacity-disabled); }
+.input.error        { outline: var(--stroke-thin) solid var(--accent-danger-2); outline-offset: -1px; }
 ```
 
 ### Progress Bar
@@ -317,7 +333,7 @@ export default function SeaAICard({ title, value, status }) {
   align-items: center;
   padding: 4px 10px;
   border-radius: var(--radius-s);
-  font-family: 'Barlow Semi Condensed', Arial, sans-serif;
+  font-family: 'Saira Condensed', Arial, sans-serif;
   font-size: 13px;
   font-weight: 500;
   text-transform: uppercase;
@@ -331,24 +347,14 @@ export default function SeaAICard({ title, value, status }) {
 
 ### Typography
 
+Use the `.typography.*` classes defined in the Typography section above:
+
 ```html
-<p class="text-title-l">Page Title</p>
-<p class="text-title-m">Section Title</p>
-<p class="text-body-m">Body text</p>
-<p class="text-body-s">Caption text</p>
-<p class="text-label">STATUS LABEL</p>
+<p class="typography main-title-l">Page Title</p>
+<p class="typography main-title-m">Section Title</p>
+<p class="typography main-body-m">Body text</p>
+<p class="typography main-body-s">Caption text</p>
+<p class="typography card-label-s">STATUS LABEL</p>
 ```
 
-```css
-.text-title-l, .text-title-m, .text-body-m, .text-body-s, .text-label {
-  font-family: 'Barlow Semi Condensed', Arial, sans-serif;
-  color: var(--content-neutral-3);
-  margin: 0;
-}
-
-.text-title-l { font-size: 40px; font-weight: 500; line-height: 48px; }
-.text-title-m { font-size: 24px; font-weight: 500; line-height: 32px; }
-.text-body-m  { font-size: 20px; font-weight: 400; line-height: 28px; }
-.text-body-s  { font-size: 16px; font-weight: 400; line-height: 24px; }
-.text-label   { font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; color: var(--content-neutral-2); }
-```
+Default text color is `var(--content-neutral-3)`; override per-context as needed.

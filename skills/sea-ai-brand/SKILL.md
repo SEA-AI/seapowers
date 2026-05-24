@@ -76,11 +76,13 @@ BLACK (#000000) — default body text
 
 ### Typography
 
-**Font: Barlow Semi Condensed** (Google Fonts)
+**Font: Barlow Semi Condensed** (Google Fonts) — for documents, slides, diagrams, all printed/exported material.
 - Files: `assets/BarlowSemiCondensed-Bold.ttf`, `assets/BarlowSemiCondensed-Regular.ttf`
 - Web: `https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;700&display=swap`
 - Fallback for code/PPTX: `Arial Narrow`
 - Fallback for system rendering: `DejaVu Sans Condensed`
+
+**Exception — product UI uses Saira Condensed.** The in-product (frontend) typeface is **Saira Condensed**, not Barlow. See `references/frontend.md` for details. Barlow is the brand font everywhere else.
 
 ```
 Bold (700)   → Section labels, headings, table headers, emphasis
