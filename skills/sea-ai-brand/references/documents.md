@@ -130,5 +130,5 @@ canvas.drawString(14*mm, y, "SECTION LABEL")
 - [ ] Red accent line under title
 - [ ] Footer: document name + CONFIDENTIAL in Sky Grey
 - [ ] Barlow Semi Condensed font loaded from assets (or Google Fonts CDN)
-- [ ] No non-brand colors
+- [ ] No non-brand colors (UI surface colors like #101214 are product-only)
 - [ ] No gradients or shadows

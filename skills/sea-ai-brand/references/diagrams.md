@@ -146,6 +146,7 @@ draw.text((W-60, footer_y), "CONFIDENTIAL", font=font(10), fill=GREY,
 ❌ Dark background for the whole canvas → use WHITE
 ❌ Blue (#0A67C2 or similar) → not a brand color, use NAVY or remove
 ❌ Green (#2DA84F) or Amber (#F1B80D) → not brand colors
+❌ UI surface colors (#101214, #181B1E etc.) → product UI only, never in diagrams
 ❌ Gradient fills → flat color only
 ❌ Drop shadows → none
 ❌ Circles/icons in blue → use NAVY or FOG

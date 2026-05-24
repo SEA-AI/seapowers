@@ -184,7 +184,6 @@ export default function SeaAICard({ title, value }) {
 ❌ No decorative shadows or borders
 ❌ No entrance animations
 ❌ No color for emphasis — only for state
-❌ Do not use UI surface colors in documents/diagrams
 ```
 
 ---
