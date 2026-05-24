@@ -6,25 +6,9 @@ reviews:
         https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices
 
         Key things to check:
-
-        Frontmatter:
-        - `name`: lowercase, hyphens only, ≤ 64 chars, no reserved words (anthropic, claude)
-        - `name`: prefer gerund form (processing-pdfs, not process-pdf or pdf-processor); avoid vague names (helper, utils, tools)
-        - `description`: ≤ 1024 chars, written in third person, includes what it does AND when to trigger it, no XML tags
-
-        Body:
-        - Concise — don't explain things Claude already knows
-        - No time-sensitive language (dates, version cutoffs); use an "old patterns" section instead
-        - Consistent terminology — pick one term and use it throughout
-        - No Windows-style paths (backslashes); always use forward slashes
-        - When presenting options, always provide a recommended default rather than listing alternatives without guidance
-
-        References & files:
-        - References must be one level deep from SKILL.md — no chains (SKILL.md → a.md → b.md)
-        - Reference files longer than 100 lines should have a table of contents at the top
-        - Use descriptive filenames (form_validation_rules.md, not doc2.md)
-
-        Scripts (if any):
-        - Handle errors explicitly — don't punt edge cases back to Claude
-        - No magic numbers; document why each constant has its value
-        - List all required packages explicitly; don't assume they're installed
+        - `name`: lowercase, hyphens only, ≤ 64 chars, gerund form preferred (processing-pdfs), no reserved words (anthropic, claude), no vague names (helper, utils, tools)
+        - `description`: ≤ 1024 chars, third person, covers what it does AND when to trigger it, no XML tags
+        - Body: concise — don't explain things Claude already knows; consistent terminology throughout
+        - No time-sensitive language (dates, version cutoffs); use an "old patterns" section for legacy info
+        - No Windows-style paths (backslashes); always forward slashes
+        - References one level deep only — no chains (SKILL.md → a.md → b.md)
