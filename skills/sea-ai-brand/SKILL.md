@@ -8,8 +8,6 @@ description: >
   any PPTX slide deck, any HTML/React UI, any marketing or technical material for SEA.AI.
   Covers ALL output types — if it carries the SEA.AI brand, use this skill.
   SKIP when working inside the Core-Frontend repo.
-creator: Philipp Stampfl
-date: 2026-05-09
 license: MIT
 ---
 
