@@ -9,55 +9,38 @@ a distinct DARK theme — this is the one place where dark backgrounds are the s
 
 ## Themes
 
-Three themes are available via the `data-theme` attribute on the root element. All
-share the same token names — only the resolved values change, so component code
-written against `var(--surface-neutral-1)` works in all three without modification.
+Apply via `data-theme` on the root element — token names stay the same, values change:
+
+```html
+<html data-theme="DARK">  <!-- LIGHT / DARK / NIGHT -->
+```
 
 | Theme | When to use |
 |---|---|
 | `DARK` | Default for the product UI |
-| `LIGHT` | Daytime / well-lit contexts where dark UI causes glare |
-| `NIGHT` | Bridge at night — preserves night vision (darker than DARK) |
+| `LIGHT` | Daytime / well-lit contexts |
+| `NIGHT` | Bridge at night — preserves night vision |
 
-### Setup
-
-Set the attribute on `<html>` (or any ancestor of the styled tree) and the tokens
-cascade automatically:
-
-```html
-<html data-theme="DARK">  <!-- LIGHT / DARK / NIGHT -->
-  <body>
-    <div class="shell">…</div>
-  </body>
-</html>
-```
-
-### Resolved values per theme
-
-The same token name resolves to different colors per theme. Reference values for
-the most-used neutrals (use these to scaffold a theme block from scratch):
+Neutral surfaces and text per theme:
 
 | Token | LIGHT | DARK | NIGHT |
 |---|---|---|---|
-| `--surface-neutral-1` (outermost shell) | `#B9BDC1` | `#101214` | `#000000` |
+| `--surface-neutral-1` (shell) | `#B9BDC1` | `#101214` | `#000000` |
 | `--surface-neutral-2` | `#CBCED1` | `#181B1E` | `#08090A` |
 | `--surface-neutral-3` (panels) | `#DCDEE0` | `#202428` | `#101214` |
-| `--surface-neutral-4` (cards/inputs) | `#EEEFF0` | `#292E33` | `#181B1E` |
+| `--surface-neutral-4` (cards) | `#EEEFF0` | `#292E33` | `#181B1E` |
 | `--surface-neutral-5` (elevated) | `#FFFFFF` | `#31373D` | `#202428` |
-| `--content-neutral-1` (dim labels) | `#747C84` | `#747C84` | `#747C84` |
-| `--content-neutral-2` (secondary text) | `#414951` | `#B9BDC1` | `#A8ADB2` |
-| `--content-neutral-3` (primary text) | `#202428` | `#FFFFFF` | `#DCDEE0` |
+| `--content-neutral-1` (dim) | `#747C84` | `#747C84` | `#747C84` |
+| `--content-neutral-2` (secondary) | `#414951` | `#B9BDC1` | `#A8ADB2` |
+| `--content-neutral-3` (primary) | `#202428` | `#FFFFFF` | `#DCDEE0` |
 
-Signal colors (`--surface-primary-3`, `--surface-danger-3`, `--surface-warning-3`)
-stay the same in DARK and LIGHT. NIGHT shifts them one step darker to reduce glow:
+Signal colors are identical in DARK and LIGHT; NIGHT shifts one step darker:
 
 | Signal | LIGHT / DARK | NIGHT |
 |---|---|---|
 | `--surface-primary-3` | `#0A67C2` | `#084C91` |
 | `--surface-danger-3` | `#C20A20` | `#910818` |
 | `--surface-warning-3` | `#F1B80D` | `#C2940A` |
-
-To switch at runtime, set `document.documentElement.setAttribute('data-theme', 'NIGHT')` — all tokens re-resolve automatically, no per-component overrides needed.
 
 ## Theme Tokens (DARK reference)
 
