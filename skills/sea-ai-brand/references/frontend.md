@@ -7,6 +7,24 @@ a distinct DARK theme — this is the one place where dark backgrounds are the s
 > the DARK theme by default. Print/document outputs use WHITE. This is intentional —
 > the product runs on ship bridges in low-light environments.
 
+## Themes
+
+Three themes are available via the `data-theme` attribute on the root element. All
+share the same token names — only the resolved values change.
+
+| Theme | When to use | Outermost surface |
+|---|---|---|
+| `DARK` | Default for the product UI | `#101214` |
+| `LIGHT` | Daytime / well-lit contexts where dark UI causes glare | `#B9BDC1` |
+| `NIGHT` | Bridge at night — preserves night vision (darker than DARK) | `#000000` |
+
+```html
+<html data-theme="DARK">  <!-- or LIGHT / NIGHT -->
+```
+
+Signal colors (`primary`, `danger`, `warning`) resolve to the same values in DARK
+and LIGHT; NIGHT shifts them one step darker to reduce glow.
+
 ## Theme Tokens
 
 ```css
