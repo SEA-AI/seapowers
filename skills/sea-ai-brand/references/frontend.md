@@ -4,9 +4,6 @@ For web UI, HTML/CSS, and software interfaces. The product runs on ship bridges 
 low-light environments — dark backgrounds are the standard here, unlike all other
 SEA.AI output types which use white.
 
-> These UI surface colors are ONLY for the software product. They are NOT brand
-> colors. Do not use them in documents, diagrams, or presentations.
-
 ## Themes
 
 Apply via `data-theme` on the root element — token names stay the same, values change:
@@ -152,24 +149,29 @@ Minimum interactive target height: **40px**.
 
 ## Example Component
 
-```jsx
-export default function SeaAICard({ title, value }) {
-  return (
-    <div style={{
-      background: 'var(--surface-neutral-4)',
-      borderRadius: 'var(--radius-m)',
-      padding: '16px',
-      border: 'none',
-    }}>
-      <span style={{ color: 'var(--content-neutral-1)', fontSize: 'var(--typography-font-size-xs)', textTransform: 'uppercase',
-        letterSpacing: '0.02em', fontFamily: "'Saira Condensed', 'Arial Narrow'" }}>
-        {title}
-      </span>
-      <div style={{ color: 'var(--content-neutral-3)', fontSize: 'var(--typography-font-size-l)', fontWeight: 500, marginTop: 4 }}>
-        {value}
-      </div>
-    </div>
-  );
+```html
+<div class="sea-card">
+  <span class="sea-card__label typography card-label-s">Wind Speed</span>
+  <div class="sea-card__value typography main-title-m">12 kn</div>
+</div>
+```
+
+```css
+.sea-card {
+  background: var(--surface-neutral-4);
+  border-radius: var(--radius-m);
+  padding: var(--space-component-l);
+  border: none;
+}
+
+.sea-card__label {
+  color: var(--content-neutral-1);
+  display: block;
+  margin-bottom: var(--space-component-xs);
+}
+
+.sea-card__value {
+  color: var(--content-neutral-3);
 }
 ```
 
@@ -181,7 +183,6 @@ export default function SeaAICard({ title, value }) {
 ✅ Color = state (only 3 semantic colors)
 ✅ Saira Condensed for UI typography
 ✅ Minimum 40px touch targets
-❌ No decorative shadows or borders
 ❌ No entrance animations
 ❌ No color for emphasis — only for state
 ```
@@ -344,7 +345,7 @@ export default function SeaAICard({ title, value }) {
   padding: 4px 10px;
   border-radius: var(--radius-s);
   font-family: 'Saira Condensed', Arial, sans-serif;
-  font-size: 13px;
+  font-size: 13px; /* intentional: between xs(12) and s(16), compact badge size */
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.04em;
