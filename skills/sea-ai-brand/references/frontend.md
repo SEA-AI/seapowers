@@ -1,11 +1,11 @@
 # SEA.AI Frontend
 
-For React components, HTML/CSS, and software interfaces. The SEA.AI product UI uses
-a distinct DARK theme — this is the one place where dark backgrounds are the standard.
+For web UI, HTML/CSS, and software interfaces. The product runs on ship bridges in
+low-light environments — dark backgrounds are the standard here, unlike all other
+SEA.AI output types which use white.
 
-> Note: The product UI (software interfaces, dashboards, detection overlays) uses
-> the DARK theme by default. Print/document outputs use WHITE. This is intentional —
-> the product runs on ship bridges in low-light environments.
+> These UI surface colors are ONLY for the software product. They are NOT brand
+> colors. Do not use them in documents, diagrams, or presentations.
 
 ## Themes
 
@@ -42,33 +42,15 @@ Signal colors are identical in DARK and LIGHT; NIGHT shifts one step darker:
 | `--surface-danger-3` | `#C20A20` | `#910818` |
 | `--surface-warning-3` | `#F1B80D` | `#C2940A` |
 
-## Theme Tokens (DARK reference)
+Text on colored surfaces and accent tokens (same across all themes):
 
 ```css
-/* DARK theme (default for UI) */
---surface-neutral-1: #101214;  /* outermost shell */
---surface-neutral-2: #181B1E;  /* panels */
---surface-neutral-3: #202428;  /* cards */
---surface-neutral-4: #292E33;  /* inputs, recessed */
---surface-neutral-5: #31373D;  /* elevated elements */
-
-/* Signal colors — same in DARK and LIGHT */
---surface-primary-3:  #0A67C2;  /* active/selected/in-progress */
---surface-danger-3:   #C20A20;  /* error/critical/alert */
---surface-warning-3:  #F1B80D;  /* caution/approaching limit */
-
-/* Text on colored surfaces */
---content-primary-2:  #CFE5FC;
---content-danger-1:   #FA9EA9;
---content-warning-1:  #FAE39E;
-
-/* Accent (borders, focus rings) */
---accent-primary-2: #0A67C2;
---accent-danger-2:  #C20A20;
+--content-primary-2: #CFE5FC;  /* text on primary blue */
+--content-danger-1:  #FA9EA9;  /* text on danger red */
+--content-warning-1: #FAE39E;  /* text on warning amber */
+--accent-primary-2:  #0A67C2;  /* focus rings, borders */
+--accent-danger-2:   #C20A20;  /* error outlines */
 ```
-
-> These UI surface colors (`#101214` etc.) are ONLY for the software product.
-> They are NOT the brand colors. Do not use them in documents, diagrams or presentations.
 
 ## Typography
 
@@ -78,8 +60,6 @@ Signal colors are identical in DARK and LIGHT; NIGHT shifts one step darker:
 ```css
 font-family: 'Saira Condensed', 'Arial Narrow', Arial, sans-serif;
 ```
-
-Condensed letterform for clarity at all sizes — instrument-panel readouts and dashboards benefit from the letterform density.
 
 Classes are scoped to the `.typography` base, e.g. `<p class="typography main-title-l">`:
 
@@ -170,10 +150,10 @@ Layout-scale spacing (`--space-layout-xs` … `--space-layout-3xl`, 64px → 512
 
 Minimum interactive target height: **40px**.
 
-## React Template
+## Example Component
 
 ```jsx
-export default function SeaAICard({ title, value, status }) {
+export default function SeaAICard({ title, value }) {
   return (
     <div style={{
       background: 'var(--surface-neutral-4)',
@@ -204,7 +184,7 @@ export default function SeaAICard({ title, value, status }) {
 ❌ No decorative shadows or borders
 ❌ No entrance animations
 ❌ No color for emphasis — only for state
-❌ Do not use UI surface colors (#101214 etc.) in documents/diagrams
+❌ Do not use UI surface colors in documents/diagrams
 ```
 
 ---
@@ -242,7 +222,7 @@ export default function SeaAICard({ title, value, status }) {
   border: none;
   border-radius: var(--radius-m);
   font-family: 'Saira Condensed', Arial, sans-serif;
-  font-size: 16px;
+  font-size: var(--typography-font-size-s);
   cursor: pointer;
   transition: 0.2s;
   gap: 8px;
@@ -330,7 +310,7 @@ export default function SeaAICard({ title, value, status }) {
   background: var(--surface-neutral-4);
   color: var(--content-neutral-3);
   font-family: 'Saira Condensed', Arial, sans-serif;
-  font-size: 16px;
+  font-size: var(--typography-font-size-s);
 }
 
 .input::placeholder { color: var(--content-neutral-1); }
