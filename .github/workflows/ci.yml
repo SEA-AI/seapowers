@@ -102,8 +102,11 @@ jobs:
         id: descriptions
         if: steps.changed-skills.outputs.any_changed == 'true'
         continue-on-error: true
+        env:
+          CHANGED_SKILLS: ${{ steps.changed-skills.outputs.all_changed_files }}
         run: |
-          mapfile -t skill_files < <(jq -r '.[]' <<< '${{ steps.changed-skills.outputs.all_changed_files }}')
+          set -euo pipefail
+          mapfile -t skill_files < <(jq -er '.[]' <<< "${CHANGED_SKILLS//\\\"/\"}")
 
           {
             echo "| Skill | Description (chars / 1024) | Status |"
@@ -126,8 +129,11 @@ jobs:
         id: tokens
         if: steps.changed.outputs.any_changed == 'true'
         continue-on-error: true
+        env:
+          CHANGED_MD: ${{ steps.changed-md.outputs.all_changed_files }}
         run: |
-          mapfile -t md_files < <(jq -r '.[]' <<< '${{ steps.changed-md.outputs.all_changed_files }}')
+          set -euo pipefail
+          mapfile -t md_files < <(jq -er '.[]' <<< "${CHANGED_MD//\\\"/\"}")
 
           if [ ${#md_files[@]} -eq 0 ]; then
             echo 'table=_No markdown files modified._' >> "$GITHUB_OUTPUT"
