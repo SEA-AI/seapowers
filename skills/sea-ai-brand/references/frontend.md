@@ -10,22 +10,98 @@ a distinct DARK theme — this is the one place where dark backgrounds are the s
 ## Themes
 
 Three themes are available via the `data-theme` attribute on the root element. All
-share the same token names — only the resolved values change.
+share the same token names — only the resolved values change, so component code
+written against `var(--surface-neutral-1)` works in all three without modification.
 
-| Theme | When to use | Outermost surface |
-|---|---|---|
-| `DARK` | Default for the product UI | `#101214` |
-| `LIGHT` | Daytime / well-lit contexts where dark UI causes glare | `#B9BDC1` |
-| `NIGHT` | Bridge at night — preserves night vision (darker than DARK) | `#000000` |
+| Theme | When to use |
+|---|---|
+| `DARK` | Default for the product UI |
+| `LIGHT` | Daytime / well-lit contexts where dark UI causes glare |
+| `NIGHT` | Bridge at night — preserves night vision (darker than DARK) |
+
+### Setup
+
+Set the attribute on `<html>` (or any ancestor of the styled tree) and the tokens
+cascade automatically:
 
 ```html
-<html data-theme="DARK">  <!-- or LIGHT / NIGHT -->
+<html data-theme="DARK">  <!-- LIGHT / DARK / NIGHT -->
+  <body>
+    <div class="shell">…</div>
+  </body>
+</html>
 ```
 
-Signal colors (`primary`, `danger`, `warning`) resolve to the same values in DARK
-and LIGHT; NIGHT shifts them one step darker to reduce glow.
+### Resolved values per theme
 
-## Theme Tokens
+The same token name resolves to different colors per theme. Reference values for
+the most-used neutrals (use these to scaffold a theme block from scratch):
+
+| Token | LIGHT | DARK | NIGHT |
+|---|---|---|---|
+| `--surface-neutral-1` (outermost shell) | `#B9BDC1` | `#101214` | `#000000` |
+| `--surface-neutral-2` | `#CBCED1` | `#181B1E` | `#08090A` |
+| `--surface-neutral-3` (panels) | `#DCDEE0` | `#202428` | `#101214` |
+| `--surface-neutral-4` (cards/inputs) | `#EEEFF0` | `#292E33` | `#181B1E` |
+| `--surface-neutral-5` (elevated) | `#FFFFFF` | `#31373D` | `#202428` |
+| `--content-neutral-1` (dim labels) | `#747C84` | `#747C84` | `#747C84` |
+| `--content-neutral-2` (secondary text) | `#414951` | `#B9BDC1` | `#A8ADB2` |
+| `--content-neutral-3` (primary text) | `#202428` | `#FFFFFF` | `#DCDEE0` |
+
+Signal colors (`--surface-primary-3`, `--surface-danger-3`, `--surface-warning-3`)
+stay the same in DARK and LIGHT. NIGHT shifts them one step darker to reduce glow:
+
+| Signal | LIGHT / DARK | NIGHT |
+|---|---|---|
+| `--surface-primary-3` | `#0A67C2` | `#084C91` |
+| `--surface-danger-3` | `#C20A20` | `#910818` |
+| `--surface-warning-3` | `#F1B80D` | `#C2940A` |
+
+### Runtime switching
+
+```jsx
+function useTheme() {
+  const [theme, setTheme] = useState('DARK');
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+  return [theme, setTheme];
+}
+
+// Persist across reloads
+localStorage.setItem('theme', theme);
+```
+
+For auto-switching by ambient light or time of day, hook the same `setTheme` call
+to your sensor / clock source — no other code needs to change because every
+component already reads tokens.
+
+### Bootstrapping a theme block (no tokens.css)
+
+If `tokens.css` isn't available, define the theme inline. Minimum viable block:
+
+```css
+[data-theme="DARK"] {
+  --surface-neutral-1: #101214;
+  --surface-neutral-3: #202428;
+  --surface-neutral-4: #292E33;
+  --content-neutral-3: #FFFFFF;
+  --content-neutral-1: #747C84;
+  --surface-primary-3: #0A67C2;
+  --surface-danger-3:  #C20A20;
+  --surface-warning-3: #F1B80D;
+  --accent-primary-2:  #0A67C2;
+  --accent-danger-2:   #C20A20;
+  --radius-m: 8px;
+  --radius-s: 4px;
+  --opacity-disabled: 0.3;
+}
+```
+
+Repeat for `[data-theme="LIGHT"]` and `[data-theme="NIGHT"]` using the values from
+the tables above.
+
+## Theme Tokens (DARK reference)
 
 ```css
 /* DARK theme (default for UI) */
