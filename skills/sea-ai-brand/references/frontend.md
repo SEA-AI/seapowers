@@ -21,7 +21,9 @@ a distinct DARK theme — this is the one place where dark backgrounds are the s
 --surface-primary-3:  #0A67C2;  /* active/selected/in-progress */
 --surface-danger-3:   #C20A20;  /* error/critical/alert */
 --surface-warning-3:  #F1B80D;  /* caution/approaching limit */
---surface-success-3:  #2DA84F;  /* complete/confirmed/nominal (implied) */
+--surface-success-3:  #2DA84F;  /* complete/confirmed/nominal */
+/* ⚠️ --surface-success-3 is not in tokens.css — define it locally until
+   a success scale is added to the design system. */
 
 /* Text on colored surfaces */
 --content-primary-2:  #CFE5FC;
@@ -148,11 +150,11 @@ export default function SeaAICard({ title, value, status }) {
       padding: '16px',
       border: 'none',
     }}>
-      <span style={{ color: '#7B9194', fontSize: 12, textTransform: 'uppercase',
+      <span style={{ color: 'var(--content-neutral-1)', fontSize: 12, textTransform: 'uppercase',
         letterSpacing: '0.02em', fontFamily: "'Saira Condensed', 'Arial Narrow'" }}>
         {title}
       </span>
-      <div style={{ color: '#F0F2F4', fontSize: 24, fontWeight: 500, marginTop: 4 }}>
+      <div style={{ color: 'var(--content-neutral-3)', fontSize: 24, fontWeight: 500, marginTop: 4 }}>
         {value}
       </div>
     </div>
