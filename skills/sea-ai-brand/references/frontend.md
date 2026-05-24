@@ -146,11 +146,11 @@ export default function SeaAICard({ title, value, status }) {
       padding: '16px',
       border: 'none',
     }}>
-      <span style={{ color: 'var(--content-neutral-1)', fontSize: 12, textTransform: 'uppercase',
+      <span style={{ color: 'var(--content-neutral-1)', fontSize: 'var(--typography-font-size-xs)', textTransform: 'uppercase',
         letterSpacing: '0.02em', fontFamily: "'Saira Condensed', 'Arial Narrow'" }}>
         {title}
       </span>
-      <div style={{ color: 'var(--content-neutral-3)', fontSize: 24, fontWeight: 500, marginTop: 4 }}>
+      <div style={{ color: 'var(--content-neutral-3)', fontSize: 'var(--typography-font-size-l)', fontWeight: 500, marginTop: 4 }}>
         {value}
       </div>
     </div>
