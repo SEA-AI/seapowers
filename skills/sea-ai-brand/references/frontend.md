@@ -1,59 +1,75 @@
 # SEA.AI Frontend
 
-For React components, HTML/CSS, and software interfaces. The SEA.AI product UI uses
-a distinct DARK theme — this is the one place where dark backgrounds are the standard.
+For web UI, HTML/CSS, and software interfaces. The product runs on ship bridges in
+low-light environments — dark backgrounds are the standard here, unlike all other
+SEA.AI output types which use white.
 
-> Note: The product UI (software interfaces, dashboards, detection overlays) uses
-> the DARK theme by default. Print/document outputs use WHITE. This is intentional —
-> the product runs on ship bridges in low-light environments.
+## Themes
 
-## Theme Tokens
+Apply via `data-theme` on the root element — token names stay the same, values change:
 
-```css
-/* DARK theme (default for UI) */
---surface-neutral-1: #101214;  /* outermost shell */
---surface-neutral-2: #181B1E;  /* panels */
---surface-neutral-3: #202428;  /* cards */
---surface-neutral-4: #292E33;  /* inputs, recessed */
---surface-neutral-5: #31373D;  /* elevated elements */
-
-/* Signal colors — same in DARK and LIGHT */
---surface-primary-3:  #0A67C2;  /* active/selected/in-progress */
---surface-danger-3:   #C20A20;  /* error/critical/alert */
---surface-warning-3:  #F1B80D;  /* caution/approaching limit */
---surface-success-3:  #2DA84F;  /* complete/confirmed/nominal (implied) */
-
-/* Text on colored surfaces */
---content-primary-2:  #CFE5FC;
---content-danger-1:   #FA9EA9;
---content-warning-1:  #FAE39E;
-
-/* Accent (borders, focus rings) */
---accent-primary-2: #0A67C2;
---accent-danger-2:  #C20A20;
+```html
+<html data-theme="DARK">  <!-- LIGHT / DARK / NIGHT -->
 ```
 
-> These UI surface colors (`#101214` etc.) are ONLY for the software product.
-> They are NOT the brand colors. Do not use them in documents, diagrams or presentations.
+| Theme | When to use |
+|---|---|
+| `DARK` | Default for the product UI |
+| `LIGHT` | Daytime / well-lit contexts |
+| `NIGHT` | Bridge at night — preserves night vision |
+
+Neutral surfaces and text per theme:
+
+| Token | LIGHT | DARK | NIGHT |
+|---|---|---|---|
+| `--surface-neutral-1` (shell) | `#B9BDC1` | `#101214` | `#000000` |
+| `--surface-neutral-2` | `#CBCED1` | `#181B1E` | `#08090A` |
+| `--surface-neutral-3` (panels) | `#DCDEE0` | `#202428` | `#101214` |
+| `--surface-neutral-4` (cards) | `#EEEFF0` | `#292E33` | `#181B1E` |
+| `--surface-neutral-5` (elevated) | `#FFFFFF` | `#31373D` | `#202428` |
+| `--content-neutral-1` (dim) | `#747C84` | `#747C84` | `#747C84` |
+| `--content-neutral-2` (secondary) | `#414951` | `#B9BDC1` | `#A8ADB2` |
+| `--content-neutral-3` (primary) | `#202428` | `#FFFFFF` | `#DCDEE0` |
+
+Signal colors are identical in DARK and LIGHT; NIGHT shifts one step darker:
+
+| Signal | LIGHT / DARK | NIGHT |
+|---|---|---|
+| `--surface-primary-3` | `#0A67C2` | `#084C91` |
+| `--surface-danger-3` | `#C20A20` | `#910818` |
+| `--surface-warning-3` | `#F1B80D` | `#C2940A` |
+
+Text on colored surfaces and accent tokens (same across all themes):
+
+```css
+--content-primary-2: #CFE5FC;  /* text on primary blue */
+--content-danger-1:  #FA9EA9;  /* text on danger red */
+--content-warning-1: #FAE39E;  /* text on warning amber */
+--accent-primary-2:  #0A67C2;  /* focus rings, borders */
+--accent-danger-2:   #C20A20;  /* error outlines */
+```
 
 ## Typography
 
+> The product UI uses **Saira Condensed**. Other output types (documents, slides,
+> diagrams) may use a different brand font — check the relevant reference file.
+
 ```css
-font-family: 'Barlow Semi Condensed', 'Arial Narrow', Arial, sans-serif;
+font-family: 'Saira Condensed', 'Arial Narrow', Arial, sans-serif;
 ```
 
-Condensed letterform for clarity at all sizes — instrument-panel readouts and dashboards benefit from the letterform density.
+Classes are scoped to the `.typography` base, e.g. `<p class="typography main-title-l">`:
 
 ```css
 /* main-* classes: sentence case, prose */
-.main-title-l  { font-size: 40px; font-weight: 500; line-height: 48px; }
-.main-title-m  { font-size: 24px; font-weight: 500; line-height: 32px; }
-.main-body-m   { font-size: 20px; font-weight: 400; line-height: 28px; }
-.main-body-s   { font-size: 16px; font-weight: 400; line-height: 24px; }
+.typography.main-title-l  { font-size: 2.5rem;  font-weight: 500; line-height: 3rem; }   /* 40/48 */
+.typography.main-title-m  { font-size: 1.5rem;  font-weight: 500; line-height: 2rem; }   /* 24/32 */
+.typography.main-body-m   { font-size: 1.25rem; font-weight: 400; line-height: 1.75rem; } /* 20/28 */
+.typography.main-body-s   { font-size: 1rem;    font-weight: 400; line-height: 1.5rem; }  /* 16/24 */
 
 /* card-* classes: UPPERCASE, data labels */
-.card-title-m  { font-size: 24px; font-weight: 400; letter-spacing: 0.02em; text-transform: uppercase; }
-.card-label-s  { font-size: 16px; font-weight: 500; text-transform: uppercase; }
+.typography.card-title-m  { font-size: 1.5rem; font-weight: 400; line-height: 2rem; letter-spacing: 0.02em; text-transform: uppercase; }
+.typography.card-label-s  { font-size: 1rem;   font-weight: 500; line-height: 100%; text-transform: uppercase; }
 ```
 
 ## Flat Surface System
@@ -74,24 +90,29 @@ Depth comes from surface value contrast only — no shadows, no borders:
 .grid { gap: 8px; padding: 16px; background: var(--surface-neutral-3); }
 ```
 
-## Semantic Color — 4 Roles Only
+## Semantic Color — 3 Roles
 
 | Color | Signal | Use |
 |-------|--------|-----|
 | Primary blue | Active / selected / in progress | Running state, active tab |
 | Danger red | Error / critical / destructive | Alert, failure, expiry |
 | Warning amber | Caution / near limit | Pending, near-threshold |
-| Success green | Complete / confirmed | Done, connected |
-| Neutral grey | Inactive / secondary | Idle, secondary, dividers |
+
+Neutral grey is the surface system, not a semantic role — use it for idle, secondary, and dividers.
 
 **Color communicates state. Never for visual emphasis alone.**
 
 ## Border Radius
 
+> Note: the upstream tokens.css ships these as `--radious-*` (misspelled). Use the
+> corrected `--radius-*` names in new code and alias them to the upstream tokens
+> at the theme root.
+
 ```css
---radious-s: 4px;   /* chips, tags, tight controls */
---radious-m: 8px;   /* buttons, cards, panels */
---radious-l: 16px;  /* modals, large surfaces */
+--radius-xs: 2px;   /* hairline */
+--radius-s:  4px;   /* chips, tags, tight controls */
+--radius-m:  8px;   /* buttons, cards, panels */
+--radius-l:  16px;  /* modals, large surfaces */
 ```
 
 Adjacent components share edges (radius → 0 on shared side):
@@ -112,36 +133,45 @@ transition: all 0.4s linear;         /* continuous indicators */
 ## Spacing Tokens
 
 ```css
---space-xs:  4px;   /* tight icon gaps */
---space-s:   8px;   /* inline element gaps */
---space-m:   12px;  /* standard gap between controls */
---space-l:   16px;  /* padding inside components */
---space-2xl: 24px;  /* between sections */
---space-3xl: 32px;  /* panel internal padding */
+--space-component-xs:  4px;   /* tight icon gaps */
+--space-component-s:   8px;   /* inline element gaps */
+--space-component-m:   12px;  /* standard gap between controls */
+--space-component-l:   16px;  /* padding inside components */
+--space-component-xl:  20px;
+--space-component-2xl: 24px;  /* between sections */
+--space-component-3xl: 32px;  /* panel internal padding */
+--space-component-4xl: 48px;
 ```
+
+Layout-scale spacing (`--space-layout-xs` … `--space-layout-3xl`, 64px → 512px) is also available for page-level gutters.
 
 Minimum interactive target height: **40px**.
 
-## React Template
+## Example Component
 
-```jsx
-export default function SeaAICard({ title, value, status }) {
-  return (
-    <div style={{
-      background: 'var(--surface-neutral-4)',
-      borderRadius: 'var(--radious-m)',
-      padding: '16px',
-      border: 'none',
-    }}>
-      <span style={{ color: '#7B9194', fontSize: 12, textTransform: 'uppercase',
-        letterSpacing: '0.02em', fontFamily: "'Barlow Semi Condensed', 'Arial Narrow'" }}>
-        {title}
-      </span>
-      <div style={{ color: '#F0F2F4', fontSize: 24, fontWeight: 500, marginTop: 4 }}>
-        {value}
-      </div>
-    </div>
-  );
+```html
+<div class="sea-card">
+  <span class="sea-card__label typography card-label-s">Wind Speed</span>
+  <div class="sea-card__value typography main-title-m">12 kn</div>
+</div>
+```
+
+```css
+.sea-card {
+  background: var(--surface-neutral-4);
+  border-radius: var(--radius-m);
+  padding: var(--space-component-l);
+  border: none;
+}
+
+.sea-card__label {
+  color: var(--content-neutral-1);
+  display: block;
+  margin-bottom: var(--space-component-xs);
+}
+
+.sea-card__value {
+  color: var(--content-neutral-3);
 }
 ```
 
@@ -150,13 +180,11 @@ export default function SeaAICard({ title, value, status }) {
 ```
 ✅ DARK theme by default (surface-neutral-1 outermost)
 ✅ Depth from background contrast only — no shadows, no borders
-✅ Color = state (only 4 semantic colors)
-✅ Barlow Semi Condensed for UI typography
+✅ Color = state (only 3 semantic colors)
+✅ Saira Condensed for UI typography
 ✅ Minimum 40px touch targets
-❌ No decorative shadows or borders
 ❌ No entrance animations
 ❌ No color for emphasis — only for state
-❌ Do not use UI surface colors (#101214 etc.) in documents/diagrams
 ```
 
 ---
@@ -193,8 +221,8 @@ export default function SeaAICard({ title, value, status }) {
   padding: 12px 16px;
   border: none;
   border-radius: var(--radius-m);
-  font-family: 'Barlow Semi Condensed', Arial, sans-serif;
-  font-size: 16px;
+  font-family: 'Saira Condensed', Arial, sans-serif;
+  font-size: var(--typography-font-size-s);
   cursor: pointer;
   transition: 0.2s;
   gap: 8px;
@@ -203,8 +231,8 @@ export default function SeaAICard({ title, value, status }) {
 .btn--primary   { background: var(--surface-primary-3); color: var(--content-primary-3); }
 .btn--secondary { background: var(--surface-neutral-4); color: var(--content-neutral-3); }
 .btn--danger    { background: var(--surface-danger-3);  color: #fff; }
-.btn--ghost     { background: transparent; color: var(--content-neutral-3); border: 1px solid var(--surface-neutral-4); }
-.btn:disabled   { opacity: 0.3; pointer-events: none; }
+.btn--ghost     { background: transparent; color: var(--content-neutral-3); border: var(--stroke-thin) solid var(--surface-neutral-4); }
+.btn:disabled   { opacity: var(--opacity-disabled); pointer-events: none; }
 ```
 
 ### Toggle
@@ -258,7 +286,7 @@ export default function SeaAICard({ title, value, status }) {
 .box {
   width: 18px; height: 18px;
   border-radius: var(--radius-s);
-  border: 1.5px solid var(--surface-neutral-5);
+  border: var(--stroke-normal) solid var(--surface-neutral-5);
   background: var(--surface-neutral-4);
   transition: 0.2s;
 }
@@ -281,13 +309,13 @@ export default function SeaAICard({ title, value, status }) {
   border-radius: var(--radius-xs);
   background: var(--surface-neutral-4);
   color: var(--content-neutral-3);
-  font-family: 'Barlow Semi Condensed', Arial, sans-serif;
-  font-size: 16px;
+  font-family: 'Saira Condensed', Arial, sans-serif;
+  font-size: var(--typography-font-size-s);
 }
 
 .input::placeholder { color: var(--content-neutral-1); }
-.input:disabled     { opacity: 0.3; }
-.input.error        { outline: 1px solid var(--accent-danger-2); outline-offset: -1px; }
+.input:disabled     { opacity: var(--opacity-disabled); }
+.input.error        { outline: var(--stroke-thin) solid var(--accent-danger-2); outline-offset: -1px; }
 ```
 
 ### Progress Bar
@@ -306,7 +334,6 @@ export default function SeaAICard({ title, value, status }) {
 ### Pill
 
 ```html
-<span class="pill pill--connected">Connected</span>
 <span class="pill pill--disconnected">Not Connected</span>
 <span class="pill pill--connecting">Connecting</span>
 ```
@@ -317,38 +344,27 @@ export default function SeaAICard({ title, value, status }) {
   align-items: center;
   padding: 4px 10px;
   border-radius: var(--radius-s);
-  font-family: 'Barlow Semi Condensed', Arial, sans-serif;
-  font-size: 13px;
+  font-family: 'Saira Condensed', Arial, sans-serif;
+  font-size: 13px; /* intentional: between xs(12) and s(16), compact badge size */
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-.pill--connected    { background: var(--surface-success-3); color: #fff; }
 .pill--disconnected { background: var(--surface-danger-3);  color: #fff; }
 .pill--connecting   { background: var(--surface-warning-3); color: #000; }
 ```
 
 ### Typography
 
+Use the `.typography.*` classes defined in the Typography section above:
+
 ```html
-<p class="text-title-l">Page Title</p>
-<p class="text-title-m">Section Title</p>
-<p class="text-body-m">Body text</p>
-<p class="text-body-s">Caption text</p>
-<p class="text-label">STATUS LABEL</p>
+<p class="typography main-title-l">Page Title</p>
+<p class="typography main-title-m">Section Title</p>
+<p class="typography main-body-m">Body text</p>
+<p class="typography main-body-s">Caption text</p>
+<p class="typography card-label-s">STATUS LABEL</p>
 ```
 
-```css
-.text-title-l, .text-title-m, .text-body-m, .text-body-s, .text-label {
-  font-family: 'Barlow Semi Condensed', Arial, sans-serif;
-  color: var(--content-neutral-3);
-  margin: 0;
-}
-
-.text-title-l { font-size: 40px; font-weight: 500; line-height: 48px; }
-.text-title-m { font-size: 24px; font-weight: 500; line-height: 32px; }
-.text-body-m  { font-size: 20px; font-weight: 400; line-height: 28px; }
-.text-body-s  { font-size: 16px; font-weight: 400; line-height: 24px; }
-.text-label   { font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; color: var(--content-neutral-2); }
-```
+Default text color is `var(--content-neutral-3)`; override per-context as needed.

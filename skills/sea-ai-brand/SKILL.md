@@ -5,10 +5,9 @@ description: >
   diagrams, infographics, PDFs, presentations (PPTX), spec sheets, one-pagers, reports,
   and UI/web code. This is the single source of truth for SEA.AI CI/CD.
   ALWAYS trigger when: creating diagrams, charts, infographics, any PDF or document,
-  any PPTX slide deck, any HTML/React UI, any marketing or technical material for SEA.AI.
+  any PPTX slide deck, any web/HTML/JS/TS UI, any marketing or technical material for SEA.AI.
   Covers ALL output types — if it carries the SEA.AI brand, use this skill.
-creator: Philipp Stampfl
-date: 2026-05-09
+  SKIP when working inside the Core-Frontend repo.
 license: MIT
 ---
 
@@ -27,7 +26,7 @@ Source of truth: **Brand Book 2025** (stored at `Brand info alt/Brand Book 2025.
 | 📄 Word document (.docx) | `references/documents.md` | python-docx |
 | 📄 Excel spreadsheet (.xlsx) | `references/documents.md` | openpyxl |
 | 🎤 Presentation (.pptx) | `references/presentations-pptx.md` | pptxgenjs |
-| 💻 Web / frontend component | `references/frontend.md` | React / HTML |
+| 💻 Web / frontend component | `references/frontend.md` | HTML / CSS / JS / TS |
 
 **⚠️ Before you start:** Read the relevant reference file + the "Core Brand" section below (colors, fonts, rules).
 
