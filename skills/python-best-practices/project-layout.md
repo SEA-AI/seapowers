@@ -14,6 +14,7 @@ my-project/
 │   └── test_core.py
 ├── pyproject.toml
 ├── ruff.toml
+├── ty.toml
 └── uv.lock
 ```
 
@@ -39,6 +40,7 @@ my-project/
 │   └── test_core.py
 ├── pyproject.toml
 ├── ruff.toml
+├── ty.toml
 └── uv.lock
 ```
 

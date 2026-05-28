@@ -37,7 +37,7 @@ Commit both `pyproject.toml` and `uv.lock`. Never run bare `pip install`.
 
 **Linting & formatting — ruff:** config lives in a dedicated `ruff.toml` at the project root. Always respect the rules defined there; do not apply or suggest rules outside of what the project has configured.
 
-**Type checking — ty** (Astral, Rust-based, 10-100× faster than mypy): `uvx ty check`. Always respect the project's local ty config. Fall back to `mypy --strict` if you need plugins (Django ORM, SQLAlchemy).
+**Type checking — ty** (Astral, Rust-based, 10-100× faster than mypy): `uvx ty check`. Config lives in a dedicated `ty.toml` at the project root. Always respect the project's local ty config. Fall back to `mypy --strict` if you need plugins (Django ORM, SQLAlchemy).
 
 **Project layout:** See [project-layout.md](project-layout.md).
 
