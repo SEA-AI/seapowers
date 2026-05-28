@@ -86,10 +86,12 @@ your own logic. Use `monkeypatch` for simple attribute/env patches; use `pytest-
 is pytest-native and auto-cleans up after each test.
 
 ```python
+from types import SimpleNamespace
+
 # Simple patch with monkeypatch
 def test_fetch_vessel_returns_name(monkeypatch):
-    monkeypatch.setattr("mypackage.vessels.httpx.get", lambda url, **_: 
-        type("R", (), {"json": lambda self: {"name": "EVER GIVEN"}})())
+    fake = SimpleNamespace(json=lambda: {"name": "EVER GIVEN"})
+    monkeypatch.setattr("mypackage.vessels.httpx.get", lambda url, **_: fake)
     assert fetch_vessel("123456789")["name"] == "EVER GIVEN"
 
 # Richer mock with pytest-mock
