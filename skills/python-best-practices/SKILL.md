@@ -35,9 +35,9 @@ Commit both `pyproject.toml` and `uv.lock`. Never run bare `pip install`.
 
 `uvx` (`uv tool run`) runs a tool in a temporary isolated environment — useful for one-off or CI invocations without permanent installation: `uvx ruff check`, `uvx ruff format`, `uvx ty check`.
 
-**Linting & formatting — ruff:** config lives in a dedicated `ruff.toml` at the project root. Rules: [docs.astral.sh/ruff/rules](https://docs.astral.sh/ruff/rules/).
+**Linting & formatting — ruff:** config lives in a dedicated `ruff.toml` at the project root. Always respect the rules defined there; do not apply or suggest rules outside of what the project has configured.
 
-**Type checking — ty** (Astral, Rust-based, 10-100× faster than mypy): `uvx ty check`. Fall back to `mypy --strict` if you need plugins (Django ORM, SQLAlchemy). Rules: [docs.astral.sh/ty/rules](https://docs.astral.sh/ty/rules/).
+**Type checking — ty** (Astral, Rust-based, 10-100× faster than mypy): `uvx ty check`. Always respect the project's local ty config. Fall back to `mypy --strict` if you need plugins (Django ORM, SQLAlchemy).
 
 **Project layout:** See [project-layout.md](project-layout.md).
 
