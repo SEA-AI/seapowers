@@ -51,9 +51,6 @@ Text on colored surfaces and accent tokens (same across all themes):
 
 ## Typography
 
-> The product UI uses **Barlow Semi Condensed**. This is the official SEA.AI brand
-> font for both frontend UI and marketing materials.
-
 ```css
 font-family: 'Barlow Semi Condensed', 'Arial Narrow', Arial, sans-serif;
 ```
@@ -181,7 +178,6 @@ Minimum interactive target height: **40px**.
 ✅ DARK theme by default (surface-neutral-1 outermost)
 ✅ Depth from background contrast only — no shadows, no borders
 ✅ Color = state (only 3 semantic colors)
-✅ Barlow Semi Condensed for UI typography
 ✅ Minimum 40px touch targets
 ❌ No entrance animations
 ❌ No color for emphasis — only for state
