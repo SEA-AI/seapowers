@@ -51,11 +51,8 @@ Text on colored surfaces and accent tokens (same across all themes):
 
 ## Typography
 
-> The product UI uses **Saira Condensed**. Other output types (documents, slides,
-> diagrams) may use a different brand font — check the relevant reference file.
-
 ```css
-font-family: 'Saira Condensed', 'Arial Narrow', Arial, sans-serif;
+font-family: 'Barlow Semi Condensed', 'Arial Narrow', Arial, sans-serif;
 ```
 
 Classes are scoped to the `.typography` base, e.g. `<p class="typography main-title-l">`:
@@ -181,7 +178,6 @@ Minimum interactive target height: **40px**.
 ✅ DARK theme by default (surface-neutral-1 outermost)
 ✅ Depth from background contrast only — no shadows, no borders
 ✅ Color = state (only 3 semantic colors)
-✅ Saira Condensed for UI typography
 ✅ Minimum 40px touch targets
 ❌ No entrance animations
 ❌ No color for emphasis — only for state
@@ -221,7 +217,7 @@ Minimum interactive target height: **40px**.
   padding: 12px 16px;
   border: none;
   border-radius: var(--radius-m);
-  font-family: 'Saira Condensed', Arial, sans-serif;
+  font-family: 'Barlow Semi Condensed', 'Arial Narrow', Arial, sans-serif;
   font-size: var(--typography-font-size-s);
   cursor: pointer;
   transition: 0.2s;
@@ -309,7 +305,7 @@ Minimum interactive target height: **40px**.
   border-radius: var(--radius-xs);
   background: var(--surface-neutral-4);
   color: var(--content-neutral-3);
-  font-family: 'Saira Condensed', Arial, sans-serif;
+  font-family: 'Barlow Semi Condensed', 'Arial Narrow', Arial, sans-serif;
   font-size: var(--typography-font-size-s);
 }
 
@@ -344,7 +340,7 @@ Minimum interactive target height: **40px**.
   align-items: center;
   padding: 4px 10px;
   border-radius: var(--radius-s);
-  font-family: 'Saira Condensed', Arial, sans-serif;
+  font-family: 'Barlow Semi Condensed', 'Arial Narrow', Arial, sans-serif;
   font-size: 13px; /* intentional: between xs(12) and s(16), compact badge size */
   font-weight: 500;
   text-transform: uppercase;
