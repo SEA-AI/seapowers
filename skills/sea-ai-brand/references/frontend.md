@@ -217,7 +217,7 @@ Minimum interactive target height: **40px**.
   padding: 12px 16px;
   border: none;
   border-radius: var(--radius-m);
-  font-family: 'Barlow Semi Condensed', Arial, sans-serif;
+  font-family: 'Barlow Semi Condensed', 'Arial Narrow', Arial, sans-serif;
   font-size: var(--typography-font-size-s);
   cursor: pointer;
   transition: 0.2s;
@@ -305,7 +305,7 @@ Minimum interactive target height: **40px**.
   border-radius: var(--radius-xs);
   background: var(--surface-neutral-4);
   color: var(--content-neutral-3);
-  font-family: 'Barlow Semi Condensed', Arial, sans-serif;
+  font-family: 'Barlow Semi Condensed', 'Arial Narrow', Arial, sans-serif;
   font-size: var(--typography-font-size-s);
 }
 
@@ -340,7 +340,7 @@ Minimum interactive target height: **40px**.
   align-items: center;
   padding: 4px 10px;
   border-radius: var(--radius-s);
-  font-family: 'Barlow Semi Condensed', Arial, sans-serif;
+  font-family: 'Barlow Semi Condensed', 'Arial Narrow', Arial, sans-serif;
   font-size: 13px; /* intentional: between xs(12) and s(16), compact badge size */
   font-weight: 500;
   text-transform: uppercase;
