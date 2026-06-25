@@ -9,7 +9,10 @@ See the [Claude Code Plugin Marketplaces documentation](https://code.claude.com/
 When adding skills, agents, or plugins:
 - [ ] Create the component in the appropriate directory
 - [ ] Update `README.md` with a description of what was added
-- [ ] Bump version in relevant manifest files (semantic versioning)
+- [ ] Bump version in relevant manifest files (semantic versioning):
+  - `PATCH` (x.y.**Z**) — fixes, rewording, description tweaks, metadata-only changes
+  - `MINOR` (x.**Y**.0) — new skills, new features, additive changes
+  - `MAJOR` (**X**.0.0) — breaking changes, removed skills, incompatible API changes
 - [ ] Test locally before creating a PR
 
 ## Key Files

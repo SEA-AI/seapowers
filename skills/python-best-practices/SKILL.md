@@ -1,9 +1,11 @@
 ---
 name: python-best-practices
 description: >
-  Modern Python best practices. Use when writing, reviewing, or refactoring Python code,
-  setting up a project, choosing between design patterns (dataclasses vs Pydantic,
-  functions vs classes), writing tests, or working with async code.
+  Provides modern Python best practices for writing, reviewing, refactoring, or debugging
+  Python code. Use when working on scripts, modules, packages, or services, and when the
+  task involves Python tooling (uv, ruff, pytest, mypy/ty), dependency management, project
+  setup, design patterns, async code, type annotations, testing, or common Python libraries
+  such as FastAPI, SQLAlchemy, pandas, or NumPy.
 license: MIT
 ---
 
