@@ -30,16 +30,16 @@ A high level description of the implemented changes. Visual aid is always prefer
 
 ## Instructions
 
-- Fill in the **What?**, **Why?**, and **How?** sections based on the branch's commits and diff against the base branch.
-- Keep **What?** to a maximum of 2 sentences.
-- For **How?**, prefer visual aids (tables, diagrams, code snippets) when they add clarity.
+- Use the **complete diff** against the base branch as the source of truth.
+- Describe the **impact of the change**, not the implementation history.
+- Focus on user-visible, behavioral, or architectural changes. Skip mechanical details unless they matter for review.
 - Leave the **Testing** section empty with the HTML comment — suggest testing evidence (screenshots, videos, etc.) to the author after the PR is created.
 
 ## Writing Style
 
-- Be concise: write only what helps the reader understand the change.
-- Use simple, plain language. Avoid jargon and unnecessary formality.
-- Make PRs easy to scan. Prefer tables, before/after comparisons, code snippets, or Mermaid diagrams over long paragraphs whenever they improve clarity.
+- **Be concise and precise**: write only what helps the reader understand the change.
+- **Use simple, plain language**. Avoid jargon and unnecessary formality.
+- **Make PRs easy to scan**. Prefer tables, diagrams, and code snippets over long paragraphs when they improve clarity.
 
 ## Large PRs
 
