@@ -33,7 +33,7 @@ A high level description of the implemented changes. Visual aid is always prefer
 - Use the **complete diff** against the base branch as the source of truth.
 - Describe the **impact of the change**, not the implementation history.
 - Focus on user-visible, behavioral, or architectural changes. Skip mechanical details unless they matter for review.
-- Leave the **Testing** section empty with the HTML comment — suggest testing evidence (screenshots, videos, etc.) to the author after the PR is created.
+- Leave the **Testing** section empty with the HTML comment. Suggest relevant **pre-merge** validation (tests, benchmarks, screenshots, videos, manual checks, etc.) that the author can add.
 
 ## Writing Style
 
