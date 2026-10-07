@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "SEA.AI shared skills marketplace",
-    "version": "1.0.4"
+    "version": "1.0.5"
   },
   "plugins": [
     {
       "name": "seapowers",
       "source": "./",
       "description": "Shared AI skills and workflows for the SEA.AI team",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "author": {
         "name": "SEA.AI"
       },
