@@ -94,16 +94,19 @@ draw.rectangle([x, y, x+w, y+3], fill=RED)
 # Night Blue = secondary detections in the same scene.
 # On dark/low-light photography, use low_light=True: white outline brackets, no filled pill —
 # a solid red/navy pill is too heavy against dark imagery.
-def draw_detection_box(draw, x, y, label=None, primary=False, low_light=False):
+def draw_detection_box(draw, x, y, box_w, box_h, label=None, primary=False, low_light=False):
     color = WHITE if low_light else (RED if primary else NAVY)
     if label and not low_light:
         draw.rounded_rectangle([x, y-28, x+70, y], radius=4, fill=color)
         draw.text((x+10, y-22), label, font=font(12, medium=True), fill=WHITE)
-    # Dashed corner brackets — approximate with short line segments per corner
+    # Dashed corner brackets at all four corners of the detected object's bounds
     bracket = 14
-    for cx, cy, dx, dy in [(x, y+8, 1, 0), (x, y+8, 0, 1),
-                            (x+40, y+8, -1, 0), (x+40, y+8, 0, 1)]:
-        draw.line([(cx, cy), (cx+dx*bracket, cy+dy*bracket)], fill=color, width=2)
+    corners = [(x, y, 1, 1), (x+box_w, y, -1, 1), (x, y+box_h, 1, -1), (x+box_w, y+box_h, -1, -1)]
+    for cx, cy, dx, dy in corners:
+        for off in range(0, bracket, 6):
+            end = min(off + 3, bracket)
+            draw.line([(cx+dx*off, cy), (cx+dx*end, cy)], fill=color, width=2)
+            draw.line([(cx, cy+dy*off), (cx, cy+dy*end)], fill=color, width=2)
 ```
 Never use more than one Focus Red detection box in the same scene — additional detections use Night Blue.
 
