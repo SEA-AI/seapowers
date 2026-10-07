@@ -35,11 +35,11 @@ Source of truth: **SEA.AI Brand Book 2026**, cross-checked against production fl
 ```
 Primary
   FOCUS RED    #CB0D00   RGB 203/13/0     CMYK 12/100/100/0   Pantone 186   ← primary accent
-  BLACK        #000000   RGB 0/0/0        CMYK 100/0/0/0                    ← body text on light backgrounds
+  BLACK        #000000   RGB 0/0/0        CMYK 0/0/0/100                    ← body text on light backgrounds
   WHITE        #FFFFFF   RGB 255/255/255  CMYK 0/0/0/0                      ← standard content background
 
 Secondary
-  NIGHT BLUE   #0B1731   RGB 11/23/45     CMYK 95/85/40/70    Pantone 289   ← dark backgrounds
+  NIGHT BLUE   #0B1731   RGB 11/23/49     CMYK 95/85/40/70    Pantone 289   ← dark backgrounds
   OCEAN GREEN  #06404C   RGB 6/64/76      CMYK 100/83/68/0    Pantone 548   ← product/secondary (visually a dark teal, NOT a green)
   SKY GREY     #7B9194   RGB 123/145/148  CMYK 59/37/37/0     Pantone 443  ← muted text, captions
   FOG WHITE    #DFDED9   RGB 223/222/217  CMYK 15/11/15/0     Pantone Cool Gray 1C ← warm backgrounds

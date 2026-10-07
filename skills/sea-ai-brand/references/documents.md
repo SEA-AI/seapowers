@@ -69,7 +69,7 @@ so the ratio is preserved). Pillow: `img.paste(logo, (x, y), logo)` after resizi
   universal rule; Night Blue fill is correct for Brand Card tables only, not comparison or
   spec-strip tables.
 - Captions / footer: **Sky Grey** (`#7B9194`)
-- Accent line under title: **Focus Red**, 1pt, full width
+- Accent line under title: **Focus Red**, 1pt, ~85–90% of the title text width (never full width)
 
 ## Heading Hierarchy (H1–H4)
 
@@ -294,7 +294,7 @@ body {
 
 h1, h2, h3 { font-weight: 500; color: #000000; }  /* Medium — no Bold weight available */
 .section-label { color: #CB0D00; font-weight: 500; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.08em; }
-.red-line { border: none; border-top: 1pt solid #CB0D00; margin: 3mm 0; }
+.red-line { border: none; border-top: 1pt solid #CB0D00; margin: 3mm 0; width: 60mm; }  /* set to ~85–90% of the heading text width */
 .footer { color: #7B9194; font-size: 8pt; border-top: 0.5pt solid #DFDED9; padding-top: 2mm; }
 ```
 

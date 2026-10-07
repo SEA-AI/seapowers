@@ -35,7 +35,7 @@ top-right, same as a white content slide. Don't apply the title-slide's top-left
 that placement was about the photo, not the color.
 ```javascript
 slide.background = { color: "0B1731" };
-slide.addImage({ path: "assets/logo_white.png", x: 11.3, y: 0.35, w: 1.6, h: 0.215 });  // top-right, white
+slide.addImage({ path: "assets/logo_white.png", x: 7.9, y: 0.35, w: 1.6, h: 0.215 });  // top-right, white
 slide.addText("OTHER MARKETING INFOS", { x: 0.5, y: 3.5, w: 8, h: 0.5,
   color: "CB0D00", fontSize: 20, fontFace: "Barlow Semi Condensed", charSpacing: 1 });
 slide.addText("Supporting body copy in white.", { x: 0.5, y: 4.2, w: 8, h: 0.8,
@@ -115,12 +115,12 @@ cards.forEach((c, i) => {
 
 ```javascript
 slide.addImage({ path: "photo.jpg", x: 0, y: 0, w: 4.8, h: 5.63 });
-// Each list item: a red vertical rule to the left of a bold title + regular text
+// Each list item: a red vertical rule to the left of a Medium-weight title + regular text
 const items = [{ title: "Title", text: "Text" }, /* up to 4 */];
 items.forEach((it, i) => {
   const y = 2.2 + i * 0.75;
   slide.addShape(pptx.ShapeType.rect, { x: 4.8, y: y, w: 0.03, h: 0.6, fill: { color: "CB0D00" } });
-  slide.addText(it.title, { x: 5.0, y: y, w: 4, h: 0.3, color: "000000", fontSize: 13, bold: true });
+  slide.addText(it.title, { x: 5.0, y: y, w: 4, h: 0.3, color: "000000", fontSize: 13, fontFace: "Barlow Semi Condensed Medium" });
   slide.addText(it.text, { x: 5.0, y: y + 0.3, w: 4, h: 0.3, color: "000000", fontSize: 11 });
 });
 // CTA button bottom-right — primary style (see Buttons section)
@@ -136,15 +136,15 @@ const stats = [{ n: "8+", label: "YEARS MARITIME AI DEVELOPMENT" }, /* ... */];
 stats.forEach((s, i) => {
   const y = 1.0 + i * 1.1;
   slide.addShape(pptx.ShapeType.rect, { x: 5.6, y: y, w: 0.3, h: 0.02, fill: { color: "CB0D00" } });
-  slide.addText(s.n, { x: 5.6, y: y + 0.1, w: 3, h: 0.7, color: "000000", fontSize: 36 });  // Regular weight, display size
+  slide.addText(s.n, { x: 5.6, y: y + 0.1, w: 3, h: 0.7, color: "000000", fontSize: 36, margin: [0, 0, 0, 0] });  // Regular weight, display size
   slide.addText(s.label, { x: 5.6, y: y + 0.75, w: 3, h: 0.3,
-    color: "7B9194", fontSize: 9, fontFace: "Barlow Semi Condensed Medium", charSpacing: 1 });
+    color: "7B9194", fontSize: 9, fontFace: "Barlow Semi Condensed Medium", charSpacing: 1, margin: [0, 0, 0, 0] });
 });
 ```
 
 ### Photo-Grid Application Cards (2–3 columns)
 
-Photo, then a red ALL CAPS label with a short red underline, then a bold black caption line:
+Photo, then a red ALL CAPS label with a short red underline, then a Medium-weight black caption line:
 ```javascript
 const cards = [{ photo: "navy.jpg", label: "NAVY / NAVAL FORCES", caption: "Persistent AI lookout for every naval platform" }, /* ... */];
 const colW = 9.0 / cards.length;
@@ -152,9 +152,9 @@ cards.forEach((c, i) => {
   const x = 0.5 + i * colW;
   slide.addImage({ path: c.photo, x, y: 1.2, w: colW - 0.15, h: 1.8 });
   slide.addText(c.label, { x, y: 3.1, w: colW - 0.15, h: 0.25,
-    color: "CB0D00", fontSize: 9, fontFace: "Barlow Semi Condensed Medium", charSpacing: 1 });
+    color: "CB0D00", fontSize: 9, fontFace: "Barlow Semi Condensed Medium", charSpacing: 1, margin: [0, 0, 0, 0] });
   slide.addShape(pptx.ShapeType.rect, { x, y: 3.4, w: 0.35, h: 0.02, fill: { color: "CB0D00" } });
-  slide.addText(c.caption, { x, y: 3.5, w: colW - 0.15, h: 0.5, color: "000000", fontSize: 12, bold: true });
+  slide.addText(c.caption, { x, y: 3.5, w: colW - 0.15, h: 0.5, color: "000000", fontSize: 12, fontFace: "Barlow Semi Condensed Medium", margin: [0, 0, 0, 0] });
 });
 ```
 
@@ -234,6 +234,7 @@ const tableRows = rows.map((r, ri) => r.map((cell, ci) => {
                                                  // (unlike Pillow — see diagrams.md)
   const color = isHero ? "CB0D00" : (cell === "–" ? "7B9194" : "000000");
   return { text, options: {
+    align: ci === 0 ? "left" : "center",
     color, fontFace: isHeader ? "Barlow Semi Condensed Medium" : "Barlow Semi Condensed",
     fontSize: isHeader ? 11 : 10,
     valign: "middle", // tested: pptxgenjs table cells default to top-aligned, always set this explicitly
@@ -256,9 +257,9 @@ slide.addText("LEARN MORE", { x: 4.0, y: 4.5, w: 2.0, h: 0.5,
   color: "FFFFFF", fontSize: 12, fontFace: "Barlow Semi Condensed Medium", align: "center", valign: "middle" });
 
 // Secondary — Focus Red outline, Focus Red ALL CAPS label
-slide.addShape(pptx.ShapeType.roundRect, { x: 4.0, y: 5.2, w: 2.0, h: 0.5,
+slide.addShape(pptx.ShapeType.roundRect, { x: 4.0, y: 5.05, w: 2.0, h: 0.5,
   fill: { type: "none" }, line: { color: "CB0D00", width: 1.5 }, rectRadius: 0.08 });
-slide.addText("LEARN MORE", { x: 4.0, y: 5.2, w: 2.0, h: 0.5,
+slide.addText("LEARN MORE", { x: 4.0, y: 5.05, w: 2.0, h: 0.5,
   color: "CB0D00", fontSize: 12, fontFace: "Barlow Semi Condensed Medium", align: "center", valign: "middle" });
 ```
 
