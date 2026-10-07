@@ -1,7 +1,7 @@
 # seapowers
 
 [![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-7c3aed?logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQyIDAtOC0zLjU4LTgtOHMzLjU4LTggOC04IDggMy41OCA4IDgtMy41OCA4LTggOHoiLz48L3N2Zz4=&style=flat-square)](https://docs.anthropic.com/en/docs/claude-code/skills)
-[![Skills & Plugins](https://img.shields.io/badge/Skills%20%26%20Plugins-3-blue?style=flat-square)](#-available-skills-and-plugins)
+[![Skills & Plugins](https://img.shields.io/badge/Skills%20%26%20Plugins-4-blue?style=flat-square)](#-available-skills-and-plugins)
 [![Upstream Sync](https://img.shields.io/github/actions/workflow/status/SEA-AI/seapowers/sync-upstream-skills.yml?label=Upstream%20Sync&style=flat-square)](https://github.com/SEA-AI/seapowers/actions/workflows/sync-upstream-skills.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
@@ -14,6 +14,7 @@
 | Skill | Description | Source |
 |-------|-------------|--------|
 | 📝 `pull-request` | SEA.AI PR template with What/Why/How/Testing sections | Internal |
+| 🐍 `python-best-practices` | Modern Python tooling and patterns (uv, ruff, pytest, typing, async, project layout) | Internal |
 | ⚛️ `react-best-practices` | React & Next.js performance optimization (70 rules across 8 categories) | [Vercel Labs](https://github.com/vercel-labs/agent-skills) |
 | 🎨 `sea-ai-brand` | Brand Book 2026 guidelines for all SEA.AI outputs (docs, Word, PDFs, diagrams, decks incl. Defence, social, video, UI) | Internal |
 
@@ -28,19 +29,21 @@ Claude Code skills are reusable prompt-based instructions that standardize how A
 ## 📁 Repository Structure
 
 ```
-seapowers/                             # Repository root
+seapowers/                             # Repository root = plugin root
 ├── .claude-plugin/
-│   └── marketplace.json               # Makes it installable
+│   ├── marketplace.json               # Marketplace catalog (makes it installable)
+│   └── plugin.json                    # Plugin metadata
 ├── .github/
+│   ├── scripts/
+│   │   └── count_tokens.py            # Token counter used by skill lint
 │   └── workflows/
+│       ├── ci.yml                     # Version check + skill lint on PRs
 │       └── sync-upstream-skills.yml   # Weekly upstream sync
-├── seapowers/                         # Self-contained plugin directory
-│   ├── .claude-plugin/
-│   │   └── plugin.json                # Plugin metadata
-│   └── skills/
-│       └── my-skill/
-│           └── SKILL.md
+├── skills/
+│   └── my-skill/
+│       └── SKILL.md
 ├── upstream-skills.json               # Manifest of vendored upstream skills
+├── AGENTS.md                          # Contributor guide for agents
 └── README.md
 ```
 
@@ -124,7 +127,7 @@ The manifest lives in `upstream-skills.json` and supports two entry types:
   "repo": "vercel-labs/agent-skills",
   "branch": "main",
   "src": "skills/react-best-practices",
-  "dest": "seapowers/skills/react-best-practices",
+  "dest": "skills/react-best-practices",
   "license": "MIT",
   "upstream_repo": "https://github.com/vercel-labs/agent-skills"
 }
@@ -148,9 +151,9 @@ The [sync workflow](.github/workflows/sync-upstream-skills.yml) runs weekly and 
 
 ### Adding a Skill
 
-1. Create a new directory in `seapowers/skills/` with a `SKILL.md` file
+1. Create a new directory in `skills/` with a `SKILL.md` file
 2. Follow the [skill format](https://docs.anthropic.com/en/docs/claude-code/skills) from the Claude Code docs
-3. Bump the plugin version in `seapowers/.claude-plugin/plugin.json` (the version check workflow will catch it if you don't!)
+3. Bump the plugin version in `.claude-plugin/plugin.json` and its entry in `.claude-plugin/marketplace.json` (the version check workflow will catch it if you don't!)
 4. Open a PR and let the team review
 
 Got a workflow that saves you time? A prompt pattern that keeps Claude on track? Ship it! The bar is low — if it helped you twice, it'll help someone else too.
