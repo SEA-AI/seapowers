@@ -153,7 +153,7 @@ The [sync workflow](.github/workflows/sync-upstream-skills.yml) runs weekly and 
 
 1. Create a new directory in `skills/` with a `SKILL.md` file
 2. Follow the [skill format](https://docs.anthropic.com/en/docs/claude-code/skills) from the Claude Code docs
-3. Bump the plugin version in `.claude-plugin/plugin.json` and its entry in `.claude-plugin/marketplace.json`, and bump `metadata.version` in `.claude-plugin/marketplace.json` (the version check workflow will catch it if you don't!)
+3. Bump `version` in `.claude-plugin/plugin.json`, the only version in the repo (MINOR for a new skill, PATCH for fixes). The version check workflow will catch it if you don't!
 4. Open a PR and let the team review
 
 Got a workflow that saves you time? A prompt pattern that keeps Claude on track? Ship it! The bar is low — if it helped you twice, it'll help someone else too.
