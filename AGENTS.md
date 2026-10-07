@@ -9,17 +9,18 @@ See the [Claude Code Plugin Marketplaces documentation](https://code.claude.com/
 When adding skills, agents, or plugins:
 - [ ] Create the component in the appropriate directory
 - [ ] Update `README.md` with a description of what was added
-- [ ] Bump version in relevant manifest files (semantic versioning):
+- [ ] Bump `version` in `.claude-plugin/plugin.json`, the only version in the repo (semantic versioning):
   - `PATCH` (x.y.**Z**) — fixes, rewording, description tweaks, metadata-only changes
   - `MINOR` (x.**Y**.0) — new skills, new features, additive changes
   - `MAJOR` (**X**.0.0) — breaking changes, removed skills, incompatible API changes
+- [ ] Don't add a `version` to `.claude-plugin/marketplace.json`; Claude Code reads it from `plugin.json` (CI enforces this)
 - [ ] Test locally before creating a PR
 
 ## Key Files
 
 - `.claude-plugin/marketplace.json` - Plugin marketplace catalog
-- `seapowers/.claude-plugin/plugin.json` - Plugin manifest
-- `seapowers/skills/` - Skill definitions (SKILL.md files)
+- `.claude-plugin/plugin.json` - Plugin manifest
+- `skills/` - Skill definitions (SKILL.md files)
 
 ## Resources
 
