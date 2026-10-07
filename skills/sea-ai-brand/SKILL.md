@@ -192,7 +192,7 @@ The bounding box that marks a detected object in product screenshots/mockups:
 
 ### Name usage
 
-- Spoken: pronounce in English, do not say "dot" — spell it out as "Sea dot AI" if needed
+- Spoken: say "Sea A-I", without the "dot". Say "Sea dot A-I" only when spelling the name out (e.g. a URL or email address)
 - Written: always "SEA.AI" — always the dot, always capital letters
 
 ### Writing style

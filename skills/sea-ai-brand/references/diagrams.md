@@ -12,7 +12,7 @@ import os
 SKILL_ASSETS = "/path/to/sea-ai-brand/assets"  # update per session
 
 # Brand colors
-RED     = "#CB0D00"   # Focus Red — labels only
+RED     = "#CB0D00"   # Focus Red — labels, filled buttons, primary detection box, accent rules
 NAVY    = "#0B1731"   # Night Blue — dark panels
 TEAL    = "#06404C"   # Ocean Teal — secondary (Brand Book: "Ocean Green" — NOT a green, dark teal)
 GREY    = "#7B9194"   # Sky Grey — captions, muted
