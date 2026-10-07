@@ -75,9 +75,10 @@ so the ratio is preserved). Pillow: `img.paste(logo, (x, y), logo)` after resizi
 
 Tested and confirmed on a real multi-section document: differentiating heading levels by size
 and weight alone ("Medium" at 15pt vs 12pt) is not enough to read as a clear hierarchy at a
-glance, and it gets worse in Word specifically — a `.docx` only *references* a font by name, it
-doesn't embed it, so on a machine without Barlow Semi Condensed installed, Word silently
-substitutes a fallback font and every "Medium" vs "Regular" distinction disappears, leaving nothing
+glance, and it gets worse in Word specifically — a `.docx` generated with python-docx only
+*references* a font by name (Word can embed fonts, but generated files don't), so on a machine
+without Barlow Semi Condensed installed, Word silently substitutes a fallback font and every
+"Medium" vs "Regular" distinction disappears, leaving nothing
 but a small size difference between levels.
 
 The fix: differentiate on **size, color, and case together**, not size alone. Color survives font
@@ -292,7 +293,9 @@ body {
   line-height: 1.3;
 }
 
-h1, h2, h3 { font-weight: 500; color: #000000; }  /* Medium — no Bold weight available */
+h1, h2 { font-weight: 500; color: #000000; }  /* Medium — no Bold weight available */
+h3 { font-weight: 500; color: #0B1731; }
+h4 { font-weight: 500; color: #7B9194; font-size: 9.5pt; text-transform: uppercase; letter-spacing: 0.08em; }
 .section-label { color: #CB0D00; font-weight: 500; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.08em; }
 .red-line { border: none; border-top: 1pt solid #CB0D00; margin: 3mm 0; width: 60mm; }  /* set to ~85–90% of the heading text width */
 .footer { color: #7B9194; font-size: 8pt; border-top: 0.5pt solid #DFDED9; padding-top: 2mm; }
