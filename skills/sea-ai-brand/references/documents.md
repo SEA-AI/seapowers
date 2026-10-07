@@ -293,8 +293,9 @@ body {
   line-height: 1.3;
 }
 
-h1, h2 { font-weight: 500; color: #000000; }  /* Medium — no Bold weight available */
-h3 { font-weight: 500; color: #0B1731; }
+h1 { font-weight: 400; color: #000000; font-size: 28pt; }   /* 24–32pt, Regular display */
+h2 { font-weight: 500; color: #000000; font-size: 17pt; }   /* 16–18pt, Medium — no Bold weight available */
+h3 { font-weight: 500; color: #0B1731; font-size: 12.5pt; } /* 12–13pt */
 h4 { font-weight: 500; color: #7B9194; font-size: 9.5pt; text-transform: uppercase; letter-spacing: 0.08em; }
 .section-label { color: #CB0D00; font-weight: 500; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.08em; }
 .red-line { border: none; border-top: 1pt solid #CB0D00; margin: 3mm 0; width: 60mm; }  /* set to ~85–90% of the heading text width */
