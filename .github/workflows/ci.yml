@@ -34,25 +34,18 @@ jobs:
           changed=$(git diff --name-only "$base"...HEAD)
 
           semver='^[0-9]+\.[0-9]+\.[0-9]+$'
-          check() {
-            local file=$1 jq_path=$2 label=$3 pattern=$4
-            local new old
-            new=$(jq -r "$jq_path" "$file")
-            [[ $new =~ $semver ]] || { echo "❌ Invalid semver in $file: $new"; return 1; }
-            echo "$changed" | grep -qE "$pattern" || return 0
-            old=$(git show "$base:$file" | jq -r "$jq_path")
-            [ "$old" != "$new" ] || { echo "❌ $label changed but $file version not bumped ($old)"; return 1; }
-            echo "✅ $label: $old → $new"
-          }
+          new=$(jq -r .version .claude-plugin/plugin.json)
+          [[ $new =~ $semver ]] || { echo "❌ Invalid semver in .claude-plugin/plugin.json: $new"; exit 1; }
 
-          check .claude-plugin/plugin.json       .version          "Skills"      '^skills/'
-          check .claude-plugin/marketplace.json  .metadata.version "Marketplace" '^\.claude-plugin/marketplace\.json$'
+          # plugin.json is the only version; a second one in marketplace.json silently loses to it
+          extra=$(jq -r '[.metadata.version?, (.plugins[]?.version)] | map(select(. != null)) | length' .claude-plugin/marketplace.json)
+          [ "$extra" = 0 ] || { echo "❌ .claude-plugin/marketplace.json sets a version; keep it only in .claude-plugin/plugin.json"; exit 1; }
 
-          plugin=$(jq -r .version .claude-plugin/plugin.json)
-          listed=$(jq -r --arg n "$(jq -r .name .claude-plugin/plugin.json)" \
-            '.plugins[] | select(.name == $n) | .version' .claude-plugin/marketplace.json)
-          [ "$plugin" = "$listed" ] || { echo "❌ plugin.json version ($plugin) differs from its marketplace.json entry ($listed)"; exit 1; }
-          echo "✅ plugin.json and marketplace.json entry in sync: $plugin"
+          if echo "$changed" | grep -qE '^skills/'; then
+            old=$(git show "$base:.claude-plugin/plugin.json" | jq -r .version)
+            [ "$old" != "$new" ] || { echo "❌ Skills changed but .claude-plugin/plugin.json version not bumped ($old)"; exit 1; }
+            echo "✅ Skills: $old → $new"
+          fi
 
       - name: Post version-check result
         if: always() && steps.changed.outputs.any_changed == 'true'
@@ -63,9 +56,8 @@ jobs:
             ${{ job.status == 'success' && '✅ **Version Check Passed**' || '❌ **Version Check Failed**' }}
 
             **Bump rules:**
-            - Skills modified → bump `.claude-plugin/plugin.json` version
-            - Marketplace modified → bump `.claude-plugin/marketplace.json` version
-            - `.claude-plugin/plugin.json` version must match its entry in `.claude-plugin/marketplace.json` `plugins[]`
+            - The only version lives in `.claude-plugin/plugin.json`; bump it when skills change
+            - `.claude-plugin/marketplace.json` must not set any `version`
             - Format: semantic versioning (`X.Y.Z`)
 
             **Semver guide:** `PATCH` = fixes · `MINOR` = features · `MAJOR` = breaking
