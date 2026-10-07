@@ -13,7 +13,8 @@ and newsletters/external banners.
 ## Color-Blocking Areas
 
 - Use **Night Blue (`#0B1731`) only** for solid color-blocking areas that hold text or the logo —
-  no other brand color is used this way
+  no other brand color is used this way. Buttons are not color-blocking areas; they follow the
+  Buttons rules below
 - When color-blocking, always cover a full area vertically or horizontally (never a partial block
   floating mid-image) — orientation depends on the photo's content
 - Text on a Night Blue block: White, Barlow Semi Condensed
