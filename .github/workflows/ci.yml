@@ -48,6 +48,12 @@ jobs:
           check .claude-plugin/plugin.json       .version          "Skills"      '^skills/'
           check .claude-plugin/marketplace.json  .metadata.version "Marketplace" '^\.claude-plugin/marketplace\.json$'
 
+          plugin=$(jq -r .version .claude-plugin/plugin.json)
+          listed=$(jq -r --arg n "$(jq -r .name .claude-plugin/plugin.json)" \
+            '.plugins[] | select(.name == $n) | .version' .claude-plugin/marketplace.json)
+          [ "$plugin" = "$listed" ] || { echo "❌ plugin.json version ($plugin) differs from its marketplace.json entry ($listed)"; exit 1; }
+          echo "✅ plugin.json and marketplace.json entry in sync: $plugin"
+
       - name: Post version-check result
         if: always() && steps.changed.outputs.any_changed == 'true'
         uses: marocchino/sticky-pull-request-comment@v2
@@ -59,6 +65,7 @@ jobs:
             **Bump rules:**
             - Skills modified → bump `.claude-plugin/plugin.json` version
             - Marketplace modified → bump `.claude-plugin/marketplace.json` version
+            - `.claude-plugin/plugin.json` version must match its entry in `.claude-plugin/marketplace.json` `plugins[]`
             - Format: semantic versioning (`X.Y.Z`)
 
             **Semver guide:** `PATCH` = fixes · `MINOR` = features · `MAJOR` = breaking

@@ -13,13 +13,14 @@ When adding skills, agents, or plugins:
   - `PATCH` (x.y.**Z**) — fixes, rewording, description tweaks, metadata-only changes
   - `MINOR` (x.**Y**.0) — new skills, new features, additive changes
   - `MAJOR` (**X**.0.0) — breaking changes, removed skills, incompatible API changes
+- [ ] Keep `.claude-plugin/plugin.json` `version` equal to the `seapowers` entry's `version` in `.claude-plugin/marketplace.json`, and bump the marketplace `metadata.version` when you touch it (CI enforces both)
 - [ ] Test locally before creating a PR
 
 ## Key Files
 
 - `.claude-plugin/marketplace.json` - Plugin marketplace catalog
-- `seapowers/.claude-plugin/plugin.json` - Plugin manifest
-- `seapowers/skills/` - Skill definitions (SKILL.md files)
+- `.claude-plugin/plugin.json` - Plugin manifest
+- `skills/` - Skill definitions (SKILL.md files)
 
 ## Resources
 
