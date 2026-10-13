@@ -138,7 +138,7 @@ stats.forEach((s, i) => {
   slide.addShape(pptx.ShapeType.rect, { x: 5.6, y: y, w: 0.3, h: 0.02, fill: { color: "CB0D00" } });
   slide.addText(s.n, { x: 5.6, y: y + 0.1, w: 3, h: 0.7, color: "000000", fontSize: 36, margin: [0, 0, 0, 0] });  // Regular weight, display size
   slide.addText(s.label, { x: 5.6, y: y + 0.75, w: 3, h: 0.3,
-    color: "7B9194", fontSize: 9, fontFace: "Barlow Semi Condensed Medium", charSpacing: 1, margin: [0, 0, 0, 0] });
+    color: "000000", fontSize: 9, fontFace: "Barlow Semi Condensed Medium", charSpacing: 1, margin: [0, 0, 0, 0] });  // Black: small ALL CAPS + spacing keep it secondary
 });
 ```
 
@@ -184,7 +184,7 @@ slide.addText("Content on dark side.", { x: 5.5, y: 1.0, w: 4, h: 3,
 | Page heading | 24–32 | Barlow Semi Condensed Medium | 000000 / FFFFFF | 0 |
 | Subheading | 14–16 | Barlow Semi Condensed Medium | 000000 / FFFFFF | 0 |
 | Body text | 10–11 | Barlow Semi Condensed | 000000 / FFFFFF | 0 |
-| Footer | 8 | Barlow Semi Condensed | 7B9194 | 0 |
+| Footer | 8 | Barlow Semi Condensed | 000000 / FFFFFF | 0 |
 
 **Font:** pptxgenjs uses the system font by name. There is no Bold weight available, so never set
 `bold: true` (it triggers OS-level faux-bold synthesis on an unhinted weight). Install
@@ -232,7 +232,7 @@ const tableRows = rows.map((r, ri) => r.map((cell, ci) => {
   const isHeader = ri === 0, isHero = ci === 3;
   const text = cell === "check" ? "✓" : cell;  // pptxgenjs/LibreOffice DOES render ✓ correctly
                                                  // (unlike Pillow — see diagrams.md)
-  const color = isHero ? "CB0D00" : (cell === "–" ? "7B9194" : "000000");
+  const color = isHero ? "CB0D00" : "000000";
   return { text, options: {
     align: ci === 0 ? "left" : "center",
     color, fontFace: isHeader ? "Barlow Semi Condensed Medium" : "Barlow Semi Condensed",
@@ -268,9 +268,9 @@ slide.addText("LEARN MORE", { x: 4.0, y: 5.05, w: 2.0, h: 0.5,
 ```javascript
 // Every content slide
 slide.addText("Watchmaster Pre-Project", { x: 0.5, y: 5.35, w: 5, h: 0.2,
-  color: "7B9194", fontSize: 8 });
+  color: "000000", fontSize: 8 });  // 8pt marks it as secondary; never Sky Grey on white
 slide.addText("SEA.AI CONFIDENTIAL", { x: 5.5, y: 5.35, w: 4, h: 0.2,
-  color: "7B9194", fontSize: 8, align: "right" });
+  color: "000000", fontSize: 8, align: "right" });
 slide.addShape(pptx.ShapeType.rect, { x: 0.5, y: 5.3, w: 9.5, h: 0.005,
   fill: { color: "DFDED9" } });
 ```
@@ -321,6 +321,7 @@ sign sits directly under its column header.
 - [ ] Any shape (rule, underline) meant to align with a text box's left edge: the text box has
       `margin: [0,0,0,0]` — otherwise the text box's default inset shifts it right of the shape
 - [ ] Footer on every content slide
+- [ ] All text on white or Fog White is Black (000000); Sky Grey (7B9194) text only on Night Blue
 - [ ] No non-brand colors
 - [ ] No gradients or shadows
 - [ ] Font: Barlow Semi Condensed + Barlow Semi Condensed Medium installed as separate families (fallback Arial Narrow)
