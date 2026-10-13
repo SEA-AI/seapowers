@@ -68,7 +68,9 @@ so the ratio is preserved). Pillow: `img.paste(logo, (x, y), logo)` after resizi
 - Tables: three distinct styles by content type — see Tables section below. Not a single
   universal rule; Night Blue fill is correct for Brand Card tables only, not comparison or
   spec-strip tables.
-- Captions / footer: **Sky Grey** (`#7B9194`)
+- Captions / footer: **Black** (`#000000`), set at 8–9pt so size marks them as secondary
+- All text on White, Fog White or grey is **Black**. Sky Grey (`#7B9194`) is text-only on Night
+  Blue; on light pages use it only for rules and borders (3.3:1 on white, below WCAG AA)
 - Accent line under title: **Focus Red**, 1pt, ~85–90% of the title text width (never full width)
 
 ## Heading Hierarchy (H1–H4)
@@ -90,7 +92,10 @@ don't.
 | **H1** | display (Regular, large) | 24–32pt | Black | Sentence case | Document title only. Pair with a Focus Red ALL CAPS kicker line above and a red accent rule below (see Line Element) |
 | **H2** | Medium | 16–18pt | Black | Sentence case | Major sections. Same color as body — size and generous space-before (≥24pt) do the work of marking a new section |
 | **H3** | Medium | 12–13pt | **Night Blue** | Sentence case | Subsections. Color is the primary differentiator from H2, not size — this is what makes it survive font substitution |
-| **H4** | Medium | 9–10pt | **Sky Grey** | ALL CAPS, letter-spaced | Minor run-in headings inside a subsection. Reads as a quiet label, clearly the smallest tier |
+| **H4** | Medium | 9–10pt | Black | ALL CAPS, letter-spaced | Minor run-in headings inside a subsection. ALL CAPS, letter-spacing and the smallest size make it read as a quiet label, clearly the smallest tier |
+
+H4 shares Black with H2. ALL CAPS and letter-spacing separate it, and both survive font
+substitution. Never use Sky Grey for headings on light backgrounds: 3.3:1 on white fails WCAG AA.
 
 Section label (a kicker line above H1, or a standalone eyebrow) is a fifth, non-heading role:
 Medium, 9–10pt, Focus Red, ALL CAPS, letter-spaced — reserve Focus Red for this and for the H1
@@ -206,9 +211,9 @@ This is what SEA.AI's actual flyers and catalogue use for "SEA.AI vs. AIS/Radar"
 .comparison tbody td { border-bottom: 0.5pt solid #DFDED9; padding: 2mm 3mm; }
 .comparison td.check { color: #000; }
 .comparison td.check.hero { color: #CB0D00; }  /* hero column checkmarks in red, all others black */
-.comparison td.dash { color: #7B9194; }
+.comparison td.dash { color: #000; }
 ```
-Highlight at most one column as the "hero" (the product being sold) — checkmarks in that column go red, every other column (competitors, other systems) stays black/grey. Never fill the header row with a background color for this table type.
+Highlight at most one column as the "hero" (the product being sold) — checkmarks in that column go red, every other column (competitors, other systems) stays black. Never fill the header row with a background color for this table type.
 
 **⚠️ Don't reach for Brand Card's colors here.** A real mistake made building this skill: content
 that is a genuine 3-column parallel comparison (e.g. three sequential funnel stages like
@@ -296,10 +301,10 @@ body {
 h1 { font-weight: 400; color: #000000; font-size: 28pt; }   /* 24–32pt, Regular display */
 h2 { font-weight: 500; color: #000000; font-size: 17pt; }   /* 16–18pt, Medium — no Bold weight available */
 h3 { font-weight: 500; color: #0B1731; font-size: 12.5pt; } /* 12–13pt */
-h4 { font-weight: 500; color: #7B9194; font-size: 9.5pt; text-transform: uppercase; letter-spacing: 0.08em; }
+h4 { font-weight: 500; color: #000000; font-size: 9.5pt; text-transform: uppercase; letter-spacing: 0.08em; }
 .section-label { color: #CB0D00; font-weight: 500; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.08em; }
 .red-line { border: none; border-top: 1pt solid #CB0D00; margin: 3mm 0; width: 60mm; }  /* set to ~85–90% of the heading text width */
-.footer { color: #7B9194; font-size: 8pt; border-top: 0.5pt solid #DFDED9; padding-top: 2mm; }
+.footer { color: #000000; font-size: 8pt; border-top: 0.5pt solid #DFDED9; padding-top: 2mm; }
 ```
 
 ## ReportLab Patterns (for Python)
@@ -311,7 +316,7 @@ from reportlab.lib.colors import HexColor
 FOCUS_RED   = HexColor("#CB0D00")
 NIGHT_BLUE  = HexColor("#0B1731")
 OCEAN_TEAL  = HexColor("#06404C")  # Brand Book: "Ocean Green" — visually dark teal, NOT green
-SKY_GREY    = HexColor("#7B9194")
+SKY_GREY    = HexColor("#7B9194")  # rules/borders only on light pages; text only on Night Blue
 FOG_WHITE   = HexColor("#DFDED9")
 
 # Section label
@@ -332,10 +337,11 @@ canvas.drawString(14*mm, y, "SECTION LABEL")
 - [ ] Logo top-right — the real image asset, never drawn as text
 - [ ] Section labels: ALL CAPS, Focus Red, Medium
 - [ ] Main heading (H1): Sentence case, Black, display weight
-- [ ] H2/H3/H4 differentiated by color and case, not size/weight alone (Black / Night Blue / Sky
-      Grey ALL CAPS) — survives font substitution, see Heading Hierarchy
+- [ ] H2/H3/H4 differentiated by color and case, not size/weight alone (Black / Night Blue / Black
+      ALL CAPS, letter-spaced) — survives font substitution, see Heading Hierarchy
 - [ ] Red accent line under title: shorter than the title text, not full content width
-- [ ] Footer: document name + CONFIDENTIAL in Sky Grey
+- [ ] Footer: document name + CONFIDENTIAL in Black
+- [ ] All text on White, Fog White or grey is Black; no Sky Grey text on light backgrounds
 - [ ] Barlow Semi Condensed font loaded from assets (or Google Fonts CDN)
 - [ ] `<meta charset="utf-8">` present — otherwise ✓/–/° render as mojibake
 - [ ] Table style matches content: Brand Card (label-column, category rows) / Comparison (parallel

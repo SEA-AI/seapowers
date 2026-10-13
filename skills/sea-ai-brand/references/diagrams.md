@@ -15,7 +15,7 @@ SKILL_ASSETS = "/path/to/sea-ai-brand/assets"  # update per session
 RED     = "#CB0D00"   # Focus Red — labels, filled buttons, primary detection box, accent rules
 NAVY    = "#0B1731"   # Night Blue — dark panels
 TEAL    = "#06404C"   # Ocean Teal — secondary (Brand Book: "Ocean Green" — NOT a green, dark teal)
-GREY    = "#7B9194"   # Sky Grey — captions, muted
+GREY    = "#7B9194"   # Sky Grey — arrows, lines, borders; text only on NAVY panels
 FOG     = "#DFDED9"   # Fog White — subtle backgrounds
 BLACK   = "#000000"   # body text
 WHITE   = "#FFFFFF"   # canvas background
@@ -51,16 +51,16 @@ draw.line([(60, 50), (W-60, 50)], fill=RED, width=1)
 ```python
 # Main heading: Sentence case or SHORT CAPS, Black, Medium, ~28-36px
 draw.text((60, 65), "Main Heading", font=font(32, medium=True), fill=BLACK)
-# Subheading: Sentence case, Sky Grey, Regular, ~16px
-draw.text((60, 105), "Subtitle or description", font=font(16), fill=GREY)
+# Subheading: Sentence case, Black, Regular, ~16px (size and weight set it below the heading)
+draw.text((60, 105), "Subtitle or description", font=font(16), fill=BLACK)
 ```
 
 ### Body Text & Labels
 ```python
 # Body: Black, Regular, 12–14px
 draw.text((x, y), "Body text", font=font(13), fill=BLACK)
-# Muted label: Sky Grey, Regular, 10–11px
-draw.text((x, y), "LABEL", font=font(10, medium=True), fill=GREY)
+# Secondary label: ALL CAPS, Black, Medium, 10–11px (small size + caps mark it as secondary)
+draw.text((x, y), "LABEL", font=font(10, medium=True), fill=BLACK)
 # Red label (section): ALL CAPS, Red, Medium, 10–12px
 draw.text((x, y), "SECTION", font=font(11, medium=True), fill=RED)
 ```
@@ -150,7 +150,7 @@ draw.text((x+12, y+8), "Content text", font=font(12), fill=BLACK)
 **2. Comparison table** (feature-vs-competitor — the real pattern used in flyers/catalogue):
 No header fill — a thin red rule above and below the header row is the only accent. Highlight at
 most one "hero" column (the product being sold): its checkmarks are red, every other column
-(competitors) stays black/grey. Never fill this header row with a background color.
+(competitors) stays black. Never fill this header row with a background color.
 ```python
 def draw_comparison_row(draw, x, y, w, row_h, cells, hero_col=None, is_header=False):
     if is_header:
@@ -164,7 +164,7 @@ def draw_comparison_row(draw, x, y, w, row_h, cells, hero_col=None, is_header=Fa
         if cell == "check":
             draw_check(draw, cx, cy+2, size=12, color=RED if i == hero_col else BLACK)
         else:
-            color = RED if (i == hero_col and not is_header) else (GREY if cell == "–" else BLACK)
+            color = RED if (i == hero_col and not is_header) else BLACK
             draw.text((cx, cy), cell, font=font(12, medium=is_header), fill=color)
 ```
 
@@ -244,8 +244,8 @@ def draw_stat_band(draw, x, y, w, h, over_label, number, caption):
 # Every diagram gets a footer
 footer_y = H - 28
 draw.line([(60, footer_y-6), (W-60, footer_y-6)], fill=FOG, width=1)
-draw.text((60, footer_y), "SEA.AI", font=font(10, medium=True), fill=GREY)
-draw.text((W-60, footer_y), "CONFIDENTIAL", font=font(10), fill=GREY,
+draw.text((60, footer_y), "SEA.AI", font=font(10, medium=True), fill=BLACK)
+draw.text((W-60, footer_y), "CONFIDENTIAL", font=font(10), fill=BLACK,
     anchor="ra")  # right-aligned
 ```
 
@@ -278,7 +278,8 @@ img.save(out, "PNG", dpi=(150, 150))
 - [ ] Body text: Black, Barlow Semi Condensed Regular
 - [ ] No non-brand colors
 - [ ] No gradients, no shadows
-- [ ] Footer present (SEA.AI + CONFIDENTIAL in Sky Grey)
+- [ ] Footer present (SEA.AI + CONFIDENTIAL in Black)
+- [ ] All text on white or Fog White is Black; Sky Grey only for arrows/lines or text on NAVY
 - [ ] Font loaded from `assets/BarlowSemiCondensed-*.ttf`
 - [ ] Checkmarks drawn with `draw_check()`, never the raw "✓" character (missing glyph → tofu box)
 - [ ] No em dashes in any copy/text

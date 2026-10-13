@@ -35,13 +35,13 @@ Source of truth: **SEA.AI Brand Book 2026**, cross-checked against production fl
 ```
 Primary
   FOCUS RED    #CB0D00   RGB 203/13/0     CMYK 12/100/100/0   Pantone 186   ← primary accent
-  BLACK        #000000   RGB 0/0/0        CMYK 0/0/0/100                    ← body text on light backgrounds
+  BLACK        #000000   RGB 0/0/0        CMYK 0/0/0/100                    ← all text on light backgrounds
   WHITE        #FFFFFF   RGB 255/255/255  CMYK 0/0/0/0                      ← standard content background
 
 Secondary
   NIGHT BLUE   #0B1731   RGB 11/23/49     CMYK 95/85/40/70    Pantone 289   ← dark backgrounds
   OCEAN GREEN  #06404C   RGB 6/64/76      CMYK 100/83/68/0    Pantone 548   ← product/secondary (visually a dark teal, NOT a green)
-  SKY GREY     #7B9194   RGB 123/145/148  CMYK 59/37/37/0     Pantone 443  ← muted text, captions
+  SKY GREY     #7B9194   RGB 123/145/148  CMYK 59/37/37/0     Pantone 443  ← text on dark only; lines, borders
   FOG WHITE    #DFDED9   RGB 223/222/217  CMYK 15/11/15/0     Pantone Cool Gray 1C ← warm backgrounds
 ```
 
@@ -67,11 +67,13 @@ OCEAN GREEN (#06404C)  — visually a dark teal
   ❌ Never describe or use as "green" in output — it is a dark teal/navy tone
 
 SKY GREY (#7B9194)
-  ✅ Captions, footer text, muted secondary labels
-  ❌ Not for main body text (too low contrast)
+  ✅ Text on dark backgrounds only (captions, labels on Night Blue)
+  ✅ Non-text elements: lines, borders, gridlines
+  ❌ Never as text on White, Fog White, grey or light grey backgrounds:
+     use Black. Contrast there is below WCAG AA (3.3:1 on white).
 
 WHITE (#FFFFFF) — default content background
-BLACK (#000000) — default body text
+BLACK (#000000) — all text on light backgrounds (White, Fog White, any grey)
 ```
 
 ### Typography
@@ -150,7 +152,7 @@ rather than fabricating a synthetic bold.
 ✅ Emphasize part of a headline with an inline Focus Red clause or keyword (or a second line in
    red) rather than bolding — this is the standard emphasis device across decks, docs, and social
 ✅ Section labels: ALL CAPS, Focus Red, Barlow Semi Condensed Medium
-✅ Footer on every page: document label + "SEA.AI CONFIDENTIAL" in Sky Grey
+✅ Footer on every page: document label + "SEA.AI CONFIDENTIAL" in Black
 ❌ No em dashes in any copy (headlines, body text, captions, video titles, social copy) — use a
    period, comma, or colon instead
 ❌ No gradients
@@ -230,8 +232,8 @@ the general claims used elsewhere:
 - **Use-case slides**: photo left, white right with a red "USE CASE — [SEGMENT]" kicker, a
   headline with one word/clause in Focus Red, and a vertical-red-line bullet list going deep on
   one scenario (e.g. counter-USV, search & rescue)
-- **Stat block, light variant**: same "big number + red dash + Sky Grey caption" pattern as
-  elsewhere, but on white background with black numerals (not the dark full-bleed band used in
+- **Stat block, light variant**: same "big number + red dash + ALL CAPS caption" pattern as
+  elsewhere, but on white background with black numerals and a Black caption (not the dark full-bleed band used in
   social/print)
 - **Detection-box overlays on this deck's imagery are frequently the low-light/outline variant**
   (see Detection Box section above) since defence photography skews toward night/thermal/overcast
