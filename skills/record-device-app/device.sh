@@ -57,6 +57,7 @@ preflight)
   echo "PREFLIGHT_OK"
   ;;
 start)
+  [ -n "$DATA_DIR" ] || { echo "CRASH DATA_DIR is required"; exit 1; }
   # The run command goes into a remote script: no nested quoting, paths with spaces survive.
   # bash -ic because PYTHONPATH and friends often live only in ~/.bashrc.
   env="export DATA_DIR=$(printf %q "$DATA_DIR")${PRODUCT:+; export PRODUCT=$(printf %q "$PRODUCT")}"

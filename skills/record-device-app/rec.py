@@ -233,9 +233,8 @@ def open_browser(p, view, video):
     ctx = p.chromium.launch_persistent_context(profile, **kw)
     ctx.add_init_script(HOOK)
     ctx.add_init_script(CURSOR)
+    # app mode may already show the URL without our scripts; clear_gates loads it again, which applies them
     page = ctx.pages[0] if ctx.pages else ctx.new_page()
-    if page.url not in ("about:blank", ""):  # app mode opens the page before our scripts exist: reload once
-        page.reload()
     return ctx, page, profile
 
 
@@ -287,7 +286,10 @@ def record(p, view):
         code = code or 1
     finally:
         video = page.video.path()
-        ctx.close()  # finalizes the webm
+        try:
+            ctx.close()  # finalizes the webm
+        except Exception:  # browser already gone: the webm may still be usable
+            pass
         shutil.rmtree(profile, ignore_errors=True)
         ev("DONE", video)
         if not code or code == 4:  # a frozen take is still worth keeping
@@ -316,22 +318,24 @@ try:
             code = record(p, VIEW)
         else:
             ctx, page, profile = open_browser(p, VIEW, video=False)
-            code = clear_gates(page, mode)
-            if mode == "explore" and not code:
-                for c in page.evaluate(CONTROLS):
-                    ev("CONTROL", c)
-                for i, target in enumerate(sys.argv[4:], 1):
-                    try:
-                        click(page, target)
-                    except Exception as e:
-                        ev("CLICK_FAIL", f"{target}: {e.__class__.__name__}")
-                        continue
-                    page.wait_for_timeout(3000)
-                    shot = f"{out}/explore_{i:02d}.png"
-                    page.screenshot(path=shot)
-                    ev("CLICKED", f"{target} -> {shot} frames={frames(page)}")
-            ctx.close()
-            shutil.rmtree(profile, ignore_errors=True)
+            try:
+                code = clear_gates(page, mode)
+                if mode == "explore" and not code:
+                    for c in page.evaluate(CONTROLS):
+                        ev("CONTROL", c)
+                    for i, target in enumerate(sys.argv[4:], 1):
+                        try:
+                            click(page, target)
+                        except Exception as e:
+                            ev("CLICK_FAIL", f"{target}: {e.__class__.__name__}")
+                            continue
+                        page.wait_for_timeout(3000)
+                        shot = f"{out}/explore_{i:02d}.png"
+                        page.screenshot(path=shot)
+                        ev("CLICKED", f"{target} -> {shot} frames={frames(page)}")
+            finally:
+                ctx.close()
+                shutil.rmtree(profile, ignore_errors=True)
 except Exception as e:  # e.g. Chrome or Playwright's recorder missing: report it as an event
     ev("ERROR", f"{e.__class__.__name__}: {str(e)[:300]}")
     code = 1

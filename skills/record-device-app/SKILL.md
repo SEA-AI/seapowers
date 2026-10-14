@@ -20,9 +20,9 @@ with `SendMessage`. Every step ends with a report, so problems show up where the
 |---|---|
 | `HOST` | `user@<device-ip>` |
 | `URL` | the web app; `http://<device-ip>/` unless the user says otherwise |
-| `DATA_DIR` | absolute path to the recording folder on the device |
+| `DATA_DIR` | absolute path to the recording folder on the device (no `~`) |
 | `PRODUCT` | **usually omit.** Only needed when `~/POWER_Const` has no `hardwareVersion`/`module_info`; preflight says so |
-| `WORKER_DIR` | only if preflight can't find the worker; relative to the device home, or absolute; ignored when `~/Makefile` exists |
+| `WORKER_DIR` | only if preflight can't find the worker; relative to the device home (write it without `~`), or absolute; ignored when `~/Makefile` exists |
 | `SECS` | take length; must fit in the clip (Flow step 1) and in the Viewer's timeout (its agent file) |
 | `OUT` | a new dir in the scratchpad |
 | `HEADED` | visible browser or headless (see below) |
@@ -77,7 +77,7 @@ Device events: `PREFLIGHT_OK`, `PREFLIGHT_FAIL <why>`, `WARN <why>`, `RUN_CMD <c
 
 Viewer events: `VIEWPORT`, `GATE registration|connection_failed|terms|unknown`, `STREAMING <png>`,
 `CONTROL`, `CLICKED`, `CLICK_FAIL` (explore), `ACTION`, `ACTION_FAIL`, `PROGRESS`, `FROZEN`, `NO_CONNECTION`,
-`ERROR`, `DONE <webm>` (deleted once `MP4` checks out), `MP4 <path> <secs>`, `MP4_SKIPPED`, `MP4_FAIL`, `BAD_ARGS`.
+`ERROR`, `DONE <webm>` (deleted once `MP4` checks out), `MP4 <path> <secs>` (without ffprobe: no secs, webm kept), `MP4_SKIPPED`, `MP4_FAIL`, `BAD_ARGS`.
 `rec.py` exit codes are in its docstring.
 
 | Event (exit code) | Lead does |
@@ -147,7 +147,7 @@ New view, control, gate or product the references don't cover, or a reference th
 | Symptom | Cause | Fix |
 |---|---|---|
 | "Register to SEA.AI" briefly after start | worker not answering yet | `rec.py` reloads; gate only if it persists |
-| "Register to SEA.AI" persists | device not registered | ask the user; with their OK, `touch ~/POWER_Const/system_successfully_registered` (persistent change) |
+| "Register to SEA.AI" persists | device not registered | ask the user; with their OK the lead runs `ssh HOST touch ~/POWER_Const/system_successfully_registered` itself (persistent change) |
 | Terms of Use page ("Agree & Continue") | fresh browser profile every run | `rec.py` clicks it |
 | Gates never recognised | UI language or gate texts changed | `rec.py` pins `en-US`; if texts changed, ask the user |
 | "Connection failed" / "…connection was lost" | worker not up yet, or the clip ended | wait for `READY`; `rec.py` reloads; mid-take, see the event table |
