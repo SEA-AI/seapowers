@@ -1,10 +1,10 @@
 ---
 name: record-device-app
 description: >
-  Run a SEA.AI product on a remote device from a recording (`make run` or `worker.py`),
-  open its web app in a browser (headless or visible) and screen-record the live stream
-  to an mp4. Uses two partner subagents (Device, Viewer) that report after every step so
-  problems surface early. Use when asked to record, capture, or film the app/stream
+  Runs a SEA.AI product on a remote device from a recording (`make run` or `worker.py`),
+  opens its web app in a browser (headless or visible) and screen-records the live stream
+  to an mp4, with two partner subagents (Device, Viewer) that report after every step so
+  problems surface early. Used when asked to record, capture, or film the app or stream
   running on a device or from a recording.
 license: MIT
 ---
@@ -77,7 +77,7 @@ Device events: `PREFLIGHT_OK`, `PREFLIGHT_FAIL <why>`, `WARN <why>`, `RUN_CMD <c
 
 Viewer events: `VIEWPORT`, `GATE registration|connection_failed|terms|unknown`, `STREAMING <png>`,
 `CONTROL`, `CLICKED`, `CLICK_FAIL` (explore), `ACTION`, `ACTION_FAIL`, `PROGRESS`, `FROZEN`, `NO_CONNECTION`,
-`ERROR`, `DONE <webm>` (deleted after `MP4`), `MP4 <path> <secs>`, `MP4_SKIPPED`, `MP4_FAIL`, `BAD_ARGS`.
+`ERROR`, `DONE <webm>` (deleted once `MP4` checks out), `MP4 <path> <secs>`, `MP4_SKIPPED`, `MP4_FAIL`, `BAD_ARGS`.
 `rec.py` exit codes are in its docstring.
 
 | Event (exit code) | Lead does |
@@ -86,7 +86,8 @@ Viewer events: `VIEWPORT`, `GATE registration|connection_failed|terms|unknown`, 
 | `WARN` | tell the user (a missing registration bypass means a registration gate is likely) |
 | `READY` | next step |
 | `GATE registration` "transient?", `GATE connection_failed` | nothing, `rec.py` reloads |
-| persistent `GATE registration`, `GATE unknown` (3) | show the screenshot, ask the user |
+| persistent `GATE registration` (3) | show the screenshot, ask the user |
+| `GATE unknown` (3) | Device `status` first (a dead worker or ended clip looks the same); if `RUNNING`, show the screenshot and ask the user |
 | `FROZEN` (4), `NO_CONNECTION` (5) | the Viewer asks the Device for `status`; act on its answer: `ENDED` clip ran out (restart, shorter take) · `CRASH` show the log tail · `RUNNING` app issue, show the screenshot · `STOPPED` worker not running, `start` and retry |
 | `ERROR` (1) | show the message (often Chrome or the video recorder missing, see Prereqs) and ask the user |
 | `CLICK_FAIL`, `ACTION_FAIL` | show the screenshot; re-find the target with `explore` |

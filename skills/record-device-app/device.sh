@@ -5,6 +5,7 @@
 # PRODUCT is the exception: only needed when ~/POWER_Const has no hardwareVersion/module_info.
 set -u
 : "${HOST:?}" "${PRODUCT:=}" "${DATA_DIR:=}" "${WORKER_DIR:=}"
+WORKER_DIR=${WORKER_DIR#\~/}  # "~/Worker" means the same as "Worker" (paths are relative to the device home)
 
 # Device conventions (SKILL.md mirrors them for readers)
 CANDIDATES="Worker Core-Backend/Worker"   # worker folders tried in order, relative to the device home
@@ -29,7 +30,7 @@ worker() { p=$(pane); [ -n "$p" ] || return 1; for c in $(tree "$p"); do grep -q
 kill_all() { p=$(pane); pids=$( [ -n "$p" ] && tree "$p"); tmux kill-session -t "$S" 2>/dev/null
   [ -n "$pids" ] && { kill $pids 2>/dev/null; sleep 3; kill -9 $pids 2>/dev/null; }; true; }
 webrtc_bytes() { curl -s -m3 "$MTX/paths/list" | python3 -c "import json,sys
-try: print(sum(p.get(\"inboundBytes\", 0) for p in json.load(sys.stdin).get(\"items\", []) if p.get(\"name\", \"\").endswith(\"_webrtc\")))
+try: print(sum(p.get(\"inboundBytes\", p.get(\"bytesReceived\", 0)) for p in json.load(sys.stdin).get(\"items\", []) if p.get(\"name\", \"\").endswith(\"_webrtc\")))
 except Exception: print(\"NOAPI\")" 2>/dev/null || echo NOAPI; }'
 tail_log() { r "tail -15 $LOG 2>/dev/null" | tr '\n' ' '; }  # one line, so the event stays one line
 
@@ -64,7 +65,7 @@ start)
   echo "STARTED $(date +%T%z)"
   # the launcher takes a few seconds to spawn the worker; wait-ready treats "no worker" as a crash
   r "$H; for i in \$(seq 30); do worker && exit 0; sleep 1; done; exit 1" || { echo "CRASH worker never spawned: $(tail_log)"; exit 1; }
-  exec "$0" wait-ready  # the old worker is already dead here, so flowing bytes mean the new one
+  exec bash "$0" wait-ready  # the old worker is already dead here, so flowing bytes mean the new one
   ;;
 wait-ready)
   # Ready = video bytes flowing into MediaMTX (open ports and its "ready" flag can be stale).
@@ -85,10 +86,11 @@ status)
       if grep -q 'End-of-stream' $LOG 2>/dev/null; then echo ENDED; elif worker; then echo RUNNING; else echo CRASH; fi
     elif [ ! -s $LOG ] || tail -1 $LOG | grep -qF '$STOP_MARK'; then echo STOPPED
     elif grep -q 'End-of-stream' $LOG; then echo ENDED; else echo CRASH; fi")
+  [ -n "$state" ] || { echo "CRASH could not reach device"; exit 1; }
   [ "$state" = CRASH ] && echo "CRASH $(tail_log)" || echo "$state"
   ;;
 stop)
-  r "$H; kill_all; echo '$STOP_MARK' >> $LOG" && echo STOPPED
+  r "$H; kill_all; echo '$STOP_MARK' >> $LOG" && echo STOPPED || { echo "CRASH could not reach device"; exit 1; }
   ;;
 *) echo "usage: device.sh preflight|start|wait-ready|status|stop"; exit 2;;
 esac

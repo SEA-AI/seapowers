@@ -6,7 +6,7 @@
 
   rec.py URL OUT gates                             # clear gates, screenshot, exit
   rec.py URL OUT explore [TARGET ...]              # clear gates, list controls, click each TARGET in order, screenshot after each
-  rec.py URL OUT record SECS [SECONDS=TARGET ...]  # clear gates, record SECS, click TARGET at that second; writes OUT/take.mp4
+  rec.py URL OUT record SECS [SECONDS=TARGET ...]  # clear gates, record SECS (>= 10), click TARGET at that second; writes OUT/take.mp4
   rec.py install                                   # once: Playwright's video recorder, matching this script's Playwright
 SECONDS count from STREAMING; the mp4 starts earlier, with the page loading.
 Run with: [HEADED=1] [VIEWPORT=WxH] uv run rec.py ...
@@ -89,7 +89,7 @@ def bad_args(why):
 if sys.argv[1:] == ["install"]:  # hand over to Playwright's installer in this script's own environment
     os.execv(sys.executable, [sys.executable, "-m", "playwright", "install", "ffmpeg"])
 if len(sys.argv) < 4 or sys.argv[3] not in ("gates", "explore", "record"):
-    bad_args("need URL OUT gates|explore|record")
+    bad_args("need URL OUT gates|explore|record, or install")
 url, out, mode = sys.argv[1:4]
 secs, actions = 0, []
 if mode == "record":
@@ -196,7 +196,7 @@ def clear_gates(page, tag):
 
 
 def to_mp4(webm):
-    """Transcode the raw webm (loading screen included) to OUT/take.mp4; the webm is deleted only after success."""
+    """Transcode the raw webm (loading screen included) to OUT/take.mp4; the webm is deleted once the mp4 checks out."""
     if not shutil.which("ffmpeg"):
         ev("MP4_SKIPPED", "ffmpeg not found; webm is in DONE")
         return
@@ -210,12 +210,15 @@ def to_mp4(webm):
     if r.returncode:
         ev("MP4_FAIL", r.stderr.strip()[-200:])
         return
-    os.remove(webm)
     if not shutil.which("ffprobe"):
-        ev("MP4", f"{mp4} (duration unknown: no ffprobe)")
+        ev("MP4", f"{mp4} (duration unknown: no ffprobe; webm kept)")
         return
     dur = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", mp4],
                          capture_output=True, text=True).stdout.strip()
+    if not re.fullmatch(r"[0-9.]+", dur) or float(dur) <= 0:  # exit 0 doesn't prove a playable file
+        ev("MP4_FAIL", f"{mp4} has no readable duration; webm kept")
+        return
+    os.remove(webm)
     ev("MP4", f"{mp4} {dur}s")
 
 
