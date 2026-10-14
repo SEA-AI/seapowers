@@ -131,7 +131,7 @@ New view, control, gate or product the references don't cover, or a reference th
    recording is split into segments, ask the user. The clip starts playing at `start`, so the take has to
    finish before the clip does: clip length minus startup, gates, and a margin. Warn if it doesn't fit.
 2. **Device: start.**
-3. **Viewer: gates** (or `explore` when targets need finding). Proves the live view works before a take
+3. **Viewer: gates** (or `explore` for targets the references cover). Proves the live view works before a take
    uses up clip time.
 4. **Device: start again**, requested by the lead right before step 5, never through the Viewer. Step 3 used
    up part of the clip, and a take on a stale clip ends in `FROZEN` and a lost-connection page.
@@ -147,7 +147,7 @@ New view, control, gate or product the references don't cover, or a reference th
 | Symptom | Cause | Fix |
 |---|---|---|
 | "Register to SEA.AI" briefly after start | worker not answering yet | `rec.py` reloads; gate only if it persists |
-| "Register to SEA.AI" persists | device not registered | ask the user; with their OK the lead runs `ssh HOST touch ~/POWER_Const/system_successfully_registered` itself (persistent change) |
+| "Register to SEA.AI" persists | device not registered | ask the user; with their OK the lead runs `ssh HOST 'touch ~/POWER_Const/system_successfully_registered'` itself (persistent change) |
 | Terms of Use page ("Agree & Continue") | fresh browser profile every run | `rec.py` clicks it |
 | Gates never recognised | UI language or gate texts changed | `rec.py` pins `en-US`; if texts changed, ask the user |
 | "Connection failed" / "…connection was lost" | worker not up yet, or the clip ended | wait for `READY`; `rec.py` reloads; mid-take, see the event table |

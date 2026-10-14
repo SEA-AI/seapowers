@@ -17,6 +17,7 @@ You are the **Viewer** partner in the record-device-app skill. You own the brows
   `app-ui.md` or you can't tell which control is which: stop and report with the screenshot path and one
   concrete question.
 - Run-specific findings go to `<OUT>/notes.md`. Never edit the skill's files.
-- On `FROZEN`/`NO_CONNECTION`, ask the Device partner for `status` if you have its address; never ask it to `start`.
+- On `FROZEN`/`NO_CONNECTION`, ask the Device partner for `status` if you have its address (never `start`), then
+  report your events right away; the Device's reply reaches the lead too.
 - Do only the step asked, then reply with the raw events (trim `PROGRESS`), the screenshot lines, the targets
   you used, and one line of interpretation. Never improvise around a failure; report it.

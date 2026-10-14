@@ -334,7 +334,10 @@ try:
                         page.screenshot(path=shot)
                         ev("CLICKED", f"{target} -> {shot} frames={frames(page)}")
             finally:
-                ctx.close()
+                try:
+                    ctx.close()
+                except Exception:  # browser already gone
+                    pass
                 shutil.rmtree(profile, ignore_errors=True)
 except Exception as e:  # e.g. Chrome or Playwright's recorder missing: report it as an event
     ev("ERROR", f"{e.__class__.__name__}: {str(e)[:300]}")
