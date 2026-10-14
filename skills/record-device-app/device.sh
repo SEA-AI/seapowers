@@ -6,12 +6,13 @@
 set -u
 : "${HOST:?}" "${PRODUCT:=}" "${DATA_DIR:=}" "${WORKER_DIR:=}"
 
-# Device conventions (one place; SKILL.md lists them for humans)
+# Device conventions (SKILL.md mirrors them for readers)
 CANDIDATES="Worker Core-Backend/Worker"   # worker folders tried in order, relative to the device home
 MTX=localhost:9997/v3                     # MediaMTX API on the device
 SESSION=rda                               # tmux session; one run per device at a time
 LOG=/tmp/record_device_app.log
 RUNNER=/tmp/record_device_app_run.sh
+STOP_MARK='== stopped by device.sh =='  # last log line after `stop`, so status can tell a stop from a crash
 r() { ssh -o BatchMode=yes -o ConnectTimeout=5 "$HOST" "$@"; }
 
 # Remote snippet that picks the run command: `make run` if ~/Makefile exists, else worker.py in WORKER_DIR or
@@ -78,12 +79,16 @@ wait-ready)
   echo "CRASH no webrtc bytes after 60 checks: $(tail_log)"; exit 1
   ;;
 status)
-  # STOPPED (no session) > ENDED (worker logged "End-of-stream", current log text) > RUNNING > CRASH
-  state=$(r "$H; if ! tmux has-session -t \$S 2>/dev/null; then echo STOPPED; elif grep -q 'End-of-stream' $LOG 2>/dev/null; then echo ENDED; elif worker; then echo RUNNING; else echo CRASH; fi")
+  # The tmux session closes when the worker exits, so without a session the log decides:
+  # stopped by us (or never started) = STOPPED, "End-of-stream" (current log text) = ENDED, anything else = CRASH.
+  state=$(r "$H; if tmux has-session -t \$S 2>/dev/null; then
+      if grep -q 'End-of-stream' $LOG 2>/dev/null; then echo ENDED; elif worker; then echo RUNNING; else echo CRASH; fi
+    elif [ ! -s $LOG ] || tail -1 $LOG | grep -qF '$STOP_MARK'; then echo STOPPED
+    elif grep -q 'End-of-stream' $LOG; then echo ENDED; else echo CRASH; fi")
   [ "$state" = CRASH ] && echo "CRASH $(tail_log)" || echo "$state"
   ;;
 stop)
-  r "$H; kill_all" && echo STOPPED
+  r "$H; kill_all; echo '$STOP_MARK' >> $LOG" && echo STOPPED
   ;;
 *) echo "usage: device.sh preflight|start|wait-ready|status|stop"; exit 2;;
 esac

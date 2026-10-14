@@ -11,8 +11,8 @@ license: MIT
 
 # Record Device App
 
-Two partner agents, one lead. Each agent does **one short step**, reports, and stops; the lead continues
-it with `SendMessage`. No step runs long without reporting, so problems show up where they happen.
+Two partner agents, one lead. Each agent does **one step**, reports, and stops; the lead continues it
+with `SendMessage`. Every step ends with a report, so problems show up where they happen.
 
 ## Inputs (ask only if missing)
 
@@ -22,8 +22,8 @@ it with `SendMessage`. No step runs long without reporting, so problems show up 
 | `URL` | the web app; `http://<device-ip>/` unless the user says otherwise |
 | `DATA_DIR` | absolute path to the recording folder on the device |
 | `PRODUCT` | **usually omit.** Only needed when `~/POWER_Const` has no `hardwareVersion`/`module_info`; preflight says so |
-| `WORKER_DIR` | only if preflight can't find the worker; relative to the device home, or absolute |
-| `SECS` | take length; must fit in the clip (see Flow step 1) and stay under ~300 s per foreground call |
+| `WORKER_DIR` | only if preflight can't find the worker; relative to the device home, or absolute; ignored when `~/Makefile` exists |
+| `SECS` | take length; must fit in the clip (Flow step 1) and in the Viewer's timeout (its agent file) |
 | `OUT` | a new dir in the scratchpad |
 | `HEADED` | visible browser or headless (see below) |
 | `VIEWPORT` | optional `WxH` override of the browser size |
@@ -40,14 +40,14 @@ call with `HEADED=1`.
 Run command: `make run` if `~/Makefile` exists, otherwise `python3 worker.py` in the worker folder.
 Preflight reports the choice as `RUN_CMD`.
 
-**Device conventions** the scripts rely on (defined at the top of `device.sh` and in `rec.py`'s
-`clear_gates`; they may change, so if a step fails, check these first):
+**Device conventions** the scripts rely on (defined in `device.sh`; this list mirrors them. They may change,
+so if a step fails, check these first):
 - device: Linux with `bash`, `tmux`, `curl`, `python3`, `pgrep` (`ffprobe` optional); env from `~/.bashrc`
-- worker: `~/Makefile`, or `worker.py` in `~/Worker` (usual) or `~/Core-Backend/Worker`; product inferred from `~/POWER_Const/hardwareVersion*`/`module_info*`
+- worker: `~/Makefile`, or `worker.py` in `~/Worker` (usual) or `~/Core-Backend/Worker`; either way a process with `worker.py`
+  in its command line must start; product inferred from `~/POWER_Const/hardwareVersion*`/`module_info*`
 - registration bypass: `~/POWER_Const/system_successfully_registered`
 - streaming: MediaMTX API on the device, WebRTC paths named `*_webrtc`
 - end of clip: the worker logs `End-of-stream`
-- UI gate texts (English): "Register to SEA.AI", "Agree & Continue", "Connection failed" / "…connection was lost"
 - one run per device at a time
 
 Scripts live next to this file. Call them with absolute paths:
@@ -55,8 +55,8 @@ Scripts live next to this file. Call them with absolute paths:
 - `rec.py`, run as `uv run rec.py ...` (dependencies are declared inline)
 
 Prereqs on the local machine: ssh key access to the device, `uv`, Google Chrome (not Playwright's bundled
-Chromium; see `rec.py`), `ffmpeg` with libx264 and `ffprobe`. Once: `uvx playwright install ffmpeg`
-(Playwright's video recorder; if it's missing, `rec.py` reports an `ERROR` naming this command).
+Chromium; see `rec.py`), `ffmpeg` with libx264 and `ffprobe`. Once: `uv run rec.py install` (Playwright's
+video recorder; if it's missing, `rec.py` reports an `ERROR`).
 
 ## Roles
 
@@ -77,7 +77,7 @@ Device events: `PREFLIGHT_OK`, `PREFLIGHT_FAIL <why>`, `WARN <why>`, `RUN_CMD <c
 
 Viewer events: `VIEWPORT`, `GATE registration|connection_failed|terms|unknown`, `STREAMING <png>`,
 `CONTROL`, `CLICKED`, `CLICK_FAIL` (explore), `ACTION`, `ACTION_FAIL`, `PROGRESS`, `FROZEN`, `NO_CONNECTION`,
-`ERROR`, `DONE <webm>`, `MP4 <path> <secs>`, `MP4_SKIPPED`, `MP4_FAIL`, `BAD_ARGS`.
+`ERROR`, `DONE <webm>` (deleted after `MP4`), `MP4 <path> <secs>`, `MP4_SKIPPED`, `MP4_FAIL`, `BAD_ARGS`.
 `rec.py` exit codes are in its docstring.
 
 | Event (exit code) | Lead does |
@@ -87,11 +87,12 @@ Viewer events: `VIEWPORT`, `GATE registration|connection_failed|terms|unknown`, 
 | `READY` | next step |
 | `GATE registration` "transient?", `GATE connection_failed` | nothing, `rec.py` reloads |
 | persistent `GATE registration`, `GATE unknown` (3) | show the screenshot, ask the user |
-| `FROZEN` (4), `NO_CONNECTION` (5) | Device `status`: `ENDED` clip ran out (restart, shorter take) · `CRASH` show the log tail · `RUNNING` app issue, show the screenshot · `STOPPED` worker not running, `start` and retry |
+| `FROZEN` (4), `NO_CONNECTION` (5) | the Viewer asks the Device for `status`; act on its answer: `ENDED` clip ran out (restart, shorter take) · `CRASH` show the log tail · `RUNNING` app issue, show the screenshot · `STOPPED` worker not running, `start` and retry |
+| `ERROR` (1) | show the message (often Chrome or the video recorder missing, see Prereqs) and ask the user |
 | `CLICK_FAIL`, `ACTION_FAIL` | show the screenshot; re-find the target with `explore` |
 | `BAD_ARGS` (2) | fix the call and rerun |
 | `MP4` | check one late frame, hand over the file |
-| `MP4_SKIPPED`, `MP4_FAIL` | convert the webm by hand with the ffmpeg arguments in `rec.py`'s `to_mp4` |
+| `MP4_SKIPPED`, `MP4_FAIL` | install ffmpeg if missing, then convert the webm by hand with the arguments in `rec.py`'s `to_mp4` |
 
 ## UI hints and actions
 
@@ -99,7 +100,7 @@ The lead speaks in intent ("show RGB, then thermal, then map"). The Viewer turns
 
 - `references/app-ui.md` explains the app in general terms. The Viewer reads it, finds the actual targets
   with `explore`, and confirms each by screenshot.
-- For a take, the Viewer proposes a schedule (`SECONDS=TARGET` args) before recording.
+- For a take, the Viewer proposes a schedule (`SECONDS=TARGET` args, seconds after `STREAMING`) before recording.
 
 ## Hands-on takes
 
@@ -131,9 +132,9 @@ New view, control, gate or product the references don't cover, or a reference th
 2. **Device: start.**
 3. **Viewer: gates** (or `explore` when targets need finding). Proves the live view works before a take
    uses up clip time.
-4. **Device: start again** (fresh clip; step 3 used some of it). The lead does this itself, right before step 5;
-   don't leave it to the Viewer. A take on a stale clip ends in `FROZEN` and a lost-connection page.
-5. **Viewer: record SECS.** Relay every few `PROGRESS` events. Handle `FROZEN`/`NO_CONNECTION` per the table.
+4. **Device: start again**, requested by the lead right before step 5, never through the Viewer. Step 3 used
+   up part of the clip, and a take on a stale clip ends in `FROZEN` and a lost-connection page.
+5. **Viewer: record SECS.** The lead gets one report when the take ends; handle its events per the event table.
 6. **Lead: finish.** `OUT/take.mp4` starts with the page loading, so it runs a bit longer than SECS. Copy it
    where the user wants it.
 7. **Device: stop** unless the user wants it left running.

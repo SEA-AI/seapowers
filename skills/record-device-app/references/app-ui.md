@@ -33,7 +33,7 @@ read this as "what to look for", then confirm on a screenshot. Nothing here is a
 - View switches apply at once. Some views may stop decoding video; that's not necessarily a fault
   (`rec.py` waits several intervals before reporting FROZEN).
 - Panels (split, instruments) tend to stay open across view switches; clicking the same icon again closes them.
-- Every run uses a fresh browser profile, so a reload returns to the default view. Easiest reset before a take.
+- Every `rec.py` run uses a fresh browser profile, so each run starts at the default view.
 - Anything that opens a dialog you didn't expect: close it, screenshot, report.
 
 ## When unsure

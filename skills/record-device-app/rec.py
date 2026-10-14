@@ -6,7 +6,9 @@
 
   rec.py URL OUT gates                             # clear gates, screenshot, exit
   rec.py URL OUT explore [TARGET ...]              # clear gates, list controls, click each TARGET in order, screenshot after each
-  rec.py URL OUT record SECS [SECONDS=TARGET ...]  # clear gates, record SECS, click TARGET at that second; writes OUT/take.mp4 (includes the loading screen)
+  rec.py URL OUT record SECS [SECONDS=TARGET ...]  # clear gates, record SECS, click TARGET at that second; writes OUT/take.mp4
+  rec.py install                                   # once: Playwright's video recorder, matching this script's Playwright
+SECONDS count from STREAMING; the mp4 starts earlier, with the page loading.
 Run with: [HEADED=1] [VIEWPORT=WxH] uv run rec.py ...
   HEADED=1: visible browser window. Viewport: VIEWPORT if set, else 1920x1080 (headed: fit to screen, capped at 1920x1080).
 TARGET: a Playwright selector (text=..., [aria-label=...], css=... >> nth=N) or xy=X,Y (viewport pixels, see VIEWPORT event).
@@ -84,6 +86,8 @@ def bad_args(why):
 
 
 # --- arguments: validate everything before opening a browser ---
+if sys.argv[1:] == ["install"]:  # hand over to Playwright's installer in this script's own environment
+    os.execv(sys.executable, [sys.executable, "-m", "playwright", "install", "ffmpeg"])
 if len(sys.argv) < 4 or sys.argv[3] not in ("gates", "explore", "record"):
     bad_args("need URL OUT gates|explore|record")
 url, out, mode = sys.argv[1:4]
@@ -146,14 +150,19 @@ def wait_decoding(page, timeout_s=DECODE_WAIT_S):
 
 
 def clear_gates(page, tag):
-    """Clear the page gates. The texts below are the current UI strings (source of truth; SKILL.md lists them).
+    """Clear the page gates. The texts below are the current UI strings (SKILL.md mirrors them).
     Returns an exit code: 0 streaming, 3 gate needs a human, 5 no connection."""
     agree = page.get_by_role("button", name="Agree & Continue").first
     failed = page.get_by_text(re.compile("Connection failed|connection was lost", re.I)).first
     register = page.get_by_text("Register to SEA.AI").first
     reg_seen = 0
     for attempt in range(PAGE_LOADS):
-        page.goto(url)
+        try:
+            page.goto(url)
+        except Exception as e:  # refused or unreachable: same as a failed load
+            ev("GATE connection_failed", f"{e.__class__.__name__}, reload {attempt + 1}/{PAGE_LOADS}")
+            page.wait_for_timeout(5000)
+            continue
         try:
             agree.or_(failed).or_(register).first.wait_for(timeout=15000)
         except Exception:
@@ -187,7 +196,7 @@ def clear_gates(page, tag):
 
 
 def to_mp4(webm):
-    """Transcode the raw webm (loading screen included) to OUT/take.mp4; the webm is kept only if that fails."""
+    """Transcode the raw webm (loading screen included) to OUT/take.mp4; the webm is deleted only after success."""
     if not shutil.which("ffmpeg"):
         ev("MP4_SKIPPED", "ffmpeg not found; webm is in DONE")
         return
@@ -288,34 +297,39 @@ os.makedirs(out, exist_ok=True)
 # channel="chrome": installed Google Chrome, because Playwright's bundled Chromium lacks H.264 for the WebRTC stream.
 headed = os.environ.get("HEADED") == "1"
 ARGS = ["--autoplay-policy=no-user-gesture-required", "--window-position=0,0"]
-with sync_playwright() as p:
-    if override:  # explicit VIEWPORT=WxH wins
-        VIEW = override
-        ev("VIEWPORT", f"{VIEW['width']}x{VIEW['height']} (from VIEWPORT)")
-    elif headed:
-        # fit the screen; xy targets then differ from headless
-        VIEW = screen_fit(p)
-    else:
-        ev("VIEWPORT", f"{VIEW['width']}x{VIEW['height']} (headless default)")
+code = 1
+try:
+    with sync_playwright() as p:
+        if override:  # explicit VIEWPORT=WxH wins
+            VIEW = override
+            ev("VIEWPORT", f"{VIEW['width']}x{VIEW['height']} (from VIEWPORT)")
+        elif headed:
+            # fit the screen; xy targets then differ from headless
+            VIEW = screen_fit(p)
+        else:
+            ev("VIEWPORT", f"{VIEW['width']}x{VIEW['height']} (headless default)")
 
-    if mode == "record":
-        code = record(p, VIEW)
-    else:
-        ctx, page, profile = open_browser(p, VIEW, video=False)
-        code = clear_gates(page, mode)
-        if mode == "explore" and not code:
-            for c in page.evaluate(CONTROLS):
-                ev("CONTROL", c)
-            for i, target in enumerate(sys.argv[4:], 1):
-                try:
-                    click(page, target)
-                except Exception as e:
-                    ev("CLICK_FAIL", f"{target}: {e.__class__.__name__}")
-                    continue
-                page.wait_for_timeout(3000)
-                shot = f"{out}/explore_{i:02d}.png"
-                page.screenshot(path=shot)
-                ev("CLICKED", f"{target} -> {shot} frames={frames(page)}")
-        ctx.close()
-        shutil.rmtree(profile, ignore_errors=True)
+        if mode == "record":
+            code = record(p, VIEW)
+        else:
+            ctx, page, profile = open_browser(p, VIEW, video=False)
+            code = clear_gates(page, mode)
+            if mode == "explore" and not code:
+                for c in page.evaluate(CONTROLS):
+                    ev("CONTROL", c)
+                for i, target in enumerate(sys.argv[4:], 1):
+                    try:
+                        click(page, target)
+                    except Exception as e:
+                        ev("CLICK_FAIL", f"{target}: {e.__class__.__name__}")
+                        continue
+                    page.wait_for_timeout(3000)
+                    shot = f"{out}/explore_{i:02d}.png"
+                    page.screenshot(path=shot)
+                    ev("CLICKED", f"{target} -> {shot} frames={frames(page)}")
+            ctx.close()
+            shutil.rmtree(profile, ignore_errors=True)
+except Exception as e:  # e.g. Chrome or Playwright's recorder missing: report it as an event
+    ev("ERROR", f"{e.__class__.__name__}: {str(e)[:300]}")
+    code = 1
 sys.exit(code)
