@@ -62,8 +62,8 @@ start)
   exec "$0" wait-ready  # old worker is already dead here, so flowing bytes mean the new one
   ;;
 wait-ready)
-  # ready = MediaMTX *_webrtc paths receiving bytes. An open port or MediaMTX "ready":true is not enough
-  # (other services listen; "ready" persists across worker restarts). Crash = worker gone, not "Traceback in log".
+  # Ready = video bytes flowing into MediaMTX (open ports and its "ready" flag can be stale).
+  # Crash = the worker process is gone (the log has harmless tracebacks).
   for _ in $(seq 60); do
     out=$(r "$H; worker || echo DEAD; webrtc_bytes; sleep 2; webrtc_bytes")
     case "$out" in *DEAD*) echo "CRASH $(r "tail -15 $LOG")"; exit 1;; *NOAPI*) echo "CRASH MediaMTX API unreachable"; exit 1;; esac

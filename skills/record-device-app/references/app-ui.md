@@ -25,10 +25,9 @@ read this as "what to look for", then confirm on a screenshot. Nothing here is a
 | wrench / gear | **settings**: only when the user asks |
 | large labelled buttons | operating modes: only when the user asks |
 
-The selected button looks different from the others. Icons may have no text or aria-label. Find them with
-`explore` (the CONTROL list gives text, aria, class and position). Prefer text/aria selectors; otherwise
-`xy=` resolved in the same run and same browser size. Class names are often generated per build:
-treat a class-based selector as valid for this build only. Confirm every target by screenshot before a take.
+- The selected button looks different from the others. Icons often have no text: find them with `explore`.
+- Prefer text or aria selectors; otherwise `xy=` at the same browser size. Class names can change per build.
+- Confirm every target by screenshot before a take.
 
 ## Navigating
 - View switches apply at once. Some views may stop decoding video; that's not necessarily a fault

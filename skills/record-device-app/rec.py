@@ -31,10 +31,8 @@ LOCALE = "en-US"  # gate texts below are matched in English; pin the UI language
 HOOK = """(() => { const O = window.RTCPeerConnection; window.__pcs = [];
   window.RTCPeerConnection = function (...a) { const pc = new O(...a); window.__pcs.push(pc); return pc; };
   window.RTCPeerConnection.prototype = O.prototype; })()"""
-# Two cursors, because Playwright videos show no OS cursor:
-# - script cursor (Focus Red core): moved only by rec.py via window.__recMove/__recClick
-# - user cursor (Night Blue core): follows real mouse events in a visible window, except while rec.py
-#   clicks (window.__recScripted), so the two never get mixed up. Headless runs only show the script cursor.
+# Playwright videos show no OS cursor, so draw two: the script's (Focus Red core, moved by rec.py) and the
+# user's (Night Blue core, follows the mouse). rec.py marks its own clicks so they don't move the user cursor.
 CURSOR = """(() => {
   const dot = (css) => { const d = document.createElement('div');
     Object.assign(d.style, { position: 'fixed', borderRadius: '50%', pointerEvents: 'none', zIndex: 2147483647 }, css);
@@ -214,7 +212,7 @@ def open_browser(p, view, video):
     ctx.add_init_script(HOOK)
     ctx.add_init_script(CURSOR)
     page = ctx.pages[0] if ctx.pages else ctx.new_page()
-    if page.url not in ("about:blank", ""):  # app mode: first page loaded before the init scripts existed
+    if page.url not in ("about:blank", ""):  # app mode opens the page before our scripts exist: reload once
         page.reload()
     return ctx, page, profile
 
@@ -287,7 +285,7 @@ with sync_playwright() as p:
         VIEW = override
         ev("VIEWPORT", f"{VIEW['width']}x{VIEW['height']} (from VIEWPORT)")
     elif headed:
-        # 1920x1080 may not fit the screen. xy TARGETs then differ from headless: resolve them in the mode you record in.
+        # fit the screen; xy targets then differ from headless
         VIEW = screen_fit(p)
     else:
         ev("VIEWPORT", f"{VIEW['width']}x{VIEW['height']} (headless default)")

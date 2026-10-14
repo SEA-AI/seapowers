@@ -11,9 +11,8 @@ license: MIT
 
 # Record Device App
 
-Two partner agents, one lead. Each agent does **one short step**, reports, and stops.
-The lead continues the same agent with `SendMessage` (context intact). Nobody runs
-a long blind job: every step ends with an event the lead can act on or show the user.
+Two partner agents, one lead. Each agent does **one short step**, reports, and stops; the lead continues
+it with `SendMessage`. No step runs long without reporting, so problems show up where they happen.
 
 ## Inputs (ask only if missing)
 
@@ -22,7 +21,7 @@ a long blind job: every step ends with an event the lead can act on or show the 
 | `HOST` | `user@<device-ip>`; the web app is served on the same IP |
 | `DATA_DIR` | absolute path to the recording folder on the device |
 | `PRODUCT` | **usually omit.** Only needed when `~/POWER_Const` has no `hardwareVersion`/`module_info`; preflight says so |
-| `WORKER_DIR` | only if there is no `~/Makefile` and `worker.py` is neither in `~/Worker` nor `~/Core-Backend/Worker`; relative to the device home, or absolute |
+| `WORKER_DIR` | only if preflight can't find the worker; relative to the device home, or absolute |
 | `SECS` | take length; must fit in the clip (see preflight) |
 | `OUT` | a new dir in the scratchpad |
 | `HEADED` | visible browser or headless (see below) |
@@ -30,17 +29,15 @@ a long blind job: every step ends with an event the lead can act on or show the 
 
 **Ask once per session, before step 1:** "Watch the browser on screen, or run headless?"
 (AskUserQuestion, two options, headless first as default). Reuse the answer for every later run in
-this session; don't ask again unless the user brings it up. Visible → prefix every Viewer `rec.py`
+this session; don't ask again unless the user brings it up. If visible, the Viewer prefixes every `rec.py`
 call with `HEADED=1`.
 
-Visible mode needs a local display (not over ssh / headless Linux).
-Browser size: headless 1920x1080. Headed opens a Chrome app window (no tabs or address bar) that fills
-the usable screen, capped at 1920x1080, pinned top-left. `VIEWPORT=WxH` overrides both. The `VIEWPORT` event reports the size;
-the video is that size, and xy TARGETs only hold for it: explore and record with the same settings.
+- Headless: 1920x1080. Visible: a Chrome app window (no tabs or address bar) filling the screen, capped at
+  1920x1080; needs a local display. `VIEWPORT=WxH` overrides either.
+- Click targets depend on the size (`VIEWPORT` event): explore and record with the same settings.
 
-Run command (picked by `device.sh`): `~/Makefile` present → `make run`; otherwise
-`python3 worker.py` in the worker folder: `WORKER_DIR`, else `~/Worker` (usual), else `~/Core-Backend/Worker`.
-Same env vars either way; preflight reports the choice as `RUN_CMD`.
+Run command: `make run` if `~/Makefile` exists, otherwise `python3 worker.py` in the worker folder.
+Preflight reports the choice as `RUN_CMD`.
 
 **Device conventions** the scripts rely on (they may change; if a step fails, check these first):
 - device: Linux with `bash`, `tmux`, `curl`, `python3` (`ffprobe` optional); env from `~/.bashrc`
@@ -67,13 +64,11 @@ Windows: `device.sh` runs in Git Bash, which Claude Code on Windows already requ
 | **Viewer** | `record-viewer` (Bash/Read/Write, Sonnet) | the browser; runs `rec.py`, reads every screenshot |
 | **Lead** | you | params, decisions, the only one who talks to the user |
 
-The agent definitions live in `../../agents/` relative to this file (in the seapowers plugin they are
-`seapowers:record-device` / `seapowers:record-viewer`). If those types aren't available in the session,
-spawn `general-purpose` agents with the matching agent file's body as the start of the prompt.
+The agents are defined in `../../agents/` (in seapowers: `seapowers:record-device`, `seapowers:record-viewer`).
+If they're missing, spawn `general-purpose` agents and start the prompt with the agent file's text.
 
-Spawn each once per run and continue it with `SendMessage`. Each prompt: the step, the params, the absolute
-script path, and (for the Viewer) the Device's address so it can ask for `start`/`status` directly.
-After each event, post one short line to the user (with the screenshot path when there is one).
+Spawn each once per run. Each prompt: the step, the params, the script path, and for the Viewer the Device's
+address, so it can ask for `start`/`status` itself. Post one short line to the user per event.
 
 Device events: `PREFLIGHT_OK`, `PREFLIGHT_FAIL <why>`, `WARN <why>`, `RUN_CMD <cmd>`, `CLIP_SECONDS <n|unknown>`,
 `STARTED`, `READY`, `RUNNING`, `ENDED`, `CRASH <log tail>`, `STOPPED`.
@@ -83,14 +78,21 @@ Viewer events: `VIEWPORT`, `GATE registration|connection_failed|terms|unknown`, 
 `ERROR`, `DONE <webm>`, `MP4 <path> <secs>`, `MP4_SKIPPED`, `MP4_FAIL`, `BAD_ARGS`.
 `rec.py` exit codes: 0 ok, 1 unexpected error, 2 bad arguments, 3 gate needs a human, 4 stream frozen, 5 app never connected.
 
+| Event | Lead does |
+|---|---|
+| `PREFLIGHT_FAIL`, `CRASH` | stop and show the user why (log tail for a crash) |
+| `READY` | go to the next step |
+| `GATE unknown` / persistent `registration` | show the screenshot, ask the user |
+| `FROZEN`, `NO_CONNECTION` | ask the Device for `status` |
+| `MP4` | check one late frame, hand over the file |
+
 ## UI hints and actions
 
 The lead speaks in intent ("show RGB, then thermal, then map"). The Viewer turns it into clicks.
 
-- Reference: `references/app-ui.md`, the general app concept (regions, icon meanings, where settings live,
-  how to navigate, what to do when unsure). Viewer reads it first and resolves concrete TARGETs at runtime,
-  confirming each by screenshot (`explore`) before a take.
-- For a take, Viewer proposes a schedule as `SECONDS=TARGET` args and states it in its report before recording.
+- `references/app-ui.md` explains the app in general terms. The Viewer reads it, finds the actual targets
+  with `explore`, and confirms each by screenshot.
+- For a take, the Viewer proposes a schedule (`SECONDS=TARGET` args) before recording.
 - Explore uses clip time; restart the worker before the take.
 
 ## Hands-on takes
@@ -99,8 +101,8 @@ In a visible run the user can also use the app during the take; everything the p
 The video then has two cursors: the script's (Focus Red core) and the user's (Night Blue core), each with
 its own click ripple. Headless runs only show the script's cursor.
 
-- Ask which parts the user will do and which the script does. Fully hands-on → `record SECS` with no actions.
-- Mixed → schedule only the script's part, and tell the user where not to click (e.g. the controls the
+- Ask which parts the user will do and which the script does. Fully hands-on: `record SECS` with no actions.
+- Mixed: schedule only the script's part, and tell the user where not to click (e.g. the controls the
   script uses) so the two don't fight. The Viewer still reports what each screenshot shows.
 - Start the take only when the user is ready; say when the window will open.
 
@@ -118,26 +120,23 @@ New view, control, gate or product the references don't cover, or a reference th
 
 ## Flow
 
-1. **Device: preflight.** `PREFLIGHT_FAIL` → stop, tell the user. `CLIP_SECONDS` is an estimate (longest single
-   video file); `unknown`, or a segmented/unusual recording → ask the user for the clip length.
-   Budget: the clip starts playing at `start`, so `SECS ≤ CLIP_SECONDS − (STARTED→READY time from step 2
-   + gate time + margin)`. Warn the user if their duration doesn't fit.
-2. **Device: start.** `CRASH` → show the log tail to the user, stop.
-3. **Viewer: gates** (or `explore` when targets need resolving). Proves the page reaches the live view
-   before burning a take. `GATE unknown`/persistent `registration` → show the screenshot, fix (see table), back to 3.
+1. **Device: preflight.** `CLIP_SECONDS` is an estimate (longest video file); if it's `unknown` or the
+   recording is split into segments, ask the user. The clip starts playing at `start`, so the take has to
+   finish before the clip does: clip length minus startup, gates, and a margin. Warn if it doesn't fit.
+2. **Device: start.**
+3. **Viewer: gates** (or `explore` when targets need finding). Proves the live view works before a take
+   uses up clip time.
 4. **Device: start again** (fresh clip; step 3 used some of it). The lead does this itself, right before step 5;
    don't leave it to the Viewer. A take on a stale clip ends in `FROZEN` and a lost-connection page.
-5. **Viewer: record SECS.** Lead relays `PROGRESS` sparsely (every ~30 s is enough).
-   `FROZEN`/`NO_CONNECTION` → Device `status`: `ENDED` → SECS too long for the clip;
-   `CRASH` → report; `RUNNING` → frontend issue, show screenshot.
-6. **Lead: finish.** `rec.py` writes `OUT/take.mp4` (`MP4` event). It starts with the page loading, so it runs
-   a bit longer than SECS. Look at one late frame, copy the mp4 where the user wants it, give the path.
-   `MP4_SKIPPED`/`MP4_FAIL` → convert the webm by hand:
+5. **Viewer: record SECS.** Relay `PROGRESS` about every 30 s. If the stream freezes, Device `status` says why:
+   `ENDED` (take too long for the clip), `CRASH`, or `RUNNING` (an app issue: show the screenshot).
+6. **Lead: finish.** `OUT/take.mp4` starts with the page loading, so it runs a bit longer than SECS. Copy it
+   where the user wants it. If `MP4_SKIPPED`/`MP4_FAIL`, convert the webm by hand:
    `ffmpeg -v error -i <webm> -c:v libx264 -crf 23 -preset fast -pix_fmt yuv420p -g 25 -movflags +faststart <dest>.mp4`
    (`-g 25` = a keyframe every second at Playwright's 25 fps, for precise seeking).
 7. **Device: stop** unless the user wants it left running.
-8. **Lead: lessons.** Anything unexpected → one-line summary to the user. If it looks general (a new gate type,
-   a navigation concept), suggest it to the user as a skill improvement; never a product-specific selector.
+8. **Lead: lessons.** Summarise anything unexpected in one line. Suggest a skill change only for general
+   lessons (a new gate type, a navigation concept), never a product-specific selector.
 
 ## Known gates and pitfalls
 
@@ -150,7 +149,7 @@ Something new? Ask the user (see above); note it in the run's `notes.md`.
 | "Terms of Use" page | fresh browser profile every run | `rec.py` clicks "Agree & Continue" |
 | Gates never recognised | UI language or gate texts changed | `rec.py` pins `en-US`; if texts changed, ask the user |
 | "Connection failed" / "Your connection was lost" | worker not up yet, or the clip ended | wait for `READY`; `rec.py` reloads; mid-take → Device `status` |
-| Tracebacks or `sudo ... timed out` in a CRASH log tail | many are caught and harmless | not necessarily the cause; the worker process being gone is |
+| Tracebacks or `sudo ... timed out` in a CRASH log tail | many are caught and harmless | usually not the cause; a crash means the worker process is gone |
 | Stream stops, worker hangs in shutdown | clip hit end-of-stream | restart before every take; keep `SECS` under the clip |
 | `CRASH MediaMTX API unreachable` / no webrtc bytes | streaming config differs from the conventions above | ask the user how the stream is served |
 
