@@ -35,6 +35,7 @@ DECODE_WAIT_S = 30    # wait for WebRTC frames after the page loads
 CLICK_TIMEOUT_MS = 5000
 PROGRESS_EVERY_S = 10  # PROGRESS event and screenshot interval
 FROZEN_AFTER = 3       # flat PROGRESS intervals in a row before FROZEN
+CONVERT_TIMEOUT_S = 180  # shared deadline for the mp4 conversion and its duration check
 # Collect every RTCPeerConnection the app creates, so we can read real decode stats.
 HOOK = """(() => { const O = window.RTCPeerConnection; window.__pcs = [];
   window.RTCPeerConnection = function (...a) { const pc = new O(...a); window.__pcs.push(pc); return pc; };
@@ -202,20 +203,29 @@ def to_mp4(webm):
         ev("MP4_SKIPPED", "ffmpeg not found; webm is in DONE")
         return
     mp4 = f"{out}/take.mp4"
-    r = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", webm, "-c:v", "libx264",
-                        "-crf", "23", "-preset", "fast", "-pix_fmt", "yuv420p",
-                        # keyframe every second (VIDEO_FPS frames) so players can seek precisely;
-                        # faststart puts the index first, the usual setting for shareable mp4s
-                        "-g", str(VIDEO_FPS), "-movflags", "+faststart", mp4],
-                       capture_output=True, text=True)
+    deadline = time.monotonic() + CONVERT_TIMEOUT_S
+    left = lambda: max(1, deadline - time.monotonic())
+    try:
+        r = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", webm, "-c:v", "libx264",
+                            "-crf", "23", "-preset", "fast", "-pix_fmt", "yuv420p",
+                            # keyframe every second (VIDEO_FPS frames) so players can seek precisely;
+                            # faststart puts the index first, the usual setting for shareable mp4s
+                            "-g", str(VIDEO_FPS), "-movflags", "+faststart", mp4],
+                           capture_output=True, text=True, timeout=left())
+    except subprocess.TimeoutExpired:
+        ev("MP4_FAIL", f"conversion took over {CONVERT_TIMEOUT_S}s; webm kept")
+        return
     if r.returncode:
         ev("MP4_FAIL", r.stderr.strip()[-200:])
         return
     if not shutil.which("ffprobe"):
         ev("MP4", f"{mp4} (duration unknown: no ffprobe; webm kept)")
         return
-    dur = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", mp4],
-                         capture_output=True, text=True).stdout.strip()
+    try:
+        dur = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", mp4],
+                             capture_output=True, text=True, timeout=left()).stdout.strip()
+    except subprocess.TimeoutExpired:
+        dur = ""  # treated as unreadable below, so the webm is kept
     if not re.fullmatch(r"[0-9.]+", dur) or float(dur) <= 0:  # exit 0 doesn't prove a playable file
         ev("MP4_FAIL", f"{mp4} has no readable duration; webm kept")
         return

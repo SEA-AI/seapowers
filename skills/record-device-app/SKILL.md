@@ -90,7 +90,7 @@ Viewer events: `VIEWPORT`, `GATE registration|connection_failed|terms|unknown`, 
 | `GATE unknown` (3) | Device `status` first (a dead worker or ended clip looks the same); if `RUNNING`, show the screenshot and ask the user |
 | `FROZEN` (4), `NO_CONNECTION` (5) | the Viewer asks the Device for `status`; act on its answer: `ENDED` clip ran out (restart, shorter take) · `CRASH` show the log tail · `RUNNING` app issue, show the screenshot · `STOPPED` worker not running, `start` and retry |
 | `ERROR` (1) | show the message (often Chrome or the video recorder missing, see Prereqs) and ask the user |
-| `CLICK_FAIL`, `ACTION_FAIL` | show the screenshot; re-find the target with `explore` |
+| `CLICK_FAIL`, `ACTION_FAIL` | show the nearest earlier screenshot (`explore_NN.png` / `tNNN.png`); re-find the target with `explore` |
 | `BAD_ARGS` (2) | fix the call and rerun |
 | `MP4` | check one late frame, hand over the file |
 | `MP4_SKIPPED`, `MP4_FAIL` | install ffmpeg if missing, then convert the webm by hand with the arguments in `rec.py`'s `to_mp4` |
