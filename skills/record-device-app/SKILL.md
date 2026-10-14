@@ -93,6 +93,17 @@ The lead speaks in intent ("show RGB, then thermal, then map"). The Viewer turns
 - For a take, Viewer proposes a schedule as `SECONDS=TARGET` args and states it in its report before recording.
 - Explore uses clip time; restart the worker before the take.
 
+## Hands-on takes
+
+In a visible run the user can also use the app during the take; everything the page shows is recorded.
+The video then has two cursors: the script's (Focus Red core) and the user's (Night Blue core), each with
+its own click ripple. Headless runs only show the script's cursor.
+
+- Ask which parts the user will do and which the script does. Fully hands-on → `record SECS` with no actions.
+- Mixed → schedule only the script's part, and tell the user where not to click (e.g. the controls the
+  script uses) so the two don't fight. The Viewer still reports what each screenshot shows.
+- Start the take only when the user is ready; say when the window will open.
+
 ## When the request isn't covered
 
 New view, control, gate or product the references don't cover, or a reference that turns out wrong:

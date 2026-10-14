@@ -31,24 +31,30 @@ LOCALE = "en-US"  # gate texts below are matched in English; pin the UI language
 HOOK = """(() => { const O = window.RTCPeerConnection; window.__pcs = [];
   window.RTCPeerConnection = function (...a) { const pc = new O(...a); window.__pcs.push(pc); return pc; };
   window.RTCPeerConnection.prototype = O.prototype; })()"""
-# Visible cursor + click ripple. Playwright videos show no OS cursor, so draw one in the page.
-# Driven only by rec.py (window.__recMove/__recClick), never by mouse events: in a visible window the
-# user's own mouse would also move it.
+# Two cursors, because Playwright videos show no OS cursor:
+# - script cursor (Focus Red core): moved only by rec.py via window.__recMove/__recClick
+# - user cursor (Night Blue core): follows real mouse events in a visible window, except while rec.py
+#   clicks (window.__recScripted), so the two never get mixed up. Headless runs only show the script cursor.
 CURSOR = """(() => {
   const dot = (css) => { const d = document.createElement('div');
     Object.assign(d.style, { position: 'fixed', borderRadius: '50%', pointerEvents: 'none', zIndex: 2147483647 }, css);
     document.documentElement.appendChild(d); return d; };
-  let c = null;
-  // SEA.AI brand: white ring on a translucent Night Blue fill, Focus Red core (#CB0D00). No shadows/gradients.
-  const cursor = () => c && c.isConnected ? c : (c = dot({ left: innerWidth / 2 + 'px', top: innerHeight / 2 + 'px',
-    width: '22px', height: '22px', margin: '-11px 0 0 -11px', boxSizing: 'border-box',
-    border: '2px solid #fff', background: 'radial-gradient(circle, #CB0D00 0 4px, rgba(11,23,49,.35) 4.5px)' }));
-  window.__recMove = (x, y, ms) => { const d = cursor(); d.getBoundingClientRect();
-    d.style.transition = `left ${ms}ms ease-in-out, top ${ms}ms ease-in-out`; d.style.left = x + 'px'; d.style.top = y + 'px'; };
-  window.__recClick = (x, y) => { const r = dot({ left: x + 'px', top: y + 'px', width: '22px', height: '22px',
-      margin: '-11px 0 0 -11px', boxSizing: 'border-box', border: '2px solid #CB0D00',
+  // SEA.AI brand: white ring, translucent Night Blue fill, solid core. No shadows/gradients.
+  const style = (core) => ({ width: '22px', height: '22px', margin: '-11px 0 0 -11px', boxSizing: 'border-box',
+    border: '2px solid #fff', background: `radial-gradient(circle, ${core} 0 4px, rgba(11,23,49,.35) 4.5px)` });
+  const ripple = (x, y, color) => { const r = dot({ left: x + 'px', top: y + 'px', width: '22px', height: '22px',
+      margin: '-11px 0 0 -11px', boxSizing: 'border-box', border: `2px solid ${color}`,
       transition: 'transform .7s ease-out, opacity .7s ease-out' });
     r.getBoundingClientRect(); r.style.transform = 'scale(2.6)'; r.style.opacity = '0'; setTimeout(() => r.remove(), 800); };
+  const keep = (get) => { let el = null; return () => el && el.isConnected ? el : (el = get()); };
+  const script = keep(() => dot({ left: innerWidth / 2 + 'px', top: innerHeight / 2 + 'px', ...style('#CB0D00') }));
+  const user = keep(() => dot({ ...style('#0B1731') }));
+  window.__recMove = (x, y, ms) => { const d = script(); d.getBoundingClientRect();
+    d.style.transition = `left ${ms}ms ease-in-out, top ${ms}ms ease-in-out`; d.style.left = x + 'px'; d.style.top = y + 'px'; };
+  window.__recClick = (x, y) => ripple(x, y, '#CB0D00');
+  addEventListener('mousemove', e => { if (window.__recScripted) return;
+    const d = user(); d.style.left = e.clientX + 'px'; d.style.top = e.clientY + 'px'; }, true);
+  addEventListener('mousedown', e => { if (!window.__recScripted) ripple(e.clientX, e.clientY, '#0B1731'); }, true);
 })()"""
 FRAMES = """async () => { let n = 0; for (const pc of window.__pcs || [])
   (await pc.getStats()).forEach(r => { if (r.type === 'inbound-rtp' && r.kind === 'video') n += r.framesDecoded || 0; });
@@ -114,8 +120,11 @@ def click(page, target):
         x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
     page.evaluate("([x, y]) => window.__recMove && window.__recMove(x, y, 600)", [x, y])
     page.wait_for_timeout(650)
-    page.evaluate("([x, y]) => window.__recClick && window.__recClick(x, y)", [x, y])
-    page.mouse.click(x, y)
+    page.evaluate("([x, y]) => { window.__recScripted = true; window.__recClick && window.__recClick(x, y); }", [x, y])
+    try:
+        page.mouse.click(x, y)  # returns after the page handled the events, so the flag covers them
+    finally:
+        page.evaluate("() => { window.__recScripted = false; }")
 
 
 def wait_decoding(page, timeout_s=30):
