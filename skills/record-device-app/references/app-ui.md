@@ -22,16 +22,16 @@ read this as "what to look for", then confirm on a screenshot. Nothing here is a
 | map | top-down map with range rings around own vessel |
 | two panes | split view; the second pane picks one of the views |
 | gauge | instruments panel (heading, readouts; empty without sensor data) |
-| wrench / gear | **settings**: only when the user asks |
-| large labelled buttons | operating modes: only when the user asks |
+| wrench / gear | **settings** |
+| large labelled buttons | operating modes |
 
 - The selected button looks different from the others. Icons often have no text: find them with `explore`.
-- Prefer text or aria selectors; otherwise `xy=` at the same browser size. Class names can change per build.
+- Prefer text or aria selectors; otherwise `xy=`. Class names can change per build.
 - Confirm every target by screenshot before a take.
 
 ## Navigating
 - View switches apply at once. Some views may stop decoding video; that's not necessarily a fault
-  (`rec.py` only reports FROZEN after 30 s flat).
+  (`rec.py` waits several intervals before reporting FROZEN).
 - Panels (split, instruments) tend to stay open across view switches; clicking the same icon again closes them.
 - Every run uses a fresh browser profile, so a reload returns to the default view. Easiest reset before a take.
 - Anything that opens a dialog you didn't expect: close it, screenshot, report.
@@ -40,4 +40,3 @@ read this as "what to look for", then confirm on a screenshot. Nothing here is a
 1. Screenshot first, then reason from the layout above (what region, what icon meaning).
 2. Don't guess-click around. Ask the user with the screenshot and one concrete question.
 3. If the user approves exploring: one `explore` run, a few candidate clicks, Read every screenshot.
-4. Never touch modes, settings or anything that persists on the device without an explicit ask.

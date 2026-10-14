@@ -22,22 +22,28 @@ import tempfile
 from playwright.sync_api import sync_playwright
 
 USAGE = (__doc__ or "").split("Run with")[0].strip()
-VIEW = {"width": 1920, "height": 1080}
+VIEW = {"width": 1920, "height": 1080}  # default size, also the cap for visible windows
 VIDEO_FPS = 25  # Playwright's screen-recording frame rate
-LOCALE = "en-US"  # gate texts below are matched in English; pin the UI language
-# Timeouts are judgement calls, not facts: decode wait 30 s, click 5 s, FROZEN after 3 flat 10 s windows,
-# registration counted as persistent after 3 reloads (~75 s). Raise them for slow devices.
+LOCALE = "en-US"  # gate texts in clear_gates are matched in English; pin the UI language
+# Timing knobs: judgement calls, raise them for slow devices.
+PAGE_LOADS = 6        # page loads before giving up (NO_CONNECTION)
+REG_RELOADS = 3       # registration screen counts as persistent after this many sightings
+DECODE_WAIT_S = 30    # wait for WebRTC frames after the page loads
+CLICK_TIMEOUT_MS = 5000
+PROGRESS_EVERY_S = 10  # PROGRESS event and screenshot interval
+FROZEN_AFTER = 3       # flat PROGRESS intervals in a row before FROZEN
 # Collect every RTCPeerConnection the app creates, so we can read real decode stats.
 HOOK = """(() => { const O = window.RTCPeerConnection; window.__pcs = [];
   window.RTCPeerConnection = function (...a) { const pc = new O(...a); window.__pcs.push(pc); return pc; };
   window.RTCPeerConnection.prototype = O.prototype; })()"""
-# Playwright videos show no OS cursor, so draw two: the script's (Focus Red core, moved by rec.py) and the
-# user's (Night Blue core, follows the mouse). rec.py marks its own clicks so they don't move the user cursor.
+# Playwright videos show no OS cursor, so draw two: the script's (red core, moved by rec.py) and the user's
+# (blue core, follows the mouse). rec.py marks its own clicks so they don't move the user cursor.
 CURSOR = """(() => {
   const dot = (css) => { const d = document.createElement('div');
     Object.assign(d.style, { position: 'fixed', borderRadius: '50%', pointerEvents: 'none', zIndex: 2147483647 }, css);
     document.documentElement.appendChild(d); return d; };
-  // SEA.AI brand: white ring, translucent Night Blue fill, solid core. No shadows/gradients.
+  // SEA.AI brand colours. The core is a hard-edged radial fill, not a soft gradient; no shadows.
+  const RED = '#CB0D00', BLUE = '#0B1731';
   const style = (core) => ({ width: '22px', height: '22px', margin: '-11px 0 0 -11px', boxSizing: 'border-box',
     border: '2px solid #fff', background: `radial-gradient(circle, ${core} 0 4px, rgba(11,23,49,.35) 4.5px)` });
   const ripple = (x, y, color) => { const r = dot({ left: x + 'px', top: y + 'px', width: '22px', height: '22px',
@@ -45,14 +51,14 @@ CURSOR = """(() => {
       transition: 'transform .7s ease-out, opacity .7s ease-out' });
     r.getBoundingClientRect(); r.style.transform = 'scale(2.6)'; r.style.opacity = '0'; setTimeout(() => r.remove(), 800); };
   const keep = (get) => { let el = null; return () => el && el.isConnected ? el : (el = get()); };
-  const script = keep(() => dot({ left: innerWidth / 2 + 'px', top: innerHeight / 2 + 'px', ...style('#CB0D00') }));
-  const user = keep(() => dot({ ...style('#0B1731') }));
+  const script = keep(() => dot({ left: innerWidth / 2 + 'px', top: innerHeight / 2 + 'px', ...style(RED) }));
+  const user = keep(() => dot({ ...style(BLUE) }));
   window.__recMove = (x, y, ms) => { const d = script(); d.getBoundingClientRect();
     d.style.transition = `left ${ms}ms ease-in-out, top ${ms}ms ease-in-out`; d.style.left = x + 'px'; d.style.top = y + 'px'; };
-  window.__recClick = (x, y) => ripple(x, y, '#CB0D00');
+  window.__recClick = (x, y) => ripple(x, y, RED);
   addEventListener('mousemove', e => { if (window.__recScripted) return;
     const d = user(); d.style.left = e.clientX + 'px'; d.style.top = e.clientY + 'px'; }, true);
-  addEventListener('mousedown', e => { if (!window.__recScripted) ripple(e.clientX, e.clientY, '#0B1731'); }, true);
+  addEventListener('mousedown', e => { if (!window.__recScripted) ripple(e.clientX, e.clientY, BLUE); }, true);
 })()"""
 FRAMES = """async () => { let n = 0; for (const pc of window.__pcs || [])
   (await pc.getStats()).forEach(r => { if (r.type === 'inbound-rtp' && r.kind === 'video') n += r.framesDecoded || 0; });
@@ -114,7 +120,7 @@ def click(page, target):
     if target.startswith("xy="):
         x, y = map(int, target[3:].split(","))
     else:
-        box = page.locator(target).first.bounding_box(timeout=5000)
+        box = page.locator(target).first.bounding_box(timeout=CLICK_TIMEOUT_MS)
         if not box:
             raise RuntimeError("target not visible")
         x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
@@ -127,7 +133,7 @@ def click(page, target):
         page.evaluate("() => { window.__recScripted = false; }")
 
 
-def wait_decoding(page, timeout_s=30):
+def wait_decoding(page, timeout_s=DECODE_WAIT_S):
     """True once WebRTC framesDecoded is increasing."""
     last = frames(page)
     for _ in range(timeout_s // 2):
@@ -140,11 +146,13 @@ def wait_decoding(page, timeout_s=30):
 
 
 def clear_gates(page, tag):
-    """Known gates from SKILL.md (current UI strings). Returns an exit code: 0 streaming, 3 gate, 5 no connection."""
+    """Clear the page gates. The texts below are the current UI strings (source of truth; SKILL.md lists them).
+    Returns an exit code: 0 streaming, 3 gate needs a human, 5 no connection."""
     agree = page.get_by_role("button", name="Agree & Continue").first
     failed = page.get_by_text(re.compile("Connection failed|connection was lost", re.I)).first
     register = page.get_by_text("Register to SEA.AI").first
-    for attempt in range(6):
+    reg_seen = 0
+    for attempt in range(PAGE_LOADS):
         page.goto(url)
         try:
             agree.or_(failed).or_(register).first.wait_for(timeout=15000)
@@ -152,15 +160,16 @@ def clear_gates(page, tag):
             pass
         if register.is_visible():
             # shows briefly while the worker starts; only a gate if it persists
-            if attempt < 3:
-                ev("GATE registration", f"transient? reload {attempt + 1}/3")
+            reg_seen += 1
+            if reg_seen < REG_RELOADS:
+                ev("GATE registration", f"transient? reload {reg_seen}/{REG_RELOADS}")
                 page.wait_for_timeout(10000)
                 continue
             page.screenshot(path=f"{out}/{tag}_gate.png")
             ev("GATE registration", f"persistent; {out}/{tag}_gate.png")
             return 3
         if failed.is_visible():
-            ev("GATE connection_failed", f"reload {attempt + 1}/6")
+            ev("GATE connection_failed", f"reload {attempt + 1}/{PAGE_LOADS}")
             page.wait_for_timeout(5000)
             continue
         if agree.is_visible():
@@ -185,7 +194,7 @@ def to_mp4(webm):
     mp4 = f"{out}/take.mp4"
     r = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", webm, "-c:v", "libx264",
                         "-crf", "23", "-preset", "fast", "-pix_fmt", "yuv420p",
-                        # keyframe every second (Playwright records at 25 fps) so players can seek precisely;
+                        # keyframe every second (VIDEO_FPS frames) so players can seek precisely;
                         # faststart puts the index first, the usual setting for shareable mp4s
                         "-g", str(VIDEO_FPS), "-movflags", "+faststart", mp4],
                        capture_output=True, text=True)
@@ -218,7 +227,7 @@ def open_browser(p, view, video):
 
 
 def screen_fit(p):
-    """Largest viewport (capped at 1920x1080) that fits the usable screen in an app-mode window."""
+    """Largest viewport (capped at VIEW) that fits the usable screen in an app-mode window."""
     profile = tempfile.mkdtemp(prefix="rec-probe-")
     # about:blank ignores --app (opens a normal window), so probe with a tiny real page
     ctx = p.chromium.launch_persistent_context(profile, channel="chrome", headless=False, chromium_sandbox=True,
@@ -227,14 +236,12 @@ def screen_fit(p):
     sw, sh, bars = pg.evaluate("[screen.availWidth, screen.availHeight, outerHeight - innerHeight]")
     ctx.close()
     shutil.rmtree(profile, ignore_errors=True)
-    view = {"width": min(1920, sw) // 2 * 2, "height": min(1080, sh - bars) // 2 * 2}  # even sizes for the encoder
+    view = {"width": min(VIEW["width"], sw) // 2 * 2, "height": min(VIEW["height"], sh - bars) // 2 * 2}  # even sizes for the encoder
     ev("VIEWPORT", f"{view['width']}x{view['height']} (screen {sw}x{sh}, window bar {bars})")
     return view
 
 
 def record(p, view):
-    # Playwright's video recorder needs its own ffmpeg build; installing is a no-op once present
-    subprocess.run([sys.executable, "-m", "playwright", "install", "ffmpeg"], capture_output=True)
     ctx, page, profile = open_browser(p, view, video=True)
     code = 0
     try:
@@ -250,16 +257,16 @@ def record(p, view):
                     ev("ACTION", f"{t}s {actions[t]}")
                 except Exception as e:
                     ev("ACTION_FAIL", f"{t}s {actions[t]}: {e.__class__.__name__}")
-            if t % 10:
+            if t % PROGRESS_EVERY_S:
                 continue
             page.screenshot(path=f"{out}/t{t:03d}.png")
             now = frames(page)
-            ev("PROGRESS", f"{t}/{secs}s decoded~{(now - last) / 10:.0f}/s (approx., all streams)")
-            # some views may pause video, so only abort after 30 s flat
+            ev("PROGRESS", f"{t}/{secs}s decoded~{(now - last) / PROGRESS_EVERY_S:.0f}/s (approx., all streams)")
+            # some views may pause video, so only give up after several flat intervals
             flat = flat + 1 if now == last else 0
             last = now
-            if flat >= 3:
-                ev("FROZEN", f"at {t}s, no new WebRTC frames for 30s; ask Device for status")
+            if flat >= FROZEN_AFTER:
+                ev("FROZEN", f"at {t}s, no new WebRTC frames for {flat * PROGRESS_EVERY_S}s; ask Device for status")
                 code = 4
                 break
     except Exception as e:  # page crash etc.: still finalize the video
