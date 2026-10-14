@@ -187,7 +187,7 @@ def clear_gates(page, tag):
 
 
 def to_mp4(webm):
-    """Transcode the raw webm (loading screen included) to OUT/take.mp4."""
+    """Transcode the raw webm (loading screen included) to OUT/take.mp4; the webm is kept only if that fails."""
     if not shutil.which("ffmpeg"):
         ev("MP4_SKIPPED", "ffmpeg not found; webm is in DONE")
         return
@@ -201,6 +201,7 @@ def to_mp4(webm):
     if r.returncode:
         ev("MP4_FAIL", r.stderr.strip()[-200:])
         return
+    os.remove(webm)
     if not shutil.which("ffprobe"):
         ev("MP4", f"{mp4} (duration unknown: no ffprobe)")
         return
