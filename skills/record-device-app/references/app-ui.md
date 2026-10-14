@@ -7,7 +7,7 @@ read this as "what to look for", then confirm on a screenshot. Nothing here is a
 - **Main view:** live camera video with detection labels, or a map. Often a heading/compass strip on top;
   marks on it are detected objects.
 - **Status bar:** text about the alarm state and current view.
-- **Side column, top:** operating **modes** (large labelled buttons). They change detection and alarms. Never click unless asked.
+- **Side column, top:** operating **modes** (large labelled buttons). They change detection and alarms and persist on the device: only when asked.
 - **Side column, below:** **view icons**, then panels, then **settings** (usually last).
 - **Other edges:** alarm sound/mute, alarm or target list, camera selector, expand/collapse,
   markers pointing to targets outside the field of view.
@@ -22,8 +22,8 @@ read this as "what to look for", then confirm on a screenshot. Nothing here is a
 | map | top-down map with range rings around own vessel |
 | two panes | split view; the second pane picks one of the views |
 | gauge | instruments panel (heading, readouts; empty without sensor data) |
-| wrench / gear | **settings**: off-limits for recordings |
-| large labelled buttons | operating modes: don't touch |
+| wrench / gear | **settings**: only when the user asks |
+| large labelled buttons | operating modes: only when the user asks |
 
 The selected button looks different from the others. Icons may have no text or aria-label. Find them with
 `explore` (the CONTROL list gives text, aria, class and position). Prefer text/aria selectors; otherwise

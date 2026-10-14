@@ -5,8 +5,11 @@
 # PRODUCT is the exception: only needed when ~/POWER_Const has no hardwareVersion/module_info.
 set -u
 : "${HOST:?}" "${PRODUCT:=}" "${DATA_DIR:=}"
-: "${WORKER_DIR:=Core-Backend/Worker}"
-WD=$(printf %q "$WORKER_DIR")  # used after `cd ~`, so relative = from device home
+# Worker folder (used after `cd ~`, so relative = from device home): WORKER_DIR if given, else the first of
+# ~/Worker (usual) and ~/Core-Backend/Worker that has a worker.py. Ignored when ~/Makefile exists (make run).
+WORKER_DIR=${WORKER_DIR:-}
+if [ -n "$WORKER_DIR" ]; then FIND="d=$(printf %q "$WORKER_DIR")"
+else FIND='for d in Worker Core-Backend/Worker; do [ -f "$d/worker.py" ] && break; done'; fi
 # One run per device at a time: fixed tmux session and /tmp paths.
 LOG=/tmp/record_device_app.log
 RUNNER=/tmp/record_device_app_run.sh
@@ -32,13 +35,14 @@ preflight)
     r "ls ~/POWER_Const/hardwareVersion* ~/POWER_Const/module_info* >/dev/null 2>&1" \
       || { echo "PREFLIGHT_FAIL no hardwareVersion/module_info in ~/POWER_Const: device can't infer its product, pass PRODUCT"; exit 1; }
   fi
-  r "cd ~ && { test -f Makefile || test -f $WD/worker.py; }" || { echo "PREFLIGHT_FAIL no ~/Makefile and no $WORKER_DIR/worker.py: pass WORKER_DIR"; exit 1; }
+  r "cd ~ && { test -f Makefile || { $FIND; test -f \"\$d/worker.py\"; }; }" \
+    || { echo "PREFLIGHT_FAIL no ~/Makefile and no worker.py in ${WORKER_DIR:-~/Worker or ~/Core-Backend/Worker}: pass WORKER_DIR"; exit 1; }
   r "test -e ~/POWER_Const/system_successfully_registered" || echo "WARN registration bypass file missing (app will show 'Register to SEA.AI')"
   missing=$(r 'for c in tmux curl python3; do command -v $c >/dev/null || printf "%s " $c; done')
   [ -z "$missing" ] || { echo "PREFLIGHT_FAIL missing on device: $missing"; exit 1; }
   # current convention: MediaMTX API on :9997 (v3); readiness depends on it
   [ "$(r "$H; webrtc_bytes")" != NOAPI ] || { echo "PREFLIGHT_FAIL MediaMTX API not reachable at localhost:9997/v3 on the device"; exit 1; }
-  echo "RUN_CMD $(r "test -f ~/Makefile" && echo 'make run' || echo "cd ~ && cd $WD && python3 worker.py")${PRODUCT:+ (PRODUCT=$PRODUCT)}"
+  echo "RUN_CMD $(r "cd ~ && if [ -f Makefile ]; then echo 'make run'; else $FIND; echo \"cd ~/\$d && python3 worker.py\"; fi")${PRODUCT:+ (PRODUCT=$PRODUCT)}"
   # estimate = longest single video file (cameras play in parallel); wrong for segmented recordings
   secs=$(r "command -v ffprobe >/dev/null && find $(printf %q "$DATA_DIR") -type f \( -name '*.mp4' -o -name '*.mkv' -o -name '*.h264' -o -name '*.ts' \) \
     -exec ffprobe -v error -show_entries format=duration -of csv=p=0 {} \; 2>/dev/null | sort -n | tail -1")
@@ -49,7 +53,7 @@ start)
   # The run command goes into a remote script: no nested quoting, paths with spaces survive.
   # bash -ic because PYTHONPATH and friends often live only in ~/.bashrc.
   env="export DATA_DIR=$(printf %q "$DATA_DIR")${PRODUCT:+; export PRODUCT=$(printf %q "$PRODUCT")}"
-  run="cd ~ && if [ -f Makefile ]; then exec make run; else cd $WD && exec python3 worker.py; fi"
+  run="cd ~ && if [ -f Makefile ]; then exec make run; else $FIND; cd \"\$d\" && exec python3 worker.py; fi"
   r "$H; kill_all; cat > $RUNNER" <<<"$env; $run" || { echo "CRASH could not reach device"; exit 1; }
   r "tmux new -d -s rda \"bash -ic 'bash $RUNNER 2>&1 | tee $LOG'\"" && echo "STARTED $(date +%T%z)" || exit 1
   # launcher takes a few seconds to spawn the worker; wait-ready treats "no worker" as a crash

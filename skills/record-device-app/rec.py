@@ -92,6 +92,8 @@ if mode == "record":
         t, _, target = a.partition("=")
         if not t.isdigit() or not target or not 1 <= int(t) <= secs:
             bad_args(f"action {a!r} must be SECONDS=TARGET with 1 <= SECONDS <= {secs}")
+        if target.startswith("xy=") and not re.fullmatch(r"xy=\d+,\d+", target):
+            bad_args(f"action {a!r}: xy targets look like xy=X,Y (integers)")
         actions.append((int(t), target))
     if len({t for t, _ in actions}) < len(actions):
         bad_args("two actions at the same second")
@@ -233,6 +235,8 @@ def screen_fit(p):
 
 
 def record(p, view):
+    # Playwright's video recorder needs its own ffmpeg build; installing is a no-op once present
+    subprocess.run([sys.executable, "-m", "playwright", "install", "ffmpeg"], capture_output=True)
     ctx, page, profile = open_browser(p, view, video=True)
     code = 0
     try:

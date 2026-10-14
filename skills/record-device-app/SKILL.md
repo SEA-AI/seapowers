@@ -22,7 +22,7 @@ a long blind job: every step ends with an event the lead can act on or show the 
 | `HOST` | `user@<device-ip>`; the web app is served on the same IP |
 | `DATA_DIR` | absolute path to the recording folder on the device |
 | `PRODUCT` | **usually omit.** Only needed when `~/POWER_Const` has no `hardwareVersion`/`module_info`; preflight says so |
-| `WORKER_DIR` | only if there is no `~/Makefile` and the worker isn't in `~/Core-Backend/Worker`; relative to the device home, or absolute |
+| `WORKER_DIR` | only if there is no `~/Makefile` and `worker.py` is neither in `~/Worker` nor `~/Core-Backend/Worker`; relative to the device home, or absolute |
 | `SECS` | take length; must fit in the clip (see preflight) |
 | `OUT` | a new dir in the scratchpad |
 | `HEADED` | visible browser or headless (see below) |
@@ -39,11 +39,12 @@ the usable screen, capped at 1920x1080, pinned top-left. `VIEWPORT=WxH` override
 the video is that size, and xy TARGETs only hold for it: explore and record with the same settings.
 
 Run command (picked by `device.sh`): `~/Makefile` present → `make run`; otherwise
-`cd ~ && cd $WORKER_DIR && python3 worker.py` (default `Core-Backend/Worker`). Same env vars either way.
+`python3 worker.py` in the worker folder: `WORKER_DIR`, else `~/Worker` (usual), else `~/Core-Backend/Worker`.
+Same env vars either way; preflight reports the choice as `RUN_CMD`.
 
 **Device conventions** the scripts rely on (they may change; if a step fails, check these first):
 - device: Linux with `bash`, `tmux`, `curl`, `python3` (`ffprobe` optional); env from `~/.bashrc`
-- worker: `~/Makefile` or `~/Core-Backend/Worker/worker.py`; product inferred from `~/POWER_Const/hardwareVersion*`/`module_info*`
+- worker: `~/Makefile`, or `worker.py` in `~/Worker` (usual) or `~/Core-Backend/Worker`; product inferred from `~/POWER_Const/hardwareVersion*`/`module_info*`
 - registration bypass: `~/POWER_Const/system_successfully_registered`
 - streaming: MediaMTX API at `localhost:9997/v3`, WebRTC paths named `*_webrtc`
 - end of clip: the worker logs `End-of-stream`
@@ -56,7 +57,6 @@ Scripts live next to this file. Call them with absolute paths:
 
 Prereqs on the local machine: ssh key access to the device, `uv`, Google Chrome (the bundled Chromium
 lacks H.264 for the stream), `ffmpeg` with libx264 and `ffprobe`.
-First run: `uv run --with playwright playwright install ffmpeg`.
 Windows: `device.sh` runs in Git Bash, which Claude Code on Windows already requires.
 
 ## Roles
@@ -112,7 +112,7 @@ New view, control, gate or product the references don't cover, or a reference th
    (e.g. "explore the right column", "skip this view", "you tell me where it is"). The user usually knows faster.
 2. Only if the user says so: Viewer runs `rec.py ... explore [TARGET ...]` guided by `references/app-ui.md`,
    Reads every screenshot, and reports back before using anything it found.
-   Never touch settings, modes or anything persistent unless the user asked.
+   Touch settings, modes or anything persistent only when the user asked for it.
 3. Findings live in `<OUT>/notes.md` for this run only. Agents and the lead never edit the skill's files;
    the references hold general concepts on purpose, because specific selectors drift as the app evolves.
 
