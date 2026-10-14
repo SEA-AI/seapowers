@@ -40,7 +40,7 @@ preflight)
   r true 2>/dev/null || { echo "PREFLIGHT_FAIL ssh to $HOST"; exit 1; }
   r "test -d $(printf %q "$DATA_DIR")" || { echo "PREFLIGHT_FAIL data dir missing: $DATA_DIR"; exit 1; }
   if [ -z "$PRODUCT" ]; then
-    r "ls ~/POWER_Const/hardwareVersion* ~/POWER_Const/module_info* >/dev/null 2>&1" \
+    r 'for f in ~/POWER_Const/hardwareVersion* ~/POWER_Const/module_info*; do [ -e "$f" ] && exit 0; done; exit 1' \
       || { echo "PREFLIGHT_FAIL no hardwareVersion/module_info in ~/POWER_Const: device can't infer its product, pass PRODUCT"; exit 1; }
   fi
   run=$(r "$CHOOSE; echo \"\$PWD: \$*\"") \

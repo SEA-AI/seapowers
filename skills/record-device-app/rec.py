@@ -20,6 +20,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 from playwright.sync_api import sync_playwright
 
@@ -260,9 +261,10 @@ def record(p, view):
         code = clear_gates(page, "rec")
         if code:
             return code
-        last, flat = frames(page), 0
+        last, flat, t0 = frames(page), 0, time.monotonic()
         for t in range(1, secs + 1):
-            page.wait_for_timeout(1000)
+            # wait until second t of the take, so clicks and screenshots don't push the schedule later
+            page.wait_for_timeout(max(0, (t0 + t - time.monotonic()) * 1000))
             if t in actions:
                 try:
                     click(page, actions[t])

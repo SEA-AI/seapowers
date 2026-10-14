@@ -55,7 +55,7 @@ Scripts live next to this file. Call them with absolute paths:
 - `rec.py`, run as `uv run rec.py ...` (dependencies are declared inline)
 
 Prereqs on the local machine: ssh key access to the device, `uv`, Google Chrome (not Playwright's bundled
-Chromium; see `rec.py`), `ffmpeg` with libx264 and `ffprobe`. Once: `uv run rec.py install` (Playwright's
+Chromium; see `rec.py`), `ffmpeg` with libx264 and `ffprobe`. Once, the lead runs `uv run rec.py install` (Playwright's
 video recorder; if it's missing, `rec.py` reports an `ERROR`).
 
 ## Roles
