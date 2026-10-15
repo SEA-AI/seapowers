@@ -28,9 +28,8 @@ You lead; two partners do the work, one step at a time. Each reports and stops; 
 | `HEADED`, `VIEWPORT` | visible browser, `WxH` size (below) |
 
 **Visible or headless?** Ask once per session, before step 1 (AskUserQuestion, headless first as the
-default); reuse the answer. Visible means `HEADED=1` on `record` (needs a
-local display); `explore` always runs headless. Targets depend on window size: for a visible take,
-run `uv run rec.py size` once and pass its `VIEWPORT` to every explore and record.
+default); reuse the answer. Visible means `HEADED=1` on every `rec.py` call (needs a local display).
+Targets depend on window size, so explore and record with the same settings.
 
 ## Scripts
 

@@ -7,7 +7,6 @@
   rec.py URL OUT explore [TARGET ...]              # clear gates, list controls, click each TARGET in order, screenshot after each
   rec.py URL OUT record SECS [SECONDS=TARGET ...]  # clear gates, record SECS, click TARGET at that second; writes OUT/take.mp4
   rec.py install                                   # once: Playwright's video recorder, matching this script's Playwright
-  rec.py size                                      # the visible window's size (VIEWPORT event), for a headless explore
 SECONDS count from STREAMING; the mp4 starts earlier, with the page loading.
 Timing settings (see knob() below) can be overridden per run with env vars REC_<NAME> (e.g. REC_DECODE_WAIT_S=60).
 Run with: [HEADED=1] [VIEWPORT=WxH] uv run rec.py ...
@@ -94,7 +93,7 @@ def parse_args(argv: list[str]) -> Run:
     try:
         url, out, mode = argv[0], argv[1], Mode(argv[2])
     except (IndexError, ValueError):
-        bad_args(f"need URL OUT {'|'.join(Mode)}, or install, or size")
+        bad_args(f"need URL OUT {'|'.join(Mode)}, or install")
     secs, actions = 0, []
     if mode == Mode.RECORD:
         if len(argv) < 4 or not (argv[3].isascii() and argv[3].isdigit()) or int(argv[3]) < 1:
@@ -348,11 +347,6 @@ def explore(page: Page, run: Run) -> int:
 def main(argv: list[str]) -> int:
     if argv == ["install"]:  # hand over to Playwright's installer in this script's own environment
         os.execv(sys.executable, [sys.executable, "-m", "playwright", "install", "ffmpeg"])
-    if argv == ["size"]:
-        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp, sync_playwright() as p:
-            view = screen_fit(p, tmp)
-        ev("VIEWPORT", f"{view['width']}x{view['height']} (screen fit)")
-        return 0
     run = parse_args(argv)
     os.makedirs(run.out, exist_ok=True)
     signal.signal(signal.SIGTERM, signal.default_int_handler)  # a plain kill stops a take like Ctrl-C
