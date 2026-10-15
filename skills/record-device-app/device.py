@@ -101,8 +101,8 @@ def parse_args(argv: list[str]) -> Config:
     except ValueError:
         bad_args("usage: device.py " + "|".join(Command))
     data_dir = os.environ.get("DATA_DIR", "")
-    if command in (Command.PREFLIGHT, Command.START) and not data_dir:
-        bad_args("DATA_DIR is required")
+    if command in (Command.PREFLIGHT, Command.START) and not data_dir.startswith("/"):
+        bad_args("DATA_DIR must be an absolute path on the device")
     return Config(
         command=command,
         host=os.environ.get("HOST") or bad_args("HOST is required"),
@@ -188,13 +188,27 @@ async def report(conn: asyncssh.SSHClientConnection, st: State) -> int:
     return 1
 
 
-async def wait_ready(conn: asyncssh.SSHClientConnection | None, cfg: Config) -> int:
+async def wait_ready(conn: asyncssh.SSHClientConnection, cfg: Config) -> int:
+    reconnected: list[asyncssh.SSHClientConnection] = []
+    try:
+        return await poll_ready(conn, cfg, reconnected)
+    finally:
+        for c in reconnected:
+            c.close()
+
+
+async def poll_ready(
+    first: asyncssh.SSHClientConnection, cfg: Config, reconnected: list[asyncssh.SSHClientConnection]
+) -> int:
     # Keeps waiting while the worker is RUNNING or still LAUNCHING: slow is not a crash. Any other state (launcher
-    # or this run's worker gone) is final: STOPPED, ENDED or CRASH (the log has harmless tracebacks).
+    # or this run's worker gone) is final: STOPPED, ENDED or CRASH (the log has harmless tracebacks), exit 1.
+    conn: asyncssh.SSHClientConnection | None = first
     end, st, counts = time.monotonic() + cfg.ready_timeout_s, None, None
     while time.monotonic() < end:
         try:
-            conn = conn or await connect(cfg)
+            if conn is None:
+                conn = await connect(cfg)
+                reconnected.append(conn)
             st, counts = await probe(conn)
         except SSH_ERRORS:  # a hiccup isn't a crash: reconnect on the next round
             if conn:
@@ -203,7 +217,7 @@ async def wait_ready(conn: asyncssh.SSHClientConnection | None, cfg: Config) -> 
             await asyncio.sleep(1)
             continue
         if st not in (State.RUNNING, State.LAUNCHING):
-            return await report(conn, st)
+            return await report(conn, st) or 1  # ENDED/STOPPED before READY is no success for start
         before, after = counts or ({}, {})  # None while MediaMTX isn't up yet: keep waiting
         if before and before.keys() == after.keys() and len(flowing(before, after)) == len(before):
             ev("READY", f"{now()} all {len(before)} camera streams flowing")

@@ -48,7 +48,7 @@ preflight() {  # $1 DATA_DIR, $2 PRODUCT ("" = the device infers it), $3 WORKER_
   fi
   local c tools="tmux curl pgrep" missing="" clip
   choose "$3" || { echo "PREFLIGHT_FAIL no ~/Makefile and no worker.py in ${3:-$CANDIDATES}: pass WORKER_DIR"; return 1; }
-  [ "${RUN[0]}" = python3 ] && tools+=" python3"
+  tools+=" ${RUN[0]}"  # make or python3
   [ -e ~/POWER_Const/system_successfully_registered ] \
     || echo "WARN registration bypass file missing (expect a registration gate)"
   for c in $tools; do command -v $c >/dev/null || missing+="$c "; done

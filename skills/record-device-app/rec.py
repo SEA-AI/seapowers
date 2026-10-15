@@ -39,14 +39,11 @@ ARGS = ["--autoplay-policy=no-user-gesture-required", "--window-position=0,0"]
 
 
 def knob(name: str, default: int) -> int:
-    try:
-        v = int(os.environ.get(f"REC_{name}", default))
-    except ValueError:
-        v = 0
-    if v < 1:
+    v = os.environ.get(f"REC_{name}", str(default))
+    if not (v.isascii() and v.isdigit()) or int(v) < 1:
         print(f"BAD_ARGS REC_{name} must be a whole number >= 1, like {default}", flush=True)
         sys.exit(2)
-    return v
+    return int(v)
 
 
 PAGE_LOADS = knob("PAGE_LOADS", 6)  # page loads before giving up (NO_CONNECTION)
@@ -61,9 +58,9 @@ SETTLE_S = knob("SETTLE_S", 3)  # after an explore click, before the screenshot
 STALL_WARN_S = knob("STALL_WARN_S", 30)  # no new frames this long: STALL (warning, keeps recording)
 STALL_ABORT_S = knob("STALL_ABORT_S", 120)  # no new frames this long: FROZEN (take ends)
 # Track every RTCPeerConnection the app creates, for its decode stats.
-HOOK = """(() => { const O = window.RTCPeerConnection; window.__pcs = [];
-  window.RTCPeerConnection = function (...a) { const pc = new O(...a); window.__pcs.push(pc); return pc; };
-  window.RTCPeerConnection.prototype = O.prototype; })()"""
+HOOK = """(() => { window.__pcs = [];
+  window.RTCPeerConnection = class extends window.RTCPeerConnection {
+    constructor(...a) { super(...a); window.__pcs.push(this); } }; })()"""
 # Playwright videos show no OS cursor, so draw two: the script's (red core, moved by rec.py) and the user's
 # (blue core, follows the mouse). rec.py marks its own clicks so they don't move the user cursor.
 CURSOR = """(() => {
@@ -137,12 +134,12 @@ def parse_args(argv: list[str]) -> Run:
         bad_args(f"need URL OUT {'|'.join(Mode)}, or install")
     secs, actions = 0, []
     if mode == Mode.RECORD:
-        if len(argv) < 4 or not argv[3].isdigit() or int(argv[3]) < 1:
+        if len(argv) < 4 or not (argv[3].isascii() and argv[3].isdigit()) or int(argv[3]) < 1:
             bad_args("record needs SECS (a positive integer)")
         secs = int(argv[3])
         for a in argv[4:]:
             t, _, target = a.partition("=")
-            if not t.isdigit() or not target or not 1 <= int(t) <= secs:
+            if not (t.isascii() and t.isdigit()) or not target or not 1 <= int(t) <= secs:
                 bad_args(f"action {a!r} must be SECONDS=TARGET with 1 <= SECONDS <= {secs}")
             actions.append((int(t), target))
         if len({t for t, _ in actions}) < len(actions):
