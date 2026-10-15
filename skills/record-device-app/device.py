@@ -286,7 +286,7 @@ async def run(conn: asyncssh.SSHClientConnection, cfg: Config) -> int:
                 cfg.settings_overrides,
             )
             if code:
-                ev("CRASH", "no ~/Makefile and no worker.py found" if code == 3 else "tmux could not start the worker")
+                ev("CRASH", "no ~/Makefile and no worker.py found" if code == 3 else "could not start the launcher")
                 return 1
             ev("STARTED", now())
             return await wait_ready(conn, cfg)  # the old worker is gone, so flowing bytes mean the new one

@@ -4,7 +4,7 @@
 # Device conventions (keep the list in SKILL.md in sync)
 CANDIDATES="Worker Core-Backend/Worker"  # worker folders tried in order, relative to the device home
 MTX=localhost:9997/v3                    # MediaMTX API on the device
-S=rda                                    # tmux session; one run per device at a time
+PIDF=/tmp/record_device_app.pid          # launcher's pid; one run per device at a time
 LOG=/tmp/record_device_app.log
 RUNNER=/tmp/record_device_app_run.sh
 SEEN=/tmp/record_device_app.seen         # exists once this run's worker was seen, so a gone worker reads as a crash
@@ -12,20 +12,20 @@ STOP_MARK='== stopped by record-device-app =='  # last log line after stop, so s
 MARK="== record-device-app =="           # output before it comes from the login shell (e.g. ~/.bashrc), not us
 SAMPLE_S=2                               # gap between two byte counts when checking that video flows
 
-# The worker is found among the tmux pane's descendants by its worker.py argument,
+# The worker is found among the launcher's descendants by its worker.py argument,
 # so it works whatever launcher make uses.
 tree() { for c in $(pgrep -P "$1"); do echo "$c"; tree "$c"; done; }
-pane() { tmux list-panes -t "$S" -F "#{pane_pid}" 2>/dev/null; }
+launcher() { local p; p=$(cat "$PIDF" 2>/dev/null) && kill -0 "$p" 2>/dev/null && echo "$p"; }  # pid while it runs
 worker() {
-  local p c; p=$(pane); [ -n "$p" ] || return 1
+  local p c; p=$(launcher) || return 1
   for c in $(tree "$p"); do
     tr "\0" "\n" </proc/"$c"/cmdline 2>/dev/null | grep -qxE "(.*/)?worker\.py" && { touch "$SEEN"; return 0; }
   done
   return 1
 }
 kill_all() {  # $1: grace seconds between TERM and KILL
-  local p pids; p=$(pane); [ -n "$p" ] && pids=$(tree "$p")
-  tmux kill-session -t "$S" 2>/dev/null; rm -f "$SEEN"
+  local p pids; p=$(launcher) && pids="$p $(tree "$p")"
+  rm -f "$PIDF" "$SEEN"
   [ -n "${pids:-}" ] && { kill $pids 2>/dev/null; sleep "$1"; kill -9 $pids 2>/dev/null; }; true
 }
 api() { curl -sf -m3 "$MTX/paths/list"; }
@@ -50,7 +50,7 @@ preflight() {  # $1 DATA_DIR, $2 PRODUCT ("" = the device infers it), $3 WORKER_
     echo "PREFLIGHT_FAIL no hardwareVersion/module_info in ~/POWER_Const: device can't infer its product, pass PRODUCT"
     return 1
   fi
-  local c tools="tmux curl pgrep" missing="" clip
+  local c tools="setsid curl pgrep" missing="" clip
   choose "$3" || { echo "PREFLIGHT_FAIL no ~/Makefile and no worker.py in ${3:-$CANDIDATES}: pass WORKER_DIR"; return 1; }
   tools+=" ${RUN[0]}"  # make or python3
   [ -e ~/POWER_Const/system_successfully_registered ] \
@@ -75,15 +75,17 @@ launch() {  # $1 DATA_DIR, $2 PRODUCT, $3 WORKER_DIR, $4 grace seconds, $5 SETTI
     [ -z "$2" ] || printf 'export PRODUCT=%q\n' "$2"
     [ -z "$5" ] || printf 'export SETTINGS_OVERRIDES=%q\n' "$5"
     printf 'cd %q && exec' "$PWD"; printf ' %q' "${RUN[@]}"; echo; } >"$RUNNER"
-  tmux new -d -s "$S" "bash -ic 'bash $RUNNER 2>&1 | tee $LOG'"
+  # setsid: its own session, so it outlives this ssh connection; all fds closed, so ssh doesn't wait for it
+  setsid bash -ic "bash $RUNNER 2>&1 | tee $LOG" </dev/null >/dev/null 2>&1 &
+  echo $! >"$PIDF"
 }
 
 probe() { status; api; echo; echo ---; sleep "$SAMPLE_S"; api; echo; }  # state, then two MediaMTX samples
 
 status() {
-  # The tmux session closes when the worker exits, so without a session the log decides:
+  # The launcher exits when the worker does, so without it the log decides:
   # stopped by us (or never started) = STOPPED, "End-of-stream" (current log text) = ENDED, anything else = CRASH.
-  if tmux has-session -t "$S" 2>/dev/null; then
+  if launcher >/dev/null; then
     if grep -q End-of-stream "$LOG" 2>/dev/null; then echo ENDED; elif worker; then echo RUNNING
     elif [ -e "$SEEN" ]; then echo GONE; else echo LAUNCHING; fi
   elif [ ! -e "$LOG" ] || tail -1 "$LOG" | grep -qF "$STOP_MARK"; then echo STOPPED
