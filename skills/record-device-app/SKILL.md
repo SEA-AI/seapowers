@@ -34,9 +34,9 @@ this session; don't ask again unless the user brings it up. If visible, the View
 call with `HEADED=1` (needs a local display). Click targets depend on the browser size (`VIEWPORT` event):
 explore and record with the same settings.
 
-**Device conventions** the scripts rely on (defined in `device.sh`; this list mirrors them. They may change,
+**Device conventions** the scripts rely on (defined in `device-remote.sh`; this list mirrors them. They may change,
 so if a step fails, check these first):
-- device: Linux with `bash`, `tmux`, `curl`, `python3`, `pgrep` (`ffprobe` optional); env from `~/.bashrc`
+- device: Linux with `bash`, `tmux`, `curl`, `pgrep` (`ffprobe` optional); env from `~/.bashrc`
 - the worker reads the recording and product from the env vars `DATA_DIR` / `PRODUCT`
 - worker: `make run` if `~/Makefile` exists (preflight reports the choice as `RUN_CMD`), else `python3 worker.py` in `~/Worker` (usual) or `~/Core-Backend/Worker`; either way a process with `worker.py` (or a path ending
   in `/worker.py`) as one of its arguments must start under the launcher (not via docker or systemd); product inferred from `~/POWER_Const/hardwareVersion*`/`module_info*`
@@ -48,15 +48,16 @@ so if a step fails, check these first):
 - one run per device at a time
 
 Scripts live next to this file. Call them with absolute paths:
-- `device.sh` (bash, on the local machine; talks to the device over ssh; on Windows Git Bash should work, untested)
+- `device.py`, run as `uv run device.py ...`: talks to the device over ssh (asyncssh; settings from `~/.ssh/config`)
+  and sends it `device-remote.sh`, the part that runs on the device
 - `rec.py`, run as `uv run rec.py ...` (dependencies are declared inline)
 
-Prereqs on the local machine: ssh key access to the device, `uv`, Google Chrome (not Playwright's bundled
+Prereqs on the local machine: ssh key access to the device (host already in `known_hosts`), `uv`, Google Chrome (not Playwright's bundled
 Chromium; see `rec.py`), `ffmpeg` with libx264 and `ffprobe`. Once, the lead runs `uv run rec.py install` (Playwright's
 video recorder; if it's missing, `rec.py` reports an `ERROR`). Videos are recorded at Playwright's fixed 25 fps.
 
 Settings (`_S` seconds, `_MS` milliseconds, otherwise counts) default to a LAN. Override per run with env vars:
-- `device.sh`: `READY_TIMEOUT_S`, `KILL_GRACE_S`, `SSH_TIMEOUT_S`. Keep `READY_TIMEOUT_S` under ~550 s,
+- `device.py`: `READY_TIMEOUT_S`, `KILL_GRACE_S`, `SSH_TIMEOUT_S`. Keep `READY_TIMEOUT_S` under ~550 s,
   the Device's 600 s command limit.
 - `rec.py`: `REC_<NAME>` for every `knob()` in it. `gates`/`explore` share the Viewer's 600 s limit: keep
   `PAGE_LOADS × (GOTO_TIMEOUT + GATE_WAIT + REG_WAIT) + DECODE_WAIT` (+ `CLICK_TIMEOUT + SETTLE + 1` per explore
@@ -66,7 +67,7 @@ Settings (`_S` seconds, `_MS` milliseconds, otherwise counts) default to a LAN. 
 
 | Role | Agent type | Owns | May message |
 |---|---|---|---|
-| **Device** | `record-device` | ssh; runs `device.sh` | replies to whoever asked |
+| **Device** | `record-device` | ssh; runs `device.py` | replies to whoever asked |
 | **Viewer** | `record-viewer` | the browser; runs `rec.py`, reads every screenshot | Device, for `status` only |
 | **Lead** | you | params, decisions, every `start`; the only one who talks to the user | everyone |
 
@@ -86,7 +87,7 @@ docstring; `DONE <webm>` is deleted once `MP4` checks out.
 | `READY` | next step |
 | `start`/`wait-ready` ends in `ENDED` or `STOPPED` | the clip or launcher ended before `READY`: tell the user which (`ENDED`: the clip is shorter than startup; pick a longer recording or retry) and ask |
 | `NOT_READY` | slow, not crashed: tell the user, run `wait-ready` again (or raise `READY_TIMEOUT_S`) |
-| `UNREACHABLE` | ssh failed (network, device off); not a crash. Tell the user, retry (raise `SSH_TIMEOUT_S` on slow links) |
+| `UNREACHABLE` | ssh failed (network, device off, unknown host key; the detail says which); not a crash. Tell the user, retry (raise `SSH_TIMEOUT_S` on slow links) |
 | `GATE registration` "transient?", `GATE connection_failed` | nothing, `rec.py` reloads |
 | persistent `GATE registration` (3) | show the screenshot, ask the user |
 | `STALL` | no new frames for a while; the take continued (a view without video, or trouble). Mention it with the result |

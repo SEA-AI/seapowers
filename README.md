@@ -23,7 +23,7 @@
 
 | Agent | Description |
 |-------|-------------|
-| `record-device` | Device partner for `record-device-app`: controls the worker over ssh with `device.sh` |
+| `record-device` | Device partner for `record-device-app`: controls the worker over ssh with `device.py` |
 | `record-viewer` | Viewer partner for `record-device-app`: drives the web app in a browser with `rec.py` |
 
 ### Plugins
