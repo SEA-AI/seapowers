@@ -31,6 +31,13 @@ kill_all() {  # $1: grace seconds between TERM and KILL
 api() { curl -sf -m3 "$MTX/paths/list"; }
 videos() { find "$1" -maxdepth 1 -type f \( -iname '*.mp4' -o -iname '*.avi' -o -iname '*.mkv' \); }  # one per camera
 cameras() { videos "$1" | wc -l; }
+duration() {  # seconds of one video: GStreamer's discoverer (the worker needs GStreamer anyway), else ffprobe
+  if command -v gst-discoverer-1.0 >/dev/null; then
+    gst-discoverer-1.0 "$1" </dev/null 2>/dev/null | awk '/Duration:/ { split($2, t, ":"); print t[1] * 3600 + t[2] * 60 + t[3]; exit }'
+  elif command -v ffprobe >/dev/null; then
+    ffprobe -v error -show_entries format=duration -of csv=p=0 "$1" </dev/null 2>/dev/null
+  fi
+}
 
 # Run command: `make run` if ~/Makefile exists, else worker.py in $1 (WORKER_DIR) or the first candidate folder.
 # Leaves the command in RUN and the folder as the cwd; fails if there is none.
@@ -60,8 +67,7 @@ preflight() {  # $1 DATA_DIR, $2 PRODUCT ("" = the device infers it), $3 WORKER_
   echo "RUN_CMD $PWD: ${RUN[*]}${2:+ (PRODUCT=$2)}"
   # Each video file is one camera; the worker stops when the first stream ends, so the clip lasts as long as
   # the shortest file.
-  command -v ffprobe >/dev/null && clip=$(videos "$1" | while read -r f; do
-    ffprobe -v error -show_entries format=duration -of csv=p=0 "$f" </dev/null 2>/dev/null; done \
+  clip=$(videos "$1" | while read -r f; do duration "$f"; done \
     | awk '/^[0-9.]+$/ { n++; if (m == "" || $1 < m) m = $1 } END { if (n) printf "%.0f (%d cameras)", m, n }')
   echo "CLIP_SECONDS ${clip:-unknown}"  # device.py adds the streaming checks and PREFLIGHT_OK
 }
