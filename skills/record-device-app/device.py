@@ -51,6 +51,7 @@ class Remote(StrEnum):
     STATUS = "status"
     STOP = "stop"
     LOGTAIL = "logtail"
+    CAMERAS = "cameras"
 
 
 class State(StrEnum):
@@ -202,8 +203,14 @@ async def poll_ready(
 ) -> int:
     # Keeps waiting while the worker is RUNNING or still LAUNCHING: slow is not a crash. Any other state (launcher
     # or this run's worker gone) is final: STOPPED, ENDED or CRASH (the log has harmless tracebacks), exit 1.
+    # READY: at least one rising *_webrtc path per video file in the recording, so a camera without a stream
+    # blocks it and leftover paths from an earlier recording don't. No DATA_DIR or no files: every listed path.
+    cameras = 0
+    if cfg.data_dir:
+        _, out = await sh(first, Remote.CAMERAS, cfg.data_dir)
+        cameras = int(out.strip() or 0)
     conn: asyncssh.SSHClientConnection | None = first
-    end, st, counts = time.monotonic() + cfg.ready_timeout_s, None, None
+    end, st, counts, rising = time.monotonic() + cfg.ready_timeout_s, None, None, []
     while time.monotonic() < end:
         try:
             if conn is None:
@@ -219,8 +226,13 @@ async def poll_ready(
         if st not in (State.RUNNING, State.LAUNCHING):
             return await report(conn, st) or 1  # ENDED/STOPPED before READY is no success for start
         before, after = counts or ({}, {})  # None while MediaMTX isn't up yet: keep waiting
-        if before and before.keys() == after.keys() and len(flowing(before, after)) == len(before):
-            ev("READY", f"{now()} all {len(before)} camera streams flowing")
+        rising = flowing(before, after)
+        if cameras:
+            ready = len(rising) >= cameras
+        else:
+            ready = bool(before) and before.keys() == after.keys() and len(rising) == len(before)
+        if ready:
+            ev("READY", f"{now()} {len(rising)} camera streams flowing")
             return 0
         await asyncio.sleep(1)
     if st is None:
@@ -228,7 +240,11 @@ async def poll_ready(
     elif st == State.LAUNCHING:
         why = "no worker process yet, launcher still running (building?)"
     else:
-        why = "MediaMTX API unreachable" if counts is None else "not every camera streams"
+        why = (
+            "MediaMTX API unreachable"
+            if counts is None
+            else f"{len(rising)}/{cameras or len(counts[0])} camera streams"
+        )
     try:
         log = await tail(conn) if conn else ""
     except SSH_ERRORS:

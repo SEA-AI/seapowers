@@ -28,6 +28,8 @@ kill_all() {  # $1: grace seconds between TERM and KILL
   [ -n "${pids:-}" ] && { kill $pids 2>/dev/null; sleep "$1"; kill -9 $pids 2>/dev/null; }; true
 }
 api() { curl -sf -m3 "$MTX/paths/list"; }
+videos() { find "$1" -type f \( -name '*.mp4' -o -name '*.avi' -o -name '*.mkv' \); }  # one file per camera
+cameras() { videos "$1" | wc -l; }
 
 # Run command: `make run` if ~/Makefile exists, else worker.py in $1 (WORKER_DIR) or the first candidate folder.
 # Leaves the command in RUN and the folder as the cwd; fails if there is none.
@@ -56,8 +58,8 @@ preflight() {  # $1 DATA_DIR, $2 PRODUCT ("" = the device infers it), $3 WORKER_
   echo "RUN_CMD $PWD: ${RUN[*]}${2:+ (PRODUCT=$2)}"
   # Each video file is one camera; the worker stops when the first stream ends, so the clip lasts as long as
   # the shortest file.
-  command -v ffprobe >/dev/null && clip=$(find "$1" -type f \( -name '*.mp4' -o -name '*.avi' -o -name '*.mkv' \) \
-    -exec ffprobe -v error -show_entries format=duration -of csv=p=0 {} \; 2>/dev/null \
+  command -v ffprobe >/dev/null && clip=$(videos "$1" | while read -r f; do
+    ffprobe -v error -show_entries format=duration -of csv=p=0 "$f" </dev/null 2>/dev/null; done \
     | awk '/^[0-9.]+$/ { n++; if (m == "" || $1 < m) m = $1 } END { if (n) printf "%.0f (%d cameras)", m, n }')
   echo "CLIP_SECONDS ${clip:-unknown}"  # device.py adds the streaming checks and PREFLIGHT_OK
 }
@@ -90,7 +92,7 @@ logtail() { tail -15 "$LOG" 2>/dev/null; }
 
 main() {
   case "${1:-}" in
-    preflight | launch | probe | status | stop | logtail) "$@" ;;
+    preflight | launch | probe | status | stop | logtail | cameras) "$@" ;;
     *) echo "BAD_ARGS unknown device command: ${1:-}"; return 2 ;;
   esac
 }
