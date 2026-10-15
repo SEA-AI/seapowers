@@ -57,12 +57,11 @@ preflight() {  # $1 DATA_DIR, $2 PRODUCT ("" = the device infers it), $3 WORKER_
     echo "PREFLIGHT_FAIL no hardwareVersion/module_info in ~/POWER_Const: device can't infer its product, pass PRODUCT"
     return 1
   fi
-  local c tools="setsid curl pgrep" missing="" clip
+  local c missing="" clip
   choose "$3" || { echo "PREFLIGHT_FAIL no ~/Makefile and no worker.py in ${3:-$CANDIDATES}: pass WORKER_DIR"; return 1; }
-  tools+=" ${RUN[0]}"  # make or python3
   [ -e ~/POWER_Const/system_successfully_registered ] \
     || echo "WARN registration bypass file missing (expect a registration gate)"
-  for c in $tools; do command -v $c >/dev/null || missing+="$c "; done
+  for c in setsid curl pgrep "${RUN[0]}"; do command -v "$c" >/dev/null || missing+="$c "; done  # RUN[0]: make or python3
   [ -z "$missing" ] || { echo "PREFLIGHT_FAIL missing on device: $missing"; return 1; }
   echo "RUN_CMD $PWD: ${RUN[*]}${2:+ (PRODUCT=$2)}"
   # Each video file is one camera; the worker stops when the first stream ends, so the clip lasts as long as

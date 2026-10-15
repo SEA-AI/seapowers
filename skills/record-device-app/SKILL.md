@@ -1,154 +1,127 @@
 ---
 name: record-device-app
 description: >
-  Runs a SEA.AI product on a remote device from a recording (`make run` or `worker.py`),
-  opens its web app in a browser (headless or visible) and screen-records the live stream
-  to an mp4, with two partner subagents (Device, Viewer) that report after every step so
-  problems surface early. Used when asked to record, capture, or film the app or stream
-  running on a device or from a recording.
+  Runs a SEA.AI product on a remote device from a recording (`make run` or `worker.py`), opens its
+  web app in a browser (headless or visible) and screen-records the live stream to an mp4, with two
+  partner subagents (Device, Viewer) that report after every step. Used when asked to record, capture,
+  or film the app or stream running on a device or from a recording.
 license: MIT
 ---
 
 # Record Device App
 
-Two partner agents, one lead. Each agent does **one step**, reports, and stops; the lead continues it
-with `SendMessage`. Every step ends with a report, so problems show up where they happen.
+You lead; two partners do the work, one step at a time. Each reports and stops; continue it with
+`SendMessage`. When something breaks, you know which step broke it.
 
-## Inputs (ask only if missing)
+## Inputs (ask only for what's missing)
 
 | Param | Meaning |
 |---|---|
 | `HOST` | `user@<device-ip>` |
-| `URL` | the web app; `http://<device-ip>/` unless the user says otherwise |
-| `DATA_DIR` | absolute path to the recording folder on the device (no `~`) |
-| `PRODUCT` | **usually omit.** Only needed when `~/POWER_Const` has no `hardwareVersion`/`module_info`; preflight says so |
-| `WORKER_DIR` | only if preflight can't find the worker; relative to the device home (write it without `~`), or absolute; ignored when `~/Makefile` exists |
-| `SETTINGS_OVERRIDES` | optional: JSON file on the device (`{"<group>": {"<setting>": value}}`), deep-merged over the worker's settings at start; the lead writes it there |
-| `SECS` | take length; must fit in the clip (Flow step 1) |
+| `URL` | default `http://<device-ip>/` |
+| `DATA_DIR` | absolute recording folder on the device (no `~`) |
+| `PRODUCT` | usually omit; preflight says when it's needed |
+| `WORKER_DIR` | only if preflight can't find the worker; relative to the device home, or absolute |
+| `SETTINGS_OVERRIDES` | optional device JSON file, `{"<group>": {"<setting>": value}}`, deep-merged over worker settings. Write it before preflight |
+| `SECS` | take length; must fit in the clip (Flow 1) |
 | `OUT` | a new dir in the scratchpad |
-| `HEADED` | visible browser or headless (see below) |
-| `VIEWPORT` | optional `WxH` override of the browser size |
+| `HEADED`, `VIEWPORT` | visible browser, `WxH` size (below) |
 
-**Ask once per session, before step 1:** "Watch the browser on screen, or run headless?"
-(AskUserQuestion, two options, headless first as default). Reuse the answer for every later run in
-this session; don't ask again unless the user brings it up. If visible, the Viewer prefixes every `rec.py`
-call with `HEADED=1` (needs a local display). Click targets depend on the browser size (`VIEWPORT` event):
-explore and record with the same settings.
+**Visible or headless?** Ask once per session, before step 1 (AskUserQuestion, headless first as the
+default); reuse the answer. Visible means `HEADED=1` on `record` (needs a
+local display); `explore` always runs headless. Targets depend on window size: for a visible take,
+run `uv run rec.py size` once and pass its `VIEWPORT` to every explore and record.
 
-**Device conventions** the scripts rely on (defined in `device-remote.sh`; this list mirrors them. They may change,
-so if a step fails, check these first):
-- device: Linux with `bash`, `setsid`, `curl`, `pgrep`, `python3` for a `worker.py` run (clip length from `gst-discoverer-1.0`, else `ffprobe`); env from `~/.bashrc`
-- the worker reads the recording and product from the env vars `DATA_DIR` / `PRODUCT`
-- worker: `make run` if `~/Makefile` exists (preflight reports the choice as `RUN_CMD`), else `python3 worker.py` in `~/Worker` (usual) or `~/Core-Backend/Worker`; either way a process with `worker.py` (or a path ending
-  in `/worker.py`) as one of its arguments must start under the launcher (not via docker or systemd); product inferred from `~/POWER_Const/hardwareVersion*`/`module_info*`
-- registration bypass: `~/POWER_Const/system_successfully_registered`
-- streaming: MediaMTX API on the device at `localhost:9997` (its own service, or started by the worker), one WebRTC path per camera named `*_webrtc`, receiving video without a viewer connected; the web app plays them
-  over WebRTC in the page (that is how `rec.py` sees frames decoding)
-- recording: one video file per camera (`.mp4`, `.avi`, `.mkv`); the clip lasts as long as the shortest file
-- end of clip: the worker logs `End-of-stream`
-- one run per device at a time
+## Scripts
 
-Scripts live next to this file. Call them with absolute paths:
-- `device.py`, run as `uv run device.py ...`: talks to the device over ssh (asyncssh; settings from `~/.ssh/config`)
-  and sends it `device-remote.sh`, the part that runs on the device
-- `rec.py`, run as `uv run rec.py ...` (dependencies are declared inline); it injects `page.js` (frame counting, drawn cursors) into the page
+Next to this file; call them by absolute path. `uv run device.py` sends `device-remote.sh` to the device
+over ssh (`~/.ssh/config` applies). `uv run rec.py` drives Chrome and injects `page.js`. Docstrings hold
+syntax, env vars and exit codes.
 
-Prereqs on the local machine: ssh key access to the device (host already in `known_hosts`), `uv`, Google Chrome (not Playwright's bundled
-Chromium; see `rec.py`), `ffmpeg` with libx264 and `ffprobe`. Videos are recorded at Playwright's fixed 25 fps.
+Local prereqs: ssh key access (host in `known_hosts`), `uv`, Google Chrome (not Playwright's Chromium),
+`ffmpeg` with libx264, `ffprobe`.
 
-Settings (`_S` seconds, `_MS` milliseconds, otherwise counts) default to a LAN. Override per run with env vars:
-- `device.py`: `READY_TIMEOUT_S`, `KILL_GRACE_S`, `SSH_TIMEOUT_S`. Keep `READY_TIMEOUT_S` under ~550 s,
-  the Device's 600 s command limit.
-- `rec.py`: `REC_<NAME>` for every `knob()` in it. `explore` shares the Viewer's 600 s limit: keep
-  `PAGE_LOADS × (GOTO_TIMEOUT + GATE_WAIT + REG_WAIT) + DECODE_WAIT` (+ `CLICK_TIMEOUT + SETTLE + 1` per explore
-  target) under ~550 s (defaults: ~360 s).
+Timings default to a LAN. Override per run: `READY_TIMEOUT_S`, `KILL_GRACE_S`, `SSH_TIMEOUT_S`
+(device.py), `REC_<NAME>` per `knob()` (rec.py). Partner commands die at 600 s: keep `READY_TIMEOUT_S` and
+a whole `explore` (default ~360 s) under ~550 s.
+
+**Device conventions.** Preflight checks tools and paths. When a step still fails, suspect these:
+- `make run` if `~/Makefile` exists, else `python3 worker.py` in `~/Worker` or `~/Core-Backend/Worker`. A
+  process with `worker.py` as an argument must start under that launcher (not docker or systemd). It runs
+  in its own session (`setsid`) with env from `~/.bashrc`.
+- Streaming: MediaMTX API at `localhost:9997`, one `*_webrtc` path per camera that flows with no viewer.
+  The page plays them over WebRTC.
+- One video file per camera (`.mp4`, `.avi`, `.mkv`); the clip lasts as long as the shortest (length from
+  `gst-discoverer-1.0`, else `ffprobe`). At the end the worker logs `End-of-stream`.
+- One run per device at a time.
 
 ## Roles
 
 | Role | Agent type | Owns | May message |
 |---|---|---|---|
-| **Device** | `record-device` | ssh; runs `device.py` | replies to whoever asked |
-| **Viewer** | `record-viewer` | the browser; runs `rec.py`, reads every screenshot | Device, for `status` only |
-| **Lead** | you | params, decisions, every `start`; the only one who talks to the user | everyone |
+| **Device** | `record-device` | ssh, `device.py` | whoever asked |
+| **Viewer** | `record-viewer` | the browser, `rec.py`, screenshots | Device, for `status` only |
+| **Lead** | you | params, decisions, every `start`, the user | everyone |
 
-The agents are defined in `../../agents/` (the plugin may prefix them, e.g. `seapowers:record-device`).
-If they're missing, spawn `general-purpose` agents and start the prompt with the agent file's text.
+Agent files: `../../agents/` (a plugin may prefix them, e.g. `seapowers:record-device`). Missing? Spawn
+`general-purpose` agents with the file's text atop the prompt. Spawn each once per run with the step,
+params, script path, and for the Viewer the Device's address. Speak in intent ("show RGB, then thermal, then map"); the Viewer proposes the schedule.
 
-Spawn each once per run. Each prompt: the step, the params, the script path, and for the Viewer the Device's
-address. Post one short line to the user per event.
+## Events
 
-Events not in the table below need no decision: just the one line to the user. `rec.py` exit codes are in its
-docstring; `DONE <webm>` is deleted once `MP4` checks out.
+One short line to the user per event. Unlisted events need nothing more.
 
-| Event (exit code) | Lead does |
+| Event (exit) | You do |
 |---|---|
-| `PREFLIGHT_FAIL`, `CRASH` | stop and show the user why |
-| `WARN` | tell the user (a missing registration bypass means a registration gate is likely; something already streaming means READY may mislead; MediaMTX unreachable is fine if the worker starts it) |
 | `READY` | next step |
-| `start`/`wait-ready` ends in `ENDED` or `STOPPED` | the clip or launcher ended before `READY`: tell the user which (`ENDED`: the clip is shorter than startup; pick a longer recording or retry) and ask |
-| `NOT_READY` | slow, not crashed: tell the user, run `wait-ready` again (or raise `READY_TIMEOUT_S`) |
-| `UNREACHABLE` | ssh failed (network, device off, unknown host key; the detail says which); not a crash. Tell the user, retry (raise `SSH_TIMEOUT_S` on slow links) |
-| `GATE registration` "transient?", `GATE connection_failed` | nothing, `rec.py` reloads |
+| `WARN`, `STALL`, `GATE registration` "transient?", `GATE connection_failed` | nothing beyond the line (`rec.py` reloads); mention `STALL` with the result |
+| `PREFLIGHT_FAIL`, `CRASH` | stop, show the user why |
+| `start`/`wait-ready` ends `ENDED` or `STOPPED` | died before `READY` (`ENDED`: clip shorter than startup); ask the user |
+| `NOT_READY` | slow, not dead: `wait-ready` again (or raise `READY_TIMEOUT_S`) |
+| `UNREACHABLE` | ssh failed, not a crash: retry (raise `SSH_TIMEOUT_S` on slow links) |
 | persistent `GATE registration` (3) | show the screenshot, ask the user |
-| `STALL` | no new frames for a while; the take continued (a view without video, or trouble). Mention it with the result |
-| `GATE unknown` (3), `FROZEN` (4), `NO_CONNECTION` (5) | the Viewer asks the Device for `status` (a dead worker or ended clip looks like an app problem); act on its answer: `ENDED` clip ran out (restart, shorter take) · `CRASH` show the log tail · `RUNNING` app issue, show the screenshot and ask the user · `STOPPED` worker not running, `start` and retry · `NOT_READY` worker still launching, `wait-ready` · `UNREACHABLE` ssh failed, retry |
-| `ERROR` (1) | show the message (often Chrome missing, see Prereqs, or the video recorder, see Flow step 1) and ask the user |
-| `CLICK_FAIL`, `ACTION_FAIL` | show the nearest earlier screenshot (`explore_NN.png` / `tNNNNN.png`); re-find the target with `explore` |
-| `BAD_ARGS` (2) | fix the call (or install ffmpeg/ffprobe if that is the message) and rerun |
+| `GATE unknown` (3), `FROZEN` (4), `NO_CONNECTION` (5) | the Viewer got the Device's `status`. `ENDED`: restart, shorter take · `CRASH`: show the log tail · `RUNNING`: app issue, show the screenshot, ask · `STOPPED`: `start`, retry · `NOT_READY`: `wait-ready` · `UNREACHABLE`: retry |
+| `CLICK_FAIL`, `ACTION_FAIL` | show the last screenshot before it; re-find the target with `explore` |
+| `ERROR` (1), `BAD_ARGS` (2) | fix the call or setup (Chrome, ffmpeg, `rec.py install`) and rerun; else ask |
 | `MP4` | check one late frame, hand over the file |
-| `MP4_FAIL` (1) | convert the webm by hand with the arguments in `rec.py`'s `to_mp4` |
-
-The lead speaks in intent ("show RGB, then thermal, then map"). The Viewer resolves targets from
-`references/app-ui.md` and proposes a schedule (`SECONDS=TARGET`, seconds after `STREAMING`) before recording.
-
-## Hands-on takes
-
-In a visible run the user can also use the app during the take; everything the page shows is recorded.
-The video then has two cursors: the script's (red core) and the user's (blue core), each with its own
-click ripple. Headless runs only show the script's cursor.
-
-- Ask which parts the user will do and which the script does. Fully hands-on: `record SECS` with no actions.
-- Mixed: schedule only the script's part, and tell the user where not to click (e.g. the controls the
-  script uses) so the two don't fight. The Viewer still reports what each screenshot shows.
-- Start the take only when the user is ready; say when the window will open.
-- The user may end a take early ("stop", "done"). The lead then stops it with `pkill -f 'rec.py .*<OUT>'`; `rec.py`
-  prints `TAKE_STOPPED` and still converts what was recorded.
-
-## When the request isn't covered
-
-New view, control, gate or product the references don't cover, or a reference that turns out wrong:
-
-1. **Stop and ask the user.** Show the screenshot, say what's unclear in one line, and offer options
-   (e.g. "explore the right column", "skip this view", "you tell me where it is"). The user usually knows faster.
-2. Only if the user says so: Viewer runs `rec.py ... explore [TARGET ...]` guided by `references/app-ui.md`,
-   Reads every screenshot, and reports back before using anything it found.
-3. Findings live in `<OUT>/notes.md` for this run only. Agents and the lead never edit the skill's files;
-   the references hold general concepts on purpose, because specific selectors drift as the app evolves.
+| `MP4_FAIL` (1) | convert the webm by hand with `rec.py`'s `to_mp4` arguments |
 
 ## Flow
 
-1. **Device: preflight.** Meanwhile the lead runs `uv run rec.py install` (Playwright's video recorder; under a
-   second when it's already there). `CLIP_SECONDS` is the shortest video file (one per camera); if it's `unknown`, ask
-   the user. The clip starts playing at `start`, so the take has to
-   finish before the clip does: clip length minus startup, gates, and a margin. Warn if it doesn't fit.
-2. **Only if the take clicks something: Device `start`, then Viewer `explore`** to find the targets. It uses up
-   clip time, so step 3 starts a fresh clip.
-3. **Device: start**, requested by the lead, never through the Viewer.
-4. **Viewer: record SECS.** It clears the gates itself and exits before the take if one needs a human. Runs in the background, so takes of any length work; its output file shows the events
-   live (`PROGRESS`, `STALL`, `CONVERTING`). The Viewer reports once the take is done; handle events per the event table.
-5. **Lead: finish.** `OUT/take.mp4` starts with the page loading, so it runs longer than SECS. Copy it where the
-   user wants it.
-6. **Device: stop** unless the user wants it left running.
-7. **Lead: lessons.** Summarise anything unexpected in one line. Suggest a skill change only for general
-   lessons (a new gate type, a navigation concept).
+1. **Device: preflight.** Meanwhile run `uv run rec.py install` (instant if done). The clip starts at
+   `start`, so `SECS` + startup + gates + margin must fit in `CLIP_SECONDS`; warn if not, ask if `unknown`.
+2. **Takes that click: Device `start`, Viewer `explore`** to find targets. That burns clip, so step 3 restarts.
+3. **Device: start.** Always requested by you, never the Viewer.
+4. **Viewer: record SECS.** Runs in the background, clears gates, and exits before the take if one needs a human.
+5. **Finish.** `OUT/take.mp4` includes the page load, so it outlasts SECS. Copy it where the user wants.
+6. **Device: stop**, unless the user wants it running.
+7. **Lessons.** One line on surprises. Suggest a skill change only for general ones (new gate type, navigation concept).
+
+## Hands-on takes
+
+In a visible run the user can drive the app mid-take. The video shows two cursors: script (red core),
+user (blue core). Ask who does what.
+- Fully hands-on: `record SECS`, no actions. Mixed: schedule only the script's part and tell the user
+  which controls to leave alone.
+- Start when the user is ready, and say when the window opens.
+- "Stop" / "done": run `pkill -f 'rec.py .*<OUT>'`. `rec.py` prints `TAKE_STOPPED` and keeps what it recorded.
+
+## When the request isn't covered
+
+New view, control, gate or product, or a wrong reference:
+1. **Ask the user first.** Screenshot, one line on what's unclear, options ("explore the right column",
+   "skip this view", "you tell me where it is"). They usually know faster.
+2. Only if they say so: the Viewer explores.
+3. Findings go to `<OUT>/notes.md`. Nobody edits the skill's files: selectors drift, so the references
+   stay general on purpose.
 
 ## Known gates and pitfalls
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| "Register to SEA.AI" persists | device not registered | ask the user; with their OK the lead runs `ssh HOST 'touch ~/POWER_Const/system_successfully_registered'` itself (persistent change) |
-| Gates never recognised | UI language or gate texts changed | `rec.py` pins `en-US`; if texts changed, ask the user |
-| Tracebacks or warnings in a CRASH log tail | many are caught and harmless | usually not the cause; a crash means the worker process is gone |
-| `NOT_READY MediaMTX API unreachable` / no webrtc bytes | streaming config differs from the conventions above | ask the user how the stream is served |
+| Symptom | Fix |
+|---|---|
+| "Register to SEA.AI" persists | device unregistered. With the user's OK, run `ssh HOST 'touch ~/POWER_Const/system_successfully_registered'` yourself (persistent) |
+| Gates never recognised | `rec.py` pins `en-US`; if the gate texts changed, ask the user |
+| Tracebacks in a `CRASH` log tail | mostly harmless; the crash is that the worker is gone |
+| `NOT_READY MediaMTX API unreachable`, no webrtc bytes | streaming breaks the conventions; ask the user how it's served |
 
-Security: if device dotfiles or logs show tokens, flag them to the user and advise rotation. Never copy them.
+Security: if device dotfiles or logs show tokens, flag them and advise rotation. Never copy them.

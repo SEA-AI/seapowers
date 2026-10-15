@@ -7,6 +7,7 @@
   rec.py URL OUT explore [TARGET ...]              # clear gates, list controls, click each TARGET in order, screenshot after each
   rec.py URL OUT record SECS [SECONDS=TARGET ...]  # clear gates, record SECS, click TARGET at that second; writes OUT/take.mp4
   rec.py install                                   # once: Playwright's video recorder, matching this script's Playwright
+  rec.py size                                      # the visible window's size (VIEWPORT event), for a headless explore
 SECONDS count from STREAMING; the mp4 starts earlier, with the page loading.
 Timing settings (see knob() below) can be overridden per run with env vars REC_<NAME> (e.g. REC_DECODE_WAIT_S=60).
 Run with: [HEADED=1] [VIEWPORT=WxH] uv run rec.py ...
@@ -28,7 +29,7 @@ import time
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import NoReturn
+from typing import Any, NoReturn
 
 from playwright.sync_api import BrowserContext, Page, Playwright, ViewportSize, sync_playwright
 from playwright.sync_api import Error as PlaywrightError
@@ -36,15 +37,22 @@ from playwright.sync_api import Error as PlaywrightError
 VIEW: ViewportSize = {"width": 1920, "height": 1080}  # default size, also the cap for visible windows
 GLIDE_MS = 600  # drawn cursor's glide to a click target, so viewers can follow it
 SAMPLE_S = 2  # gap between two framesDecoded reads when checking that video decodes
-# channel="chrome": installed Google Chrome, because Playwright's bundled Chromium lacks H.264 for the WebRTC stream.
 ARGS = ["--autoplay-policy=no-user-gesture-required", "--window-position=0,0"]
+
+
+def ev(name: str, detail: object = "") -> None:
+    print(f"{name} {detail}".strip(), flush=True)
+
+
+def bad_args(why: str) -> NoReturn:
+    ev("BAD_ARGS", why)
+    sys.exit(2)
 
 
 def knob(name: str, default: int) -> int:
     v = os.environ.get(f"REC_{name}", str(default))
     if not (v.isascii() and v.isdigit()) or int(v) < 1:
-        print(f"BAD_ARGS REC_{name} must be a whole number >= 1, like {default}", flush=True)
-        sys.exit(2)
+        bad_args(f"REC_{name} must be a whole number >= 1, like {default}")
     return int(v)
 
 
@@ -60,15 +68,6 @@ SETTLE_S = knob("SETTLE_S", 3)  # after an explore click, before the screenshot
 STALL_WARN_S = knob("STALL_WARN_S", 30)  # no new frames this long: STALL (warning, keeps recording)
 STALL_ABORT_S = knob("STALL_ABORT_S", 120)  # no new frames this long: FROZEN (take ends)
 PAGE_JS = Path(__file__).parent / "page.js"  # frame counting and the drawn cursors, called through window.__rec
-
-
-def ev(name: str, detail: object = "") -> None:
-    print(f"{name} {detail}".strip(), flush=True)
-
-
-def bad_args(why: str) -> NoReturn:
-    ev("BAD_ARGS", why)
-    sys.exit(2)
 
 
 class Mode(StrEnum):
@@ -95,7 +94,7 @@ def parse_args(argv: list[str]) -> Run:
     try:
         url, out, mode = argv[0], argv[1], Mode(argv[2])
     except (IndexError, ValueError):
-        bad_args(f"need URL OUT {'|'.join(Mode)}, or install")
+        bad_args(f"need URL OUT {'|'.join(Mode)}, or install, or size")
     secs, actions = 0, []
     if mode == Mode.RECORD:
         if len(argv) < 4 or not (argv[3].isascii() and argv[3].isdigit()) or int(argv[3]) < 1:
@@ -157,10 +156,10 @@ def click(page: Page, target: str) -> None:
         page.evaluate("window.__rec?.clickDone()")
 
 
-def wait_decoding(page: Page, timeout_s: int = DECODE_WAIT_S) -> bool:
+def wait_decoding(page: Page) -> bool:
     """True once WebRTC framesDecoded is increasing."""
     last = frames(page)
-    for _ in range(max(1, timeout_s // SAMPLE_S)):
+    for _ in range(max(1, DECODE_WAIT_S // SAMPLE_S)):
         page.wait_for_timeout(SAMPLE_S * 1000)
         now = frames(page)
         if now > last > 0:
@@ -221,32 +220,11 @@ def to_mp4(webm: Path, out: str, length_s: float) -> bool:
     """Transcode the raw webm (loading screen included) to OUT/take.mp4, reporting CONVERTING progress.
     The webm is deleted once the mp4 checks out. Returns whether it did."""
     mp4 = f"{out}/take.mp4"
-    args = [
-        "ffmpeg",
-        "-v",
-        "error",
-        "-y",
-        "-i",
-        webm,
-        "-c:v",
-        "libx264",
-        "-crf",
-        "23",
-        "-preset",
-        "fast",
-        "-pix_fmt",
-        "yuv420p",
-        # keyframe every second (Playwright records at 25 fps) for precise seeking;
-        # faststart puts the index first, so playback starts before the download ends
-        "-g",
-        "25",
-        "-movflags",
-        "+faststart",
-        "-progress",
-        "pipe:1",
-        "-nostats",
-        mp4,
-    ]
+    encode = ["-c:v", "libx264", "-crf", "23", "-preset", "fast", "-pix_fmt", "yuv420p"]
+    # a keyframe every second (Playwright records at 25 fps) for precise seeking;
+    # faststart puts the index first, so playback starts before the download ends
+    seekable = ["-g", "25", "-movflags", "+faststart"]
+    args = ["ffmpeg", "-v", "error", "-y", "-i", webm, *encode, *seekable, "-progress", "pipe:1", "-nostats", mp4]
     with tempfile.TemporaryFile("w+") as err:
         proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=err, text=True)
         shown = 0
@@ -261,8 +239,7 @@ def to_mp4(webm: Path, out: str, length_s: float) -> bool:
         err.seek(0)
         error = err.read().strip()[-200:]
     if proc.returncode:
-        if os.path.exists(mp4):
-            os.remove(mp4)  # half-written: never hand it over
+        Path(mp4).unlink(missing_ok=True)  # half-written: never hand it over
         ev("MP4_FAIL", error or f"ffmpeg exit {proc.returncode}")
         return False
     dur = subprocess.run(
@@ -280,38 +257,40 @@ def to_mp4(webm: Path, out: str, length_s: float) -> bool:
     return True
 
 
-def open_browser(p: Playwright, run: Run, view: ViewportSize, profile: str) -> tuple[BrowserContext, Page]:
-    """Fresh throwaway profile per run. Visible: Chrome app mode (no tabs/address bar), pinned top-left."""
-    video = run.mode == Mode.RECORD
+def launch(p: Playwright, profile: str, app_url: str | None, **options: Any) -> tuple[BrowserContext, Page]:
+    """Chrome on a throwaway profile; with app_url, a visible app-mode window (no tabs/address bar) pinned top-left.
+    channel="chrome": Playwright's bundled Chromium lacks H.264 for the WebRTC stream."""
     ctx = p.chromium.launch_persistent_context(
         profile,
         channel="chrome",
-        headless=not run.headed,
+        headless=app_url is None,
         chromium_sandbox=True,  # sandbox off shows a warning bar
-        args=ARGS + ([f"--app={run.url}"] if run.headed else []),
+        args=ARGS + ([f"--app={app_url}"] if app_url else []),
+        **options,
+    )
+    return ctx, ctx.pages[0] if ctx.pages else ctx.new_page()
+
+
+def open_browser(p: Playwright, run: Run, view: ViewportSize, profile: str) -> tuple[BrowserContext, Page]:
+    video = run.mode == Mode.RECORD
+    ctx, page = launch(
+        p,
+        profile,
+        run.url if run.headed else None,
         viewport=view,
         locale="en-US",  # gate texts in clear_gates are matched in English
         record_video_dir=run.out if video else None,
         record_video_size=view if video else None,
     )
-    ctx.add_init_script(path=PAGE_JS)
     # app mode may already show the URL without our scripts; clear_gates loads it again, which applies them
-    page = ctx.pages[0] if ctx.pages else ctx.new_page()
+    ctx.add_init_script(path=PAGE_JS)
     return ctx, page
 
 
 def screen_fit(p: Playwright, profile: str) -> ViewportSize:
     """Largest viewport (capped at VIEW) that fits the usable screen in an app-mode window."""
     # about:blank ignores --app (opens a normal window), so probe with a tiny real page
-    ctx = p.chromium.launch_persistent_context(
-        profile,
-        channel="chrome",
-        headless=False,
-        chromium_sandbox=True,
-        args=ARGS + ["--app=data:text/html,<title>probe</title>"],
-        no_viewport=True,
-    )
-    pg = ctx.pages[0] if ctx.pages else ctx.new_page()
+    ctx, pg = launch(p, profile, "data:text/html,<title>probe</title>", no_viewport=True)
     sw, sh, bars = pg.evaluate("[screen.availWidth, screen.availHeight, outerHeight - innerHeight]")
     ctx.close()
     # even sizes for the encoder
@@ -369,6 +348,11 @@ def explore(page: Page, run: Run) -> int:
 def main(argv: list[str]) -> int:
     if argv == ["install"]:  # hand over to Playwright's installer in this script's own environment
         os.execv(sys.executable, [sys.executable, "-m", "playwright", "install", "ffmpeg"])
+    if argv == ["size"]:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp, sync_playwright() as p:
+            view = screen_fit(p, tmp)
+        ev("VIEWPORT", f"{view['width']}x{view['height']} (screen fit)")
+        return 0
     run = parse_args(argv)
     os.makedirs(run.out, exist_ok=True)
     signal.signal(signal.SIGTERM, signal.default_int_handler)  # a plain kill stops a take like Ctrl-C

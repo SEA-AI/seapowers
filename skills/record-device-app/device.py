@@ -194,18 +194,7 @@ async def report(conn: asyncssh.SSHClientConnection, st: State) -> int:
     return 1
 
 
-async def wait_ready(conn: asyncssh.SSHClientConnection, cfg: Config) -> int:
-    reconnected: list[asyncssh.SSHClientConnection] = []
-    try:
-        return await poll_ready(conn, cfg, reconnected)
-    finally:
-        for c in reconnected:
-            c.close()
-
-
-async def poll_ready(
-    first: asyncssh.SSHClientConnection, cfg: Config, reconnected: list[asyncssh.SSHClientConnection]
-) -> int:
+async def wait_ready(first: asyncssh.SSHClientConnection, cfg: Config) -> int:
     # Keeps waiting while the worker is RUNNING or still LAUNCHING: slow is not a crash. Any other state (launcher
     # or this run's worker gone) is final: STOPPED, ENDED or CRASH (the log has harmless tracebacks), exit 1.
     # READY: at least one rising *_webrtc path per video file in the recording, so a camera without a stream
@@ -216,46 +205,46 @@ async def poll_ready(
         cameras = int(out) if out.strip().isdigit() else 0
     conn: asyncssh.SSHClientConnection | None = first
     end, st, counts, rising = time.monotonic() + cfg.ready_timeout_s, None, None, []
-    while time.monotonic() < end:
-        try:
-            if conn is None:
-                conn = await connect(cfg)
-                reconnected.append(conn)
-            st, counts = await probe(conn)
-        except SSH_ERRORS:  # a hiccup isn't a crash: reconnect on the next round
-            if conn:
-                conn.close()
-            conn, st = None, None
-            await asyncio.sleep(1)
-            continue
-        if st not in (State.RUNNING, State.LAUNCHING):
-            return await report(conn, st) or 1  # ENDED/STOPPED before READY is no success for start
-        before, after = counts or ({}, {})  # None while MediaMTX isn't up yet: keep waiting
-        rising = flowing(before, after)
-        if cameras:
-            ready = len(rising) >= cameras
-        else:
-            ready = bool(before) and before.keys() == after.keys() and len(rising) == len(before)
-        if ready:
-            ev("READY", f"{now()} {len(rising)} camera streams flowing")
-            return 0
-        await asyncio.sleep(1)
-    if st is None:
-        why = "device unreachable over ssh"
-    elif st == State.LAUNCHING:
-        why = "no worker process yet, launcher still running (building?)"
-    else:
-        why = (
-            "MediaMTX API unreachable"
-            if counts is None
-            else f"{len(rising)}/{cameras or len(counts[0])} camera streams"
-        )
     try:
-        log = await tail(conn) if conn else ""
-    except SSH_ERRORS:
-        log = ""
-    ev("NOT_READY", f"{why} after {cfg.ready_timeout_s}s. Run wait-ready again, or check: {log}")
-    return 1
+        while time.monotonic() < end:
+            try:
+                conn = conn or await connect(cfg)
+                st, counts = await probe(conn)
+            except SSH_ERRORS:  # a hiccup isn't a crash: reconnect on the next round
+                if conn:
+                    conn.close()
+                conn, st = None, None
+                await asyncio.sleep(1)
+                continue
+            if st not in (State.RUNNING, State.LAUNCHING):
+                return await report(conn, st) or 1  # ENDED/STOPPED before READY is no success for start
+            before, after = counts or ({}, {})  # None while MediaMTX isn't up yet: keep waiting
+            rising = flowing(before, after)
+            if cameras:
+                ready = len(rising) >= cameras
+            else:
+                ready = bool(before) and before.keys() == after.keys() and len(rising) == len(before)
+            if ready:
+                ev("READY", f"{now()} {len(rising)} camera streams flowing")
+                return 0
+            await asyncio.sleep(1)
+        if st is None:
+            why = "device unreachable over ssh"
+        elif st == State.LAUNCHING:
+            why = "no worker process yet, launcher still running (building?)"
+        elif counts is None:
+            why = "MediaMTX API unreachable"
+        else:
+            why = f"{len(rising)}/{cameras or len(counts[0])} camera streams"
+        try:
+            log = await tail(conn) if conn else ""
+        except SSH_ERRORS:
+            log = ""
+        ev("NOT_READY", f"{why} after {cfg.ready_timeout_s}s. Run wait-ready again, or check: {log}")
+        return 1
+    finally:
+        if conn and conn is not first:  # main() closes the first connection
+            conn.close()
 
 
 async def run(conn: asyncssh.SSHClientConnection, cfg: Config) -> int:
