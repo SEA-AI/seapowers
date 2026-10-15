@@ -27,7 +27,6 @@ read this as "what to look for", then confirm on a screenshot. Nothing here is a
 
 - The selected button looks different from the others. Icons often have no text: find them with `explore`.
 - Prefer text or aria selectors; otherwise `xy=`. Class names can change per build.
-- Confirm every target by screenshot before a take.
 
 ## Navigating
 - View switches apply at once. Some views may stop decoding video; that's not necessarily a fault
@@ -35,8 +34,3 @@ read this as "what to look for", then confirm on a screenshot. Nothing here is a
 - Panels (split, instruments) tend to stay open across view switches; clicking the same icon again closes them.
 - Every `rec.py` run uses a fresh browser profile, so each run starts at the default view.
 - Anything that opens a dialog you didn't expect: close it, screenshot, report.
-
-## When unsure
-1. Screenshot first, then reason from the layout above (what region, what icon meaning).
-2. Don't guess-click around. Ask the user with the screenshot and one concrete question.
-3. If the user approves exploring: one `explore` run, a few candidate clicks, Read every screenshot.

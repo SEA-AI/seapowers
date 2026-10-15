@@ -31,11 +31,8 @@ with `SendMessage`. Every step ends with a report, so problems show up where the
 **Ask once per session, before step 1:** "Watch the browser on screen, or run headless?"
 (AskUserQuestion, two options, headless first as default). Reuse the answer for every later run in
 this session; don't ask again unless the user brings it up. If visible, the Viewer prefixes every `rec.py`
-call with `HEADED=1`.
-
-- Headless: 1920x1080. Visible: a Chrome app window (no tabs or address bar) filling the screen, capped at
-  1920x1080; needs a local display. `VIEWPORT=WxH` overrides either.
-- Click targets depend on the size (`VIEWPORT` event): explore and record with the same settings.
+call with `HEADED=1` (needs a local display). Click targets depend on the browser size (`VIEWPORT` event):
+explore and record with the same settings.
 
 **Device conventions** the scripts rely on (defined in `device.sh`; this list mirrors them. They may change,
 so if a step fails, check these first):
@@ -79,13 +76,8 @@ If they're missing, spawn `general-purpose` agents and start the prompt with the
 Spawn each once per run. Each prompt: the step, the params, the script path, and for the Viewer the Device's
 address. Post one short line to the user per event.
 
-Device events: `PREFLIGHT_OK`, `PREFLIGHT_FAIL <why>`, `WARN <why>`, `RUN_CMD <cmd>`, `CLIP_SECONDS <n (cameras)|unknown>`,
-`STARTED`, `READY`, `NOT_READY`, `RUNNING`, `ENDED`, `CRASH <log tail>`, `STOPPED`, `UNREACHABLE`, `BAD_ARGS`.
-
-Viewer events: `VIEWPORT`, `GATE registration|connection_failed|terms|unknown`, `STREAMING <png>`,
-`CONTROL`, `CLICKED`, `CLICK_FAIL` (explore), `ACTION`, `ACTION_FAIL`, `PROGRESS`, `STALL`, `FROZEN`, `NO_CONNECTION`,
-`ERROR`, `DONE <webm>` (deleted once `MP4` checks out), `CONVERTING <n%>`, `MP4 <path> <secs>` (without ffprobe: no secs, webm kept), `MP4_SKIPPED`, `MP4_FAIL`, `BAD_ARGS`.
-`rec.py` exit codes are in its docstring.
+Events not in the table below need no decision: just the one line to the user. `rec.py` exit codes are in its
+docstring; `DONE <webm>` is deleted once `MP4` checks out.
 
 | Event (exit code) | Lead does |
 |---|---|
@@ -100,17 +92,13 @@ Viewer events: `VIEWPORT`, `GATE registration|connection_failed|terms|unknown`, 
 | `STALL` | no new frames for a while; the take continued (a view without video, or trouble). Mention it with the result |
 | `GATE unknown` (3), `FROZEN` (4), `NO_CONNECTION` (5) | the Viewer asks the Device for `status` (a dead worker or ended clip looks like an app problem); act on its answer: `ENDED` clip ran out (restart, shorter take) · `CRASH` show the log tail · `RUNNING` app issue, show the screenshot and ask the user · `STOPPED` worker not running, `start` and retry · `NOT_READY` worker still launching, `wait-ready` · `UNREACHABLE` ssh failed, retry |
 | `ERROR` (1) | show the message (often Chrome or the video recorder missing, see Prereqs) and ask the user |
-| `CLICK_FAIL`, `ACTION_FAIL` | show the nearest earlier screenshot (`explore_NN.png` / `tNNN.png`); re-find the target with `explore` |
+| `CLICK_FAIL`, `ACTION_FAIL` | show the nearest earlier screenshot (`explore_NN.png` / `tNNNNN.png`); re-find the target with `explore` |
 | `BAD_ARGS` (2) | fix the call and rerun |
 | `MP4` | check one late frame, hand over the file |
-| `MP4_SKIPPED`, `MP4_FAIL` | install ffmpeg if missing, then convert the webm by hand with the arguments in `rec.py`'s `to_mp4` |
+| `MP4_FAIL` | convert the webm by hand with the arguments in `rec.py`'s `to_mp4` |
 
-## UI hints and actions
-
-The lead speaks in intent ("show RGB, then thermal, then map"). The Viewer turns it into clicks.
-
-- `references/app-ui.md` explains the app in general terms; the Viewer resolves targets from it.
-- For a take, the Viewer proposes a schedule (`SECONDS=TARGET` args, seconds after `STREAMING`) before recording.
+The lead speaks in intent ("show RGB, then thermal, then map"). The Viewer resolves targets from
+`references/app-ui.md` and proposes a schedule (`SECONDS=TARGET`, seconds after `STREAMING`) before recording.
 
 ## Hands-on takes
 
@@ -150,19 +138,15 @@ New view, control, gate or product the references don't cover, or a reference th
    user wants it.
 7. **Device: stop** unless the user wants it left running.
 8. **Lead: lessons.** Summarise anything unexpected in one line. Suggest a skill change only for general
-   lessons (a new gate type, a navigation concept), never a product-specific selector.
+   lessons (a new gate type, a navigation concept).
 
 ## Known gates and pitfalls
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| "Register to SEA.AI" briefly after start | worker not answering yet | `rec.py` reloads; gate only if it persists |
 | "Register to SEA.AI" persists | device not registered | ask the user; with their OK the lead runs `ssh HOST 'touch ~/POWER_Const/system_successfully_registered'` itself (persistent change) |
-| Terms of Use page ("Agree & Continue") | fresh browser profile every run | `rec.py` clicks it |
 | Gates never recognised | UI language or gate texts changed | `rec.py` pins `en-US`; if texts changed, ask the user |
-| "Connection failed" / "…connection was lost" | worker not up yet, or the clip ended | wait for `READY`; `rec.py` reloads; mid-take, see the event table |
 | Tracebacks or warnings in a CRASH log tail | many are caught and harmless | usually not the cause; a crash means the worker process is gone |
-| Stream stops, worker hangs in shutdown | clip hit end-of-stream | Flow step 4; keep `SECS` under the clip |
 | `NOT_READY MediaMTX API unreachable` / no webrtc bytes | streaming config differs from the conventions above | ask the user how the stream is served |
 
 Security: if device dotfiles or logs show tokens, flag them to the user and advise rotation. Never copy them.
