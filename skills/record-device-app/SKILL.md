@@ -23,6 +23,7 @@ with `SendMessage`. Every step ends with a report, so problems show up where the
 | `DATA_DIR` | absolute path to the recording folder on the device (no `~`) |
 | `PRODUCT` | **usually omit.** Only needed when `~/POWER_Const` has no `hardwareVersion`/`module_info`; preflight says so |
 | `WORKER_DIR` | only if preflight can't find the worker; relative to the device home (write it without `~`), or absolute; ignored when `~/Makefile` exists |
+| `SETTINGS_OVERRIDES` | optional: JSON file on the device (`{"<group>": {"<setting>": value}}`), deep-merged over the worker's settings at start; the lead writes it there |
 | `SECS` | take length; must fit in the clip (Flow step 1) |
 | `OUT` | a new dir in the scratchpad |
 | `HEADED` | visible browser or headless (see below) |

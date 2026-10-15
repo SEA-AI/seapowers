@@ -4,10 +4,11 @@
 # ///
 """Device side of record-device-app: controls the worker on a remote device over ssh. Prints one-line events.
 
-  HOST=user@ip DATA_DIR=<abs recording dir> [PRODUCT=<product>] [WORKER_DIR=<dir>] \\
+  HOST=user@ip DATA_DIR=<abs recording dir> [PRODUCT=<product>] [WORKER_DIR=<dir>] [SETTINGS_OVERRIDES=<file>] \\
     uv run device.py preflight|start|wait-ready|status|stop
 
 PRODUCT is the exception: only needed when ~/POWER_Const has no hardwareVersion/module_info.
+SETTINGS_OVERRIDES: a JSON file on the device, deep-merged over the worker's user settings.
 WORKER_DIR: relative to the device home, or absolute. The commands that run on the device live in device-remote.sh.
 ssh settings (user, keys, agent, ProxyJump, known hosts) come from ~/.ssh/config as usual.
 Settings (whole seconds, env): READY_TIMEOUT_S, KILL_GRACE_S, SSH_TIMEOUT_S; defaults in parse_args().
@@ -74,6 +75,7 @@ class Config:
     host: str
     data_dir: str
     product: str
+    settings_overrides: str
     worker_dir: str
     ready_timeout_s: int  # wait for the worker to start and every camera's stream to flow
     kill_grace_s: int  # after asking the old worker to stop, before force-killing it
@@ -110,6 +112,7 @@ def parse_args(argv: list[str]) -> Config:
         host=os.environ.get("HOST") or bad_args("HOST is required"),
         data_dir=data_dir,
         product=os.environ.get("PRODUCT", ""),
+        settings_overrides=os.environ.get("SETTINGS_OVERRIDES", ""),
         worker_dir=os.environ.get("WORKER_DIR", "").removeprefix("~/"),  # "~/Worker" means "Worker" (device home)
         ready_timeout_s=setting("READY_TIMEOUT_S", 270),
         kill_grace_s=setting("KILL_GRACE_S", 3),
@@ -258,7 +261,9 @@ async def poll_ready(
 async def run(conn: asyncssh.SSHClientConnection, cfg: Config) -> int:
     match cfg.command:
         case Command.PREFLIGHT:
-            code, out = await sh(conn, Remote.PREFLIGHT, cfg.data_dir, cfg.product, cfg.worker_dir)
+            code, out = await sh(
+                conn, Remote.PREFLIGHT, cfg.data_dir, cfg.product, cfg.worker_dir, cfg.settings_overrides
+            )
             print(out, end="", flush=True)
             if code:
                 return code
@@ -271,7 +276,15 @@ async def run(conn: asyncssh.SSHClientConnection, cfg: Config) -> int:
             ev("PREFLIGHT_OK")
             return 0
         case Command.START:
-            code, _ = await sh(conn, Remote.LAUNCH, cfg.data_dir, cfg.product, cfg.worker_dir, str(cfg.kill_grace_s))
+            code, _ = await sh(
+                conn,
+                Remote.LAUNCH,
+                cfg.data_dir,
+                cfg.product,
+                cfg.worker_dir,
+                str(cfg.kill_grace_s),
+                cfg.settings_overrides,
+            )
             if code:
                 ev("CRASH", "no ~/Makefile and no worker.py found" if code == 3 else "tmux could not start the worker")
                 return 1

@@ -42,8 +42,9 @@ choose() {
   [ -f "$d/worker.py" ] && cd "$d" && RUN=(python3 worker.py)
 }
 
-preflight() {  # $1 DATA_DIR, $2 PRODUCT ("" = the device infers it), $3 WORKER_DIR; prints events
+preflight() {  # $1 DATA_DIR, $2 PRODUCT ("" = the device infers it), $3 WORKER_DIR, $4 SETTINGS_OVERRIDES
   [ -d "$1" ] || { echo "PREFLIGHT_FAIL data dir missing: $1"; return 1; }
+  [ -z "$4" ] || [ -f "$4" ] || { echo "PREFLIGHT_FAIL settings overrides file missing: $4"; return 1; }
   if [ -z "$2" ] && ! compgen -G "$HOME/POWER_Const/hardwareVersion*" >/dev/null \
     && ! compgen -G "$HOME/POWER_Const/module_info*" >/dev/null; then
     echo "PREFLIGHT_FAIL no hardwareVersion/module_info in ~/POWER_Const: device can't infer its product, pass PRODUCT"
@@ -65,13 +66,14 @@ preflight() {  # $1 DATA_DIR, $2 PRODUCT ("" = the device infers it), $3 WORKER_
   echo "CLIP_SECONDS ${clip:-unknown}"  # device.py adds the streaming checks and PREFLIGHT_OK
 }
 
-launch() {  # $1 DATA_DIR, $2 PRODUCT, $3 WORKER_DIR, $4 grace seconds; exit 3: no worker to run
+launch() {  # $1 DATA_DIR, $2 PRODUCT, $3 WORKER_DIR, $4 grace seconds, $5 SETTINGS_OVERRIDES; exit 3: no worker
   choose "$3" || return 3
   kill_all "$4"
   : >"$LOG"  # tee only truncates it after ~/.bashrc is sourced; until then status would read the old run
   # bash -ic because PYTHONPATH and friends often live only in ~/.bashrc. Unbuffered, so the log is current.
   { printf 'export PYTHONUNBUFFERED=1 DATA_DIR=%q\n' "$1"
     [ -z "$2" ] || printf 'export PRODUCT=%q\n' "$2"
+    [ -z "$5" ] || printf 'export SETTINGS_OVERRIDES=%q\n' "$5"
     printf 'cd %q && exec' "$PWD"; printf ' %q' "${RUN[@]}"; echo; } >"$RUNNER"
   tmux new -d -s "$S" "bash -ic 'bash $RUNNER 2>&1 | tee $LOG'"
 }
