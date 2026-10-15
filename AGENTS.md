@@ -16,6 +16,18 @@ When adding skills, agents, or plugins:
 - [ ] Don't add a `version` to `.claude-plugin/marketplace.json`; Claude Code reads it from `plugin.json` (CI enforces this)
 - [ ] Test locally before creating a PR
 
+## Skills That Ship Code
+
+- Python scripts declare dependencies inline (PEP 723) and run with `uv run`; follow the `python-best-practices` skill.
+- Before committing: `uvx ruff format`, `uvx ruff check`, and type-check each script against its own environment:
+  `uv sync --script s.py && uvx ty check --python "$(uv python find --script s.py)" s.py`
+  (until ty resolves PEP 723 dependencies on its own). `bash -n` for shell scripts.
+- Scripts used by agents validate input up front and fail with a clear message and exit code, never a traceback.
+- Comments explain what the code can't; no history of how it got there.
+- Keep skill content generic (no product names, IPs or UI selectors); when a request isn't covered, stop and ask.
+- Never copy secrets found in logs or files; flag them and advise rotation.
+- Before the PR: run the skill end to end, including its failure paths, then a `/code-review` pass.
+
 ## Key Files
 
 - `.claude-plugin/marketplace.json` - Plugin marketplace catalog
