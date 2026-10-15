@@ -65,6 +65,7 @@ preflight() {  # $1 DATA_DIR, $2 PRODUCT ("" = the device infers it), $3 WORKER_
 launch() {  # $1 DATA_DIR, $2 PRODUCT, $3 WORKER_DIR, $4 grace seconds; exit 3: no worker to run
   choose "$3" || return 3
   kill_all "$4"
+  : >"$LOG"  # tee only truncates it after ~/.bashrc is sourced; until then status would read the old run
   # bash -ic because PYTHONPATH and friends often live only in ~/.bashrc. Unbuffered, so the log is current.
   { printf 'export PYTHONUNBUFFERED=1 DATA_DIR=%q\n' "$1"
     [ -z "$2" ] || printf 'export PRODUCT=%q\n' "$2"
