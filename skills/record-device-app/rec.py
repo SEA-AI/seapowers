@@ -1,5 +1,5 @@
 # /// script
-# requires-python = ">=3.10"
+# requires-python = ">=3.11"
 # dependencies = ["playwright>=1.45"]
 # ///
 """Viewer side of record-device-app. Prints one-line events: EVENT detail.
@@ -24,6 +24,7 @@ import sys
 import tempfile
 import time
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import NoReturn
 
@@ -109,13 +110,18 @@ def bad_args(why: str) -> NoReturn:
     sys.exit(2)
 
 
+class Mode(StrEnum):
+    EXPLORE = "explore"
+    RECORD = "record"
+
+
 @dataclass(frozen=True)
 class Run:
     """One validated invocation."""
 
     url: str
     out: str
-    mode: str  # explore | record
+    mode: Mode
     secs: int  # record only
     actions: dict[int, str]  # record: second -> target
     targets: list[str]  # explore: targets in order
@@ -125,11 +131,12 @@ class Run:
 
 def parse_args(argv: list[str]) -> Run:
     """Validate everything before opening a browser."""
-    if len(argv) < 3 or argv[2] not in ("explore", "record"):
-        bad_args("need URL OUT explore|record, or install")
-    url, out, mode = argv[:3]
+    try:
+        url, out, mode = argv[0], argv[1], Mode(argv[2])
+    except (IndexError, ValueError):
+        bad_args(f"need URL OUT {'|'.join(Mode)}, or install")
     secs, actions = 0, []
-    if mode == "record":
+    if mode == Mode.RECORD:
         if len(argv) < 4 or not argv[3].isdigit() or int(argv[3]) < 1:
             bad_args("record needs SECS (a positive integer)")
         secs = int(argv[3])
@@ -142,7 +149,7 @@ def parse_args(argv: list[str]) -> Run:
             bad_args("two actions at the same second")
         if not (shutil.which("ffmpeg") and shutil.which("ffprobe")):
             bad_args("record needs ffmpeg and ffprobe on PATH (for the mp4)")
-    targets = [t for _, t in actions] if mode == "record" else argv[3:]
+    targets = [t for _, t in actions] if mode == Mode.RECORD else argv[3:]
     for target in targets:
         if target.startswith("xy=") and not re.fullmatch(r"xy=\d+,\d+", target):
             bad_args(f"target {target!r}: xy targets look like xy=X,Y (integers)")
@@ -305,7 +312,7 @@ def to_mp4(webm: Path, out: str, length_s: float) -> None:
 
 def open_browser(p: Playwright, run: Run, view: ViewportSize, profile: str) -> tuple[BrowserContext, Page]:
     """Fresh throwaway profile per run. Visible: Chrome app mode (no tabs/address bar), pinned top-left."""
-    video = run.mode == "record"
+    video = run.mode == Mode.RECORD
     ctx = p.chromium.launch_persistent_context(
         profile,
         channel="chrome",
@@ -409,7 +416,7 @@ def main(argv: list[str]) -> int:
                 code = clear_gates(page, run)
                 if not code:
                     code = 1  # stays 1 if the take raises: no mp4 from a crashed take
-                    code = take(page, run) if run.mode == "record" else explore(page, run)
+                    code = take(page, run) if run.mode == Mode.RECORD else explore(page, run)
             finally:
                 video = page.video.path() if page.video else None
                 with contextlib.suppress(PlaywrightError):  # browser already gone: the webm may still be usable
