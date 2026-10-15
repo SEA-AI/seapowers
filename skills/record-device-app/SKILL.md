@@ -41,8 +41,8 @@ call with `HEADED=1`.
 so if a step fails, check these first):
 - device: Linux with `bash`, `tmux`, `curl`, `python3`, `pgrep` (`ffprobe` optional); env from `~/.bashrc`
 - the worker reads the recording and product from the env vars `DATA_DIR` / `PRODUCT`
-- worker: `make run` if `~/Makefile` exists (preflight reports the choice as `RUN_CMD`), else `python3 worker.py` in `~/Worker` (usual) or `~/Core-Backend/Worker`; either way a process with `worker.py`
-  in its command line must start under the launcher (not via docker or systemd); product inferred from `~/POWER_Const/hardwareVersion*`/`module_info*`
+- worker: `make run` if `~/Makefile` exists (preflight reports the choice as `RUN_CMD`), else `python3 worker.py` in `~/Worker` (usual) or `~/Core-Backend/Worker`; either way a process with `worker.py` (or a path ending
+  in `/worker.py`) as one of its arguments must start under the launcher (not via docker or systemd); product inferred from `~/POWER_Const/hardwareVersion*`/`module_info*`
 - registration bypass: `~/POWER_Const/system_successfully_registered`
 - streaming: MediaMTX API on the device at `localhost:9997` (its own service, or started by the worker), one WebRTC path per camera named `*_webrtc`, receiving video without a viewer connected; the web app plays them
   over WebRTC in the page (that is how `rec.py` sees frames decoding)
@@ -92,14 +92,13 @@ Viewer events: `VIEWPORT`, `GATE registration|connection_failed|terms|unknown`, 
 | `PREFLIGHT_FAIL`, `CRASH` | stop and show the user why |
 | `WARN` | tell the user (a missing registration bypass means a registration gate is likely; something already streaming means READY may mislead; MediaMTX unreachable is fine if the worker starts it) |
 | `READY` | next step |
-| `start`/`wait-ready` ends in `ENDED` or `STOPPED` | the clip or launcher ended before `READY`: show the log tail (`status` gives it on a crash) and ask the user |
+| `start`/`wait-ready` ends in `ENDED` or `STOPPED` | the clip or launcher ended before `READY`: tell the user which (`ENDED`: the clip is shorter than startup; pick a longer recording or retry) and ask |
 | `NOT_READY` | slow, not crashed: tell the user, run `wait-ready` again (or raise `READY_TIMEOUT_S`) |
 | `UNREACHABLE` | ssh failed (network, device off); not a crash. Tell the user, retry (raise `SSH_TIMEOUT_S` on slow links) |
 | `GATE registration` "transient?", `GATE connection_failed` | nothing, `rec.py` reloads |
 | persistent `GATE registration` (3) | show the screenshot, ask the user |
-| `GATE unknown` (3) | ask the Device for `status` first (a dead worker or ended clip looks the same); if `RUNNING`, show the screenshot and ask the user |
 | `STALL` | no new frames for a while; the take continued (a view without video, or trouble). Mention it with the result |
-| `FROZEN` (4), `NO_CONNECTION` (5) | the Viewer asks the Device for `status`; act on its answer: `ENDED` clip ran out (restart, shorter take) · `CRASH` show the log tail · `RUNNING` app issue, show the screenshot · `STOPPED` worker not running, `start` and retry · `NOT_READY` worker still launching, `wait-ready` · `UNREACHABLE` ssh failed, retry |
+| `GATE unknown` (3), `FROZEN` (4), `NO_CONNECTION` (5) | the Viewer asks the Device for `status` (a dead worker or ended clip looks like an app problem); act on its answer: `ENDED` clip ran out (restart, shorter take) · `CRASH` show the log tail · `RUNNING` app issue, show the screenshot and ask the user · `STOPPED` worker not running, `start` and retry · `NOT_READY` worker still launching, `wait-ready` · `UNREACHABLE` ssh failed, retry |
 | `ERROR` (1) | show the message (often Chrome or the video recorder missing, see Prereqs) and ask the user |
 | `CLICK_FAIL`, `ACTION_FAIL` | show the nearest earlier screenshot (`explore_NN.png` / `tNNN.png`); re-find the target with `explore` |
 | `BAD_ARGS` (2) | fix the call and rerun |

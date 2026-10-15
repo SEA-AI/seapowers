@@ -32,7 +32,7 @@ if [ -n "$WORKER_DIR" ]; then FIND="d=$(printf %q "$WORKER_DIR")"
 else FIND="for d in $CANDIDATES; do [ -f \"\$d/worker.py\" ] && break; done"; fi
 CHOOSE="cd ~; if [ -f Makefile ]; then set -- make run; else $FIND; [ -f \"\$d/worker.py\" ] || exit 3; cd \"\$d\"; set -- python3 worker.py; fi"
 
-# Remote helpers. The worker is tracked as a descendant of the tmux pane, not by command-line pattern,
+# Remote helpers. The worker is found among the tmux pane's descendants by its worker.py argument,
 # so it works whatever launcher make uses and never matches this ssh command itself.
 H="S=$SESSION; MTX=$MTX; G=$KILL_GRACE_S; SEEN=$SEEN; "'tree() { for c in $(pgrep -P "$1"); do echo "$c"; tree "$c"; done; }
 pane() { tmux list-panes -t "$S" -F "#{pane_pid}" 2>/dev/null; }
