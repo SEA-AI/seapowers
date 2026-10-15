@@ -13,6 +13,7 @@ MTX=localhost:9997/v3                     # MediaMTX API on the device
 SESSION=rda                               # tmux session; one run per device at a time
 LOG=/tmp/record_device_app.log
 RUNNER=/tmp/record_device_app_run.sh
+SEEN=/tmp/record_device_app.seen        # exists once this run's worker was seen, so a gone worker reads as a crash
 STOP_MARK='== stopped by device.sh =='  # last log line after `stop`, so status can tell a stop from a crash
 # Timing settings (whole seconds): defaults suit a LAN; override per run via env.
 READY_TIMEOUT_S=${READY_TIMEOUT_S:-270}  # wait for the worker to start and every camera's WebRTC stream to flow
@@ -22,7 +23,8 @@ SAMPLE_S=2                               # gap between two byte counts when chec
 for v in READY_TIMEOUT_S KILL_GRACE_S SSH_TIMEOUT_S; do
   [[ ${!v} =~ ^[1-9][0-9]*$ ]] || { echo "BAD_ARGS $v must be a whole number >= 1"; exit 2; }
 done
-r() { ssh -o BatchMode=yes -o ConnectTimeout="$SSH_TIMEOUT_S" "$HOST" "$@"; }
+# keepalive: a link that drops mid-command fails within ~2x SSH_TIMEOUT_S instead of hanging
+r() { ssh -o BatchMode=yes -o ConnectTimeout="$SSH_TIMEOUT_S" -o ServerAliveInterval="$SSH_TIMEOUT_S" -o ServerAliveCountMax=2 "$HOST" "$@"; }
 
 # Remote snippet that picks the run command: `make run` if ~/Makefile exists, else worker.py in WORKER_DIR or
 # the first candidate folder that has one. Leaves the command in "$@" and the folder as the cwd; exit 3 if none.
@@ -32,10 +34,10 @@ CHOOSE="cd ~; if [ -f Makefile ]; then set -- make run; else $FIND; [ -f \"\$d/w
 
 # Remote helpers. The worker is tracked as a descendant of the tmux pane, not by command-line pattern,
 # so it works whatever launcher make uses and never matches this ssh command itself.
-H="S=$SESSION; MTX=$MTX; G=$KILL_GRACE_S; "'tree() { for c in $(pgrep -P "$1"); do echo "$c"; tree "$c"; done; }
+H="S=$SESSION; MTX=$MTX; G=$KILL_GRACE_S; SEEN=$SEEN; "'tree() { for c in $(pgrep -P "$1"); do echo "$c"; tree "$c"; done; }
 pane() { tmux list-panes -t "$S" -F "#{pane_pid}" 2>/dev/null; }
-worker() { p=$(pane); [ -n "$p" ] || return 1; for c in $(tree "$p"); do grep -qa worker.py /proc/$c/cmdline 2>/dev/null && return 0; done; return 1; }
-kill_all() { p=$(pane); pids=$( [ -n "$p" ] && tree "$p"); tmux kill-session -t "$S" 2>/dev/null
+worker() { p=$(pane); [ -n "$p" ] || return 1; for c in $(tree "$p"); do grep -qa worker.py /proc/$c/cmdline 2>/dev/null && { touch "$SEEN"; return 0; }; done; return 1; }
+kill_all() { p=$(pane); pids=$( [ -n "$p" ] && tree "$p"); tmux kill-session -t "$S" 2>/dev/null; rm -f "$SEEN"
   [ -n "$pids" ] && { kill $pids 2>/dev/null; sleep "$G"; kill -9 $pids 2>/dev/null; }; true; }
 webrtc_bytes() { curl -s -m3 "$MTX/paths/list" | python3 -c "import json,sys
 try: [print(p[\"name\"], p.get(\"inboundBytes\", p.get(\"bytesReceived\", 0))) for p in json.load(sys.stdin).get(\"items\", []) if p.get(\"name\", \"\").endswith(\"_webrtc\")]
@@ -72,25 +74,25 @@ preflight)
   ;;
 start)
   # The run command goes into a remote script: no nested quoting, paths with spaces survive.
-  # bash -ic because PYTHONPATH and friends often live only in ~/.bashrc.
-  env="export DATA_DIR=$(printf %q "$DATA_DIR")${PRODUCT:+; export PRODUCT=$(printf %q "$PRODUCT")}"
+  # bash -ic because PYTHONPATH and friends often live only in ~/.bashrc. Unbuffered, so the log is current.
+  env="export PYTHONUNBUFFERED=1 DATA_DIR=$(printf %q "$DATA_DIR")${PRODUCT:+; export PRODUCT=$(printf %q "$PRODUCT")}"
   r "$H; kill_all; cat > $RUNNER" <<<"$env; $CHOOSE; exec \"\$@\"" || { echo "UNREACHABLE ssh to $HOST failed"; exit 1; }
-  r "tmux new -d -s $SESSION \"bash -ic 'bash $RUNNER 2>&1 | tee $LOG'\"" || { echo "CRASH tmux could not start the worker"; exit 1; }
+  r "tmux new -d -s $SESSION \"bash -ic 'bash $RUNNER 2>&1 | tee $LOG'\""
+  case $? in 0) ;; 255) echo "UNREACHABLE ssh to $HOST failed"; exit 1;; *) echo "CRASH tmux could not start the worker"; exit 1;; esac
   echo "STARTED $(date +%T%z)"
   exec bash "$0" wait-ready  # the old worker is already dead here, so flowing bytes mean the new one
   ;;
 wait-ready)
   # Ready = every camera's WebRTC path receiving bytes (open ports and MediaMTX's "ready" flag can be stale).
-  # Crash = launcher gone without a worker, or the worker gone after it was seen (the log has harmless
-  # tracebacks). The launcher may take a while to spawn the worker (building?). Slow is not a crash: NOT_READY.
-  end=$(( $(date +%s) + READY_TIMEOUT_S )); seen=
+  # Launcher gone: status decides (STOPPED, ENDED or CRASH). Worker gone after it was seen: CRASH (the log has
+  # harmless tracebacks). The launcher may take a while to spawn the worker (building?). Slow is not a crash: NOT_READY.
+  end=$(( $(date +%s) + READY_TIMEOUT_S ))
   while [ "$(date +%s)" -lt "$end" ]; do
-    out=$(r "$H; if worker; then echo WORKER; elif ! tmux has-session -t \$S 2>/dev/null; then echo DEAD; fi
+    out=$(r "$H; if worker; then echo WORKER; elif ! tmux has-session -t \$S 2>/dev/null; then echo DEAD; elif [ -e \$SEEN ]; then echo GONE; fi
       webrtc_bytes; echo ---; sleep $SAMPLE_S; webrtc_bytes") || { out=UNREACHABLE; sleep 1; continue; }  # a hiccup isn't a crash
     case "$out" in
-      *WORKER*) seen=1;;
-      *DEAD*) echo "CRASH $(tail_log)"; exit 1;;
-      *) [ -n "$seen" ] && { echo "CRASH worker exited, launcher still running: $(tail_log)"; exit 1; };;
+      *DEAD*) exec bash "$0" status;;
+      *GONE*) echo "CRASH worker exited, launcher still running: $(tail_log)"; exit 1;;
     esac  # NOAPI: MediaMTX not up yet, keep waiting
     # ready when the same paths are listed before and after the pause, each with more bytes after it
     if n=$(awk '/^---$/ { after = 1; next } !/_webrtc/ { next } !after { a[$1] = $2; n++ } after { m++; if ($2 > a[$1]) up++ }
@@ -107,14 +109,15 @@ wait-ready)
 status)
   # The tmux session closes when the worker exits, so without a session the log decides:
   # stopped by us (or never started) = STOPPED, "End-of-stream" (current log text) = ENDED, anything else = CRASH.
-  # A session without a worker is still launching (or a worker died and the launcher hangs): NOT_READY.
+  # A session without a worker: CRASH if this run's worker was already seen, else still launching (NOT_READY).
   state=$(r "$H; if tmux has-session -t \$S 2>/dev/null; then
-      if grep -q 'End-of-stream' $LOG 2>/dev/null; then echo ENDED; elif worker; then echo RUNNING; else echo LAUNCHING; fi
+      if grep -q 'End-of-stream' $LOG 2>/dev/null; then echo ENDED; elif worker; then echo RUNNING; elif [ -e \$SEEN ]; then echo GONE; else echo LAUNCHING; fi
     elif [ ! -s $LOG ] || tail -1 $LOG | grep -qF '$STOP_MARK'; then echo STOPPED
     elif grep -q 'End-of-stream' $LOG; then echo ENDED; else echo CRASH; fi")
   [ -n "$state" ] || { echo "UNREACHABLE ssh to $HOST failed"; exit 1; }
   case $state in
     CRASH) echo "CRASH $(tail_log)";;
+    GONE) echo "CRASH worker exited, launcher still running: $(tail_log)"; exit 1;;
     LAUNCHING) echo "NOT_READY launcher running, no worker process yet: $(tail_log)";;
     *) echo "$state";;
   esac

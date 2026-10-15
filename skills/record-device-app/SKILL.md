@@ -42,9 +42,9 @@ so if a step fails, check these first):
 - device: Linux with `bash`, `tmux`, `curl`, `python3`, `pgrep` (`ffprobe` optional); env from `~/.bashrc`
 - the worker reads the recording and product from the env vars `DATA_DIR` / `PRODUCT`
 - worker: `make run` if `~/Makefile` exists (preflight reports the choice as `RUN_CMD`), else `python3 worker.py` in `~/Worker` (usual) or `~/Core-Backend/Worker`; either way a process with `worker.py`
-  in its command line must start; product inferred from `~/POWER_Const/hardwareVersion*`/`module_info*`
+  in its command line must start under the launcher (not via docker or systemd); product inferred from `~/POWER_Const/hardwareVersion*`/`module_info*`
 - registration bypass: `~/POWER_Const/system_successfully_registered`
-- streaming: MediaMTX API on the device at `localhost:9997` (its own service, or started by the worker), one WebRTC path per camera named `*_webrtc`; the web app plays them
+- streaming: MediaMTX API on the device at `localhost:9997` (its own service, or started by the worker), one WebRTC path per camera named `*_webrtc`, receiving video without a viewer connected; the web app plays them
   over WebRTC in the page (that is how `rec.py` sees frames decoding)
 - recording: one video file per camera (`.mp4`, `.avi`, `.mkv`); the clip lasts as long as the shortest file
 - end of clip: the worker logs `End-of-stream`
@@ -98,7 +98,7 @@ Viewer events: `VIEWPORT`, `GATE registration|connection_failed|terms|unknown`, 
 | persistent `GATE registration` (3) | show the screenshot, ask the user |
 | `GATE unknown` (3) | ask the Device for `status` first (a dead worker or ended clip looks the same); if `RUNNING`, show the screenshot and ask the user |
 | `STALL` | no new frames for a while; the take continued (a view without video, or trouble). Mention it with the result |
-| `FROZEN` (4), `NO_CONNECTION` (5) | the Viewer asks the Device for `status`; act on its answer: `ENDED` clip ran out (restart, shorter take) · `CRASH` show the log tail · `RUNNING` app issue, show the screenshot · `STOPPED` worker not running, `start` and retry · `NOT_READY` launcher without a worker, show the log tail |
+| `FROZEN` (4), `NO_CONNECTION` (5) | the Viewer asks the Device for `status`; act on its answer: `ENDED` clip ran out (restart, shorter take) · `CRASH` show the log tail · `RUNNING` app issue, show the screenshot · `STOPPED` worker not running, `start` and retry · `NOT_READY` worker still launching, `wait-ready` · `UNREACHABLE` ssh failed, retry |
 | `ERROR` (1) | show the message (often Chrome or the video recorder missing, see Prereqs) and ask the user |
 | `CLICK_FAIL`, `ACTION_FAIL` | show the nearest earlier screenshot (`explore_NN.png` / `tNNN.png`); re-find the target with `explore` |
 | `BAD_ARGS` (2) | fix the call and rerun |

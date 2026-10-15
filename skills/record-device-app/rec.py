@@ -87,9 +87,9 @@ CURSOR = """(() => {
     const d = user(); d.style.left = e.clientX + 'px'; d.style.top = e.clientY + 'px'; }, true);
   addEventListener('mousedown', e => { if (!window.__recScripted) ripple(e.clientX, e.clientY, BLUE); }, true);
 })()"""
-FRAMES = """async () => { let n = 0; for (const pc of window.__pcs || [])
+FRAMES = """async () => { let n = 0; for (const pc of window.__pcs || []) try {
   (await pc.getStats()).forEach(r => { if (r.type === 'inbound-rtp' && r.kind === 'video') n += r.framesDecoded || 0; });
-  return n; }"""
+  } catch (e) {} return n; }"""  # per connection, so one closed connection can't hide the others
 # Visible clickable things with whatever names they have, plus their centre.
 CONTROLS = """() => [...document.querySelectorAll('button,a,[role=button],[onclick],svg')]
   .map(e => e.closest('button,a,[role=button],[onclick]') || e).filter((e, i, a) => a.indexOf(e) === i)
@@ -134,11 +134,10 @@ for target in targets:
         bad_args(f"target {target!r}: xy targets look like xy=X,Y (integers)")
 actions = dict(actions)
 if os.environ.get("VIEWPORT"):  # explicit VIEWPORT=WxH wins over the default and the screen fit
-    try:
-        w, h = map(int, os.environ["VIEWPORT"].lower().split("x"))
-    except ValueError:
+    m = re.fullmatch(r"(\d+)x(\d+)", os.environ["VIEWPORT"].lower())
+    if not m or min(map(int, m.groups())) < 100:
         bad_args("VIEWPORT must look like 1920x1080")
-    VIEW = {"width": w // 2 * 2, "height": h // 2 * 2}
+    VIEW = {"width": int(m[1]) // 2 * 2, "height": int(m[2]) // 2 * 2}
 
 
 def frames(page, default=0):
