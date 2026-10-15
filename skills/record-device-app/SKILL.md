@@ -36,7 +36,7 @@ explore and record with the same settings.
 
 **Device conventions** the scripts rely on (defined in `device-remote.sh`; this list mirrors them. They may change,
 so if a step fails, check these first):
-- device: Linux with `bash`, `tmux`, `curl`, `pgrep` (`ffprobe` optional); env from `~/.bashrc`
+- device: Linux with `bash`, `tmux`, `curl`, `pgrep`, `python3` for a `worker.py` run (`ffprobe` optional); env from `~/.bashrc`
 - the worker reads the recording and product from the env vars `DATA_DIR` / `PRODUCT`
 - worker: `make run` if `~/Makefile` exists (preflight reports the choice as `RUN_CMD`), else `python3 worker.py` in `~/Worker` (usual) or `~/Core-Backend/Worker`; either way a process with `worker.py` (or a path ending
   in `/worker.py`) as one of its arguments must start under the launcher (not via docker or systemd); product inferred from `~/POWER_Const/hardwareVersion*`/`module_info*`

@@ -30,7 +30,7 @@ kill_all() {  # $1: grace seconds between TERM and KILL
 api() { curl -sf -m3 "$MTX/paths/list"; }
 
 # Run command: `make run` if ~/Makefile exists, else worker.py in $1 (WORKER_DIR) or the first candidate folder.
-# Leaves the command in RUN and the folder as the cwd; fails if there is none. Also copied into the runner.
+# Leaves the command in RUN and the folder as the cwd; fails if there is none.
 choose() {
   cd ~ || return 1
   if [ -f Makefile ]; then RUN=(make run); return 0; fi
@@ -46,14 +46,14 @@ preflight() {  # $1 DATA_DIR, $2 PRODUCT ("" = the device infers it), $3 WORKER_
     echo "PREFLIGHT_FAIL no hardwareVersion/module_info in ~/POWER_Const: device can't infer its product, pass PRODUCT"
     return 1
   fi
-  local c missing="" run clip
-  run=$(choose "$3" && echo "$PWD: ${RUN[*]}") \
-    || { echo "PREFLIGHT_FAIL no ~/Makefile and no worker.py in ${3:-$CANDIDATES}: pass WORKER_DIR"; return 1; }
+  local c tools="tmux curl pgrep" missing="" clip
+  choose "$3" || { echo "PREFLIGHT_FAIL no ~/Makefile and no worker.py in ${3:-$CANDIDATES}: pass WORKER_DIR"; return 1; }
+  [ "${RUN[0]}" = python3 ] && tools+=" python3"
   [ -e ~/POWER_Const/system_successfully_registered ] \
     || echo "WARN registration bypass file missing (expect a registration gate)"
-  for c in tmux curl pgrep; do command -v $c >/dev/null || missing+="$c "; done
+  for c in $tools; do command -v $c >/dev/null || missing+="$c "; done
   [ -z "$missing" ] || { echo "PREFLIGHT_FAIL missing on device: $missing"; return 1; }
-  echo "RUN_CMD $run${2:+ (PRODUCT=$2)}"
+  echo "RUN_CMD $PWD: ${RUN[*]}${2:+ (PRODUCT=$2)}"
   # Each video file is one camera (recordings are never split per camera); the worker stops when the first
   # stream ends, so the clip is as long as the shortest file.
   command -v ffprobe >/dev/null && clip=$(find "$1" -type f \( -name '*.mp4' -o -name '*.avi' -o -name '*.mkv' \) \
@@ -62,22 +62,17 @@ preflight() {  # $1 DATA_DIR, $2 PRODUCT ("" = the device infers it), $3 WORKER_
   echo "CLIP_SECONDS ${clip:-unknown}"  # device.py adds the streaming checks and PREFLIGHT_OK
 }
 
-launch() {  # $1 DATA_DIR, $2 PRODUCT, $3 WORKER_DIR, $4 grace seconds
+launch() {  # $1 DATA_DIR, $2 PRODUCT, $3 WORKER_DIR, $4 grace seconds; exit 3: no worker to run
+  choose "$3" || return 3
   kill_all "$4"
   # bash -ic because PYTHONPATH and friends often live only in ~/.bashrc. Unbuffered, so the log is current.
   { printf 'export PYTHONUNBUFFERED=1 DATA_DIR=%q\n' "$1"
     [ -z "$2" ] || printf 'export PRODUCT=%q\n' "$2"
-    printf 'CANDIDATES=%q\n' "$CANDIDATES"
-    declare -f choose
-    printf 'choose %q || exit 3\nexec "${RUN[@]}"\n' "$3"; } >"$RUNNER"
+    printf 'cd %q && exec' "$PWD"; printf ' %q' "${RUN[@]}"; echo; } >"$RUNNER"
   tmux new -d -s "$S" "bash -ic 'bash $RUNNER 2>&1 | tee $LOG'"
 }
 
-probe() {  # worker state, then the MediaMTX path list twice, SAMPLE_S apart
-  if worker; then echo WORKER; elif ! tmux has-session -t "$S" 2>/dev/null; then echo DEAD
-  elif [ -e "$SEEN" ]; then echo GONE; else echo LAUNCHING; fi
-  api; echo; echo ---; sleep "$SAMPLE_S"; api; echo
-}
+probe() { status; api; echo; echo ---; sleep "$SAMPLE_S"; api; echo; }  # state, then two MediaMTX samples
 
 status() {
   # The tmux session closes when the worker exits, so without a session the log decides:

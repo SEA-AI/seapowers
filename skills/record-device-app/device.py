@@ -23,6 +23,7 @@ from pathlib import Path
 
 import asyncssh
 
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # Windows pipes default to cp1252; logs may not be ASCII
 REMOTE = (Path(__file__).parent / "device-remote.sh").read_text()
 COMMANDS = ("preflight", "start", "wait-ready", "status", "stop")
 SSH_ERRORS = (OSError, asyncssh.Error, asyncio.TimeoutError)
@@ -40,7 +41,7 @@ def bad_args(why):
 def setting(name, default):
     """Timing setting in whole seconds: a judgement call for a LAN, overridable per run via env."""
     v = os.environ.get(name, str(default))
-    if not v.isdigit() or int(v) < 1:
+    if not (v.isascii() and v.isdigit()) or int(v) < 1:
         bad_args(f"{name} must be a whole number >= 1, like {default}")
     return int(v)
 
@@ -77,8 +78,8 @@ async def connect():
 
 async def sh(conn, *args):
     """Run one device-remote.sh command: the script goes over stdin, the args as $1..., so nothing is re-quoted."""
-    r = await conn.run("bash -s -- " + shlex.join(args), input=REMOTE, check=False)
-    return r.exit_status, r.stdout
+    r = await conn.run("bash -s -- " + shlex.join(args), input=REMOTE, check=False, errors="replace")
+    return 255 if r.exit_status is None else r.exit_status, r.stdout  # None: killed by a signal
 
 
 async def tail(conn):
@@ -106,8 +107,8 @@ def flowing(before, after):
     return [k for k in before if after.get(k, 0) > before[k]]
 
 
-async def status(conn):
-    state = (await sh(conn, "status"))[1].strip()
+async def report(conn, state):
+    """Print the event for a state from device-remote.sh's status; returns the exit code."""
     if state in ("RUNNING", "ENDED", "STOPPED"):
         ev(state)
         return 0
@@ -119,19 +120,21 @@ async def status(conn):
 
 
 async def wait_ready(conn):
-    # Launcher gone, or this run's worker gone: status decides (STOPPED, ENDED or CRASH; the log has harmless
-    # tracebacks). The launcher may take a while to spawn the worker. Slow is not a crash: NOT_READY.
+    # Keeps waiting while the worker is RUNNING or still LAUNCHING (building?): slow is not a crash. Any other
+    # state (launcher or this run's worker gone) is final: STOPPED, ENDED or CRASH (the log has harmless tracebacks).
     end, state, s = time.monotonic() + READY_TIMEOUT_S, "UNREACHABLE", None
     while time.monotonic() < end:
         try:
             conn = conn or await connect()
             state, _, out = (await sh(conn, "probe"))[1].partition("\n")
         except SSH_ERRORS:  # a hiccup isn't a crash: reconnect on the next round
+            if conn:
+                conn.close()
             conn, state = None, "UNREACHABLE"
             await asyncio.sleep(1)
             continue
-        if state in ("DEAD", "GONE"):
-            return await status(conn)
+        if state not in ("RUNNING", "LAUNCHING"):
+            return await report(conn, state)
         s = samples(out)  # None while MediaMTX isn't up yet: keep waiting
         if s and s[0] and s[0].keys() == s[1].keys() and len(flowing(*s)) == len(s[0]):
             ev("READY", f"{now()} all {len(s[0])} camera streams flowing")
@@ -141,10 +144,11 @@ async def wait_ready(conn):
         "UNREACHABLE": "device unreachable over ssh",
         "LAUNCHING": "no worker process yet, launcher still running (building?)",
     }.get(state) or ("MediaMTX API unreachable" if s is None else "not every camera streams")
-    ev(
-        "NOT_READY",
-        f"{why} after {READY_TIMEOUT_S}s. Run wait-ready again, or check: {await tail(conn) if conn else ''}",
-    )
+    try:
+        log = await tail(conn) if conn else ""
+    except SSH_ERRORS:
+        log = ""
+    ev("NOT_READY", f"{why} after {READY_TIMEOUT_S}s. Run wait-ready again, or check: {log}")
     return 1
 
 
@@ -157,7 +161,9 @@ async def run(conn):
         state, _, out = (await sh(conn, "probe"))[1].partition("\n")
         if (s := samples(out)) is None:
             ev("WARN", "MediaMTX API not reachable yet (fine if the worker starts it)")
-        elif state == "DEAD" and flowing(*s):  # streaming without our worker would make READY meaningless
+        elif state in ("STOPPED", "ENDED", "CRASH") and flowing(
+            *s
+        ):  # streaming without our worker would make READY meaningless
             ev(
                 "WARN",
                 "video is already streaming without this skill's worker; stop it first or READY may be misleading",
@@ -165,15 +171,16 @@ async def run(conn):
         ev("PREFLIGHT_OK")
         return 0
     if cmd == "start":
-        if (await sh(conn, "launch", DATA_DIR, PRODUCT, WORKER_DIR, str(KILL_GRACE_S)))[0]:
-            ev("CRASH", "tmux could not start the worker")
+        code = (await sh(conn, "launch", DATA_DIR, PRODUCT, WORKER_DIR, str(KILL_GRACE_S)))[0]
+        if code:
+            ev("CRASH", "no ~/Makefile and no worker.py found" if code == 3 else "tmux could not start the worker")
             return 1
         ev("STARTED", now())
         return await wait_ready(conn)  # the old worker is gone, so flowing bytes mean the new one
     if cmd == "wait-ready":
         return await wait_ready(conn)
     if cmd == "status":
-        return await status(conn)
+        return await report(conn, (await sh(conn, "status"))[1].strip())
     await sh(conn, "stop", str(KILL_GRACE_S))
     ev("STOPPED")
     return 0
