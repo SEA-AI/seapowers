@@ -12,7 +12,7 @@ Timing settings (see knob() below) can be overridden per run with env vars REC_<
 Run with: [HEADED=1] [VIEWPORT=WxH] uv run rec.py ...
   HEADED=1: visible browser window. Viewport: VIEWPORT if set, else 1920x1080 (headed: fit to screen, capped at 1920x1080).
 TARGET: a Playwright selector (text=..., [aria-label=...], css=... >> nth=N) or xy=X,Y (viewport pixels, see VIEWPORT event).
-Exit codes: 0 ok, 1 unexpected error, 2 bad arguments, 3 gate needs a human (see screenshot), 4 stream frozen, 5 app never connected.
+Exit codes: 0 ok, 1 unexpected error or no mp4, 2 bad arguments, 3 gate needs a human (see screenshot), 4 stream frozen, 5 app never connected.
 """
 
 import contextlib
@@ -245,9 +245,9 @@ def clear_gates(page: Page, run: Run) -> int:
     return 5
 
 
-def to_mp4(webm: Path, out: str, length_s: float) -> None:
+def to_mp4(webm: Path, out: str, length_s: float) -> bool:
     """Transcode the raw webm (loading screen included) to OUT/take.mp4, reporting CONVERTING progress.
-    The webm is deleted once the mp4 checks out."""
+    The webm is deleted once the mp4 checks out. Returns whether it did."""
     mp4 = f"{out}/take.mp4"
     args = [
         "ffmpeg",
@@ -292,7 +292,7 @@ def to_mp4(webm: Path, out: str, length_s: float) -> None:
         if os.path.exists(mp4):
             os.remove(mp4)  # half-written: never hand it over
         ev("MP4_FAIL", error or f"ffmpeg exit {proc.returncode}")
-        return
+        return False
     dur = subprocess.run(
         ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", mp4],
         capture_output=True,
@@ -302,9 +302,10 @@ def to_mp4(webm: Path, out: str, length_s: float) -> None:
     if not re.fullmatch(r"[0-9.]+", dur) or float(dur) <= 0:  # exit 0 doesn't prove a playable file
         os.remove(mp4)
         ev("MP4_FAIL", "mp4 has no readable duration; webm kept")
-        return
+        return False
     os.remove(webm)
     ev("MP4", f"{mp4} {dur}s")
+    return True
 
 
 def open_browser(p: Playwright, run: Run, view: ViewportSize, profile: str) -> tuple[BrowserContext, Page]:
@@ -420,8 +421,9 @@ def main(argv: list[str]) -> int:
                     ctx.close()  # finalizes the webm
                 if video:
                     ev("DONE", video)
-                    if code in (0, 4):  # a frozen take is still worth keeping
-                        to_mp4(video, run.out, time.monotonic() - video_t0)
+                    # a frozen take is still worth keeping; no mp4 is no success
+                    if code in (0, 4) and not to_mp4(video, run.out, time.monotonic() - video_t0):
+                        code = 1
     except (PlaywrightError, OSError) as e:  # e.g. Chrome or the recorder missing: report it as an event
         ev("ERROR", f"{e.__class__.__name__}: {str(e)[:300]}")
         return 1

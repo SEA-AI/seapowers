@@ -31,6 +31,7 @@ import asyncssh
 if isinstance(sys.stdout, io.TextIOWrapper):  # Windows pipes default to cp1252; logs may not be ASCII
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 REMOTE = (Path(__file__).parent / "device-remote.sh").read_text()
+MARK = "== record-device-app ==\n"  # device-remote.sh prints it first; anything before is login-shell noise
 SSH_ERRORS = (OSError, asyncssh.Error)
 
 
@@ -135,7 +136,8 @@ async def connect(cfg: Config) -> asyncssh.SSHClientConnection:
 async def sh(conn: asyncssh.SSHClientConnection, fn: Remote, *args: str) -> tuple[int, str]:
     """Run one device-remote.sh command: the script goes over stdin, the args as $1..."""
     r = await conn.run("bash -s -- " + shlex.join([fn, *args]), input=REMOTE, check=False, errors="replace")
-    return 255 if r.exit_status is None else r.exit_status, str(r.stdout)  # exit None: killed by a signal
+    out = str(r.stdout).rpartition(MARK)[2]
+    return 255 if r.exit_status is None else r.exit_status, out  # exit None: killed by a signal
 
 
 async def tail(conn: asyncssh.SSHClientConnection) -> str:
@@ -208,7 +210,7 @@ async def poll_ready(
     cameras = 0
     if cfg.data_dir:
         _, out = await sh(first, Remote.CAMERAS, cfg.data_dir)
-        cameras = int(out.strip() or 0)
+        cameras = int(out) if out.strip().isdigit() else 0
     conn: asyncssh.SSHClientConnection | None = first
     end, st, counts, rising = time.monotonic() + cfg.ready_timeout_s, None, None, []
     while time.monotonic() < end:

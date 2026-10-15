@@ -95,7 +95,7 @@ docstring; `DONE <webm>` is deleted once `MP4` checks out.
 | `CLICK_FAIL`, `ACTION_FAIL` | show the nearest earlier screenshot (`explore_NN.png` / `tNNNNN.png`); re-find the target with `explore` |
 | `BAD_ARGS` (2) | fix the call (or install ffmpeg/ffprobe if that is the message) and rerun |
 | `MP4` | check one late frame, hand over the file |
-| `MP4_FAIL` | convert the webm by hand with the arguments in `rec.py`'s `to_mp4` |
+| `MP4_FAIL` (1) | convert the webm by hand with the arguments in `rec.py`'s `to_mp4` |
 
 The lead speaks in intent ("show RGB, then thermal, then map"). The Viewer resolves targets from
 `references/app-ui.md` and proposes a schedule (`SECONDS=TARGET`, seconds after `STREAMING`) before recording.

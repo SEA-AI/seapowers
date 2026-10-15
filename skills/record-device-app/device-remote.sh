@@ -9,6 +9,7 @@ LOG=/tmp/record_device_app.log
 RUNNER=/tmp/record_device_app_run.sh
 SEEN=/tmp/record_device_app.seen         # exists once this run's worker was seen, so a gone worker reads as a crash
 STOP_MARK='== stopped by record-device-app =='  # last log line after stop, so status can tell a stop from a crash
+MARK="== record-device-app =="           # output before it comes from the login shell (e.g. ~/.bashrc), not us
 SAMPLE_S=2                               # gap between two byte counts when checking that video flows
 
 # The worker is found among the tmux pane's descendants by its worker.py argument,
@@ -28,7 +29,7 @@ kill_all() {  # $1: grace seconds between TERM and KILL
   [ -n "${pids:-}" ] && { kill $pids 2>/dev/null; sleep "$1"; kill -9 $pids 2>/dev/null; }; true
 }
 api() { curl -sf -m3 "$MTX/paths/list"; }
-videos() { find "$1" -type f \( -name '*.mp4' -o -name '*.avi' -o -name '*.mkv' \); }  # one file per camera
+videos() { find "$1" -maxdepth 1 -type f \( -iname '*.mp4' -o -iname '*.avi' -o -iname '*.mkv' \); }  # one per camera
 cameras() { videos "$1" | wc -l; }
 
 # Run command: `make run` if ~/Makefile exists, else worker.py in $1 (WORKER_DIR) or the first candidate folder.
@@ -91,6 +92,7 @@ stop() { kill_all "$1"; echo "$STOP_MARK" >>"$LOG"; }  # $1: grace seconds
 logtail() { tail -15 "$LOG" 2>/dev/null; }
 
 main() {
+  echo "$MARK"
   case "${1:-}" in
     preflight | launch | probe | status | stop | logtail | cameras) "$@" ;;
     *) echo "BAD_ARGS unknown device command: ${1:-}"; return 2 ;;
