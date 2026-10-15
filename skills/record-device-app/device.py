@@ -14,31 +14,34 @@ Exit codes: 0 ok, 1 not ready / crash / unreachable, 2 bad arguments.
 """
 
 import asyncio
+import io
 import json
 import os
 import shlex
 import sys
 import time
 from pathlib import Path
+from typing import NoReturn
 
 import asyncssh
 
-sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # Windows pipes default to cp1252; logs may not be ASCII
+if isinstance(sys.stdout, io.TextIOWrapper):  # Windows pipes default to cp1252; logs may not be ASCII
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 REMOTE = (Path(__file__).parent / "device-remote.sh").read_text()
 COMMANDS = ("preflight", "start", "wait-ready", "status", "stop")
 SSH_ERRORS = (OSError, asyncssh.Error, asyncio.TimeoutError)
 
 
-def ev(name, detail=""):
+def ev(name: str, detail: str = "") -> None:
     print(f"{name} {detail}".strip(), flush=True)
 
 
-def bad_args(why):
+def bad_args(why: str) -> NoReturn:
     ev("BAD_ARGS", why)
     sys.exit(2)
 
 
-def setting(name, default):
+def setting(name: str, default: int) -> int:
     """Timing setting in whole seconds: a judgement call for a LAN, overridable per run via env."""
     v = os.environ.get(name, str(default))
     if not (v.isascii() and v.isdigit()) or int(v) < 1:
@@ -60,11 +63,11 @@ PRODUCT = os.environ.get("PRODUCT", "")
 WORKER_DIR = os.environ.get("WORKER_DIR", "").removeprefix("~/")  # "~/Worker" means "Worker" (device home)
 
 
-def now():
+def now() -> str:
     return time.strftime("%H:%M:%S%z")
 
 
-async def connect():
+async def connect() -> asyncssh.SSHClientConnection:
     user, _, host = HOST.rpartition("@")
     # keepalive: a link that drops mid-command fails within ~2x SSH_TIMEOUT_S instead of hanging
     return await asyncssh.connect(
@@ -76,21 +79,22 @@ async def connect():
     )
 
 
-async def sh(conn, *args):
+async def sh(conn: asyncssh.SSHClientConnection, *args: str) -> tuple[int, str]:
     """Run one device-remote.sh command: the script goes over stdin, the args as $1..., so nothing is re-quoted."""
     r = await conn.run("bash -s -- " + shlex.join(args), input=REMOTE, check=False, errors="replace")
-    return 255 if r.exit_status is None else r.exit_status, r.stdout  # None: killed by a signal
+    return 255 if r.exit_status is None else r.exit_status, str(r.stdout)  # exit None: killed by a signal
 
 
-async def tail(conn):
-    return " ".join((await sh(conn, "logtail"))[1].split())  # one line, so the event stays one line
+async def tail(conn: asyncssh.SSHClientConnection) -> str:
+    _, log = await sh(conn, "logtail")
+    return " ".join(log.split())  # one line, so the event stays one line
 
 
-def samples(out):
+def samples(out: str) -> tuple[dict[str, int], dict[str, int]] | None:
     """The two *_webrtc byte counts from probe as {path: bytes} dicts, or None while the MediaMTX API doesn't answer.
     Bytes, not open ports or MediaMTX's "ready" flag: those can be stale from a previous run."""
     try:
-        return tuple(
+        before, after = (
             {
                 p["name"]: p.get("inboundBytes", p.get("bytesReceived", 0))
                 for p in json.loads(s)["items"]
@@ -98,16 +102,17 @@ def samples(out):
             }
             for s in out.split("\n---\n", 1)
         )
-    except (ValueError, KeyError, TypeError):
+    except (ValueError, KeyError, TypeError):  # ValueError also covers a missing second sample
         return None
+    return before, after
 
 
-def flowing(before, after):
+def flowing(before: dict[str, int], after: dict[str, int]) -> list[str]:
     """Camera paths whose bytes rose between the two samples."""
     return [k for k in before if after.get(k, 0) > before[k]]
 
 
-async def report(conn, state):
+async def report(conn: asyncssh.SSHClientConnection, state: str) -> int:
     """Print the event for a state from device-remote.sh's status; returns the exit code."""
     if state in ("RUNNING", "ENDED", "STOPPED"):
         ev(state)
@@ -119,25 +124,27 @@ async def report(conn, state):
     return 1
 
 
-async def wait_ready(conn):
+async def wait_ready(conn: asyncssh.SSHClientConnection | None) -> int:
     # Keeps waiting while the worker is RUNNING or still LAUNCHING (building?): slow is not a crash. Any other
     # state (launcher or this run's worker gone) is final: STOPPED, ENDED or CRASH (the log has harmless tracebacks).
     end, state, s = time.monotonic() + READY_TIMEOUT_S, "UNREACHABLE", None
     while time.monotonic() < end:
         try:
             conn = conn or await connect()
-            state, _, out = (await sh(conn, "probe"))[1].partition("\n")
+            _, out = await sh(conn, "probe")
         except SSH_ERRORS:  # a hiccup isn't a crash: reconnect on the next round
             if conn:
                 conn.close()
             conn, state = None, "UNREACHABLE"
             await asyncio.sleep(1)
             continue
+        state, _, out = out.partition("\n")
         if state not in ("RUNNING", "LAUNCHING"):
             return await report(conn, state)
         s = samples(out)  # None while MediaMTX isn't up yet: keep waiting
-        if s and s[0] and s[0].keys() == s[1].keys() and len(flowing(*s)) == len(s[0]):
-            ev("READY", f"{now()} all {len(s[0])} camera streams flowing")
+        before, after = s or ({}, {})
+        if before and before.keys() == after.keys() and len(flowing(before, after)) == len(before):
+            ev("READY", f"{now()} all {len(before)} camera streams flowing")
             return 0
         await asyncio.sleep(1)
     why = {
@@ -152,13 +159,14 @@ async def wait_ready(conn):
     return 1
 
 
-async def run(conn):
+async def run(conn: asyncssh.SSHClientConnection) -> int:
     if cmd == "preflight":
         code, out = await sh(conn, "preflight", DATA_DIR, PRODUCT, WORKER_DIR)
         print(out, end="", flush=True)
         if code:
             return code
-        state, _, out = (await sh(conn, "probe"))[1].partition("\n")
+        _, out = await sh(conn, "probe")
+        state, _, out = out.partition("\n")
         if (s := samples(out)) is None:
             ev("WARN", "MediaMTX API not reachable yet (fine if the worker starts it)")
         elif state in ("STOPPED", "ENDED", "CRASH") and flowing(
@@ -171,7 +179,7 @@ async def run(conn):
         ev("PREFLIGHT_OK")
         return 0
     if cmd == "start":
-        code = (await sh(conn, "launch", DATA_DIR, PRODUCT, WORKER_DIR, str(KILL_GRACE_S)))[0]
+        code, _ = await sh(conn, "launch", DATA_DIR, PRODUCT, WORKER_DIR, str(KILL_GRACE_S))
         if code:
             ev("CRASH", "no ~/Makefile and no worker.py found" if code == 3 else "tmux could not start the worker")
             return 1
@@ -180,19 +188,20 @@ async def run(conn):
     if cmd == "wait-ready":
         return await wait_ready(conn)
     if cmd == "status":
-        return await report(conn, (await sh(conn, "status"))[1].strip())
+        _, state = await sh(conn, "status")
+        return await report(conn, state.strip())
     await sh(conn, "stop", str(KILL_GRACE_S))
     ev("STOPPED")
     return 0
 
 
-async def main():
+async def main() -> int:
     try:
         async with await connect() as conn:
             return await run(conn)
     except SSH_ERRORS as e:
         ev("UNREACHABLE", f"ssh to {HOST} failed: {e.__class__.__name__} {e}".strip())
-        return 1
+    return 1
 
 
 sys.exit(asyncio.run(main()))
