@@ -349,7 +349,7 @@ def record(p, view):
         if code:
             return code
         last, flat_s, t0 = frames(page), 0, time.monotonic()
-        last_progress = last
+        last_progress, last_progress_t = last, 0
         for t in range(1, secs + 1):
             # wait until second t of the take, so clicks and screenshots don't push the schedule later
             page.wait_for_timeout(max(0, (t0 + t - time.monotonic()) * 1000))
@@ -371,8 +371,11 @@ def record(p, view):
                 ev("STALL", f"at {t}s, no new WebRTC frames for {flat_s}s; still recording")
             if t % every == 0 or t == secs:
                 page.screenshot(path=f"{out}/t{t:0{width}d}.png")
-                ev("PROGRESS", f"{t}/{secs}s decoded~{(now - last_progress) / every:.0f}/s (approx., all streams)")
-                last_progress = now
+                ev(
+                    "PROGRESS",
+                    f"{t}/{secs}s decoded~{(now - last_progress) / (t - last_progress_t):.0f}/s (approx., all streams)",
+                )
+                last_progress, last_progress_t = now, t
     except (PlaywrightError, OSError) as e:  # page or browser crash: still finalize the video and report it
         ev("ERROR", f"{e.__class__.__name__}: {str(e)[:200]}")
         code = code or 1
