@@ -15,6 +15,7 @@ TARGET: a Playwright selector (text=..., [aria-label=...], css=... >> nth=N) or 
 Exit codes: 0 ok, 1 unexpected error or no mp4, 2 bad arguments, 3 gate needs a human (see screenshot), 4 stream frozen, 5 app never connected.
 """
 
+import base64
 import contextlib
 import os
 import re
@@ -130,6 +131,14 @@ def frames(page: Page, default: int = 0) -> int:
         return default
 
 
+def shot(page: Page, path: str) -> str:
+    """Screenshot through Chrome's own capture: Playwright's page.screenshot glitches the video in a visible window
+    (a frame drawn at half size)."""
+    png = page.context.new_cdp_session(page).send("Page.captureScreenshot", {"format": "png"})["data"]
+    Path(path).write_bytes(base64.b64decode(png))
+    return path
+
+
 def click(page: Page, target: str) -> None:
     """Glide the drawn cursor to the target, show a ripple, then click."""
     if target.startswith("xy="):
@@ -187,7 +196,7 @@ def clear_gates(page: Page, run: Run) -> int:
                 ev("GATE registration", f"transient? reload {reg_seen}/{REG_RELOADS}")
                 page.wait_for_timeout(REG_WAIT_S * 1000)
                 continue
-            page.screenshot(path=f"{out}/{tag}_gate.png")
+            shot(page, f"{out}/{tag}_gate.png")
             ev("GATE registration", f"persistent; {out}/{tag}_gate.png")
             return 3
         if failed.is_visible():
@@ -198,10 +207,10 @@ def clear_gates(page: Page, run: Run) -> int:
             agree.click()
             ev("GATE terms", "accepted")
         if not wait_decoding(page):
-            page.screenshot(path=f"{out}/{tag}_gate.png")
+            shot(page, f"{out}/{tag}_gate.png")
             ev("GATE unknown", f"no WebRTC frames decoding; {out}/{tag}_gate.png")
             return 3
-        page.screenshot(path=f"{out}/{tag}_ready.png")
+        shot(page, f"{out}/{tag}_ready.png")
         ev("STREAMING", f"{frames(page)} frames decoded; {out}/{tag}_ready.png")
         return 0
     ev("NO_CONNECTION", "app never connected; ask Device for status")
@@ -335,7 +344,7 @@ def take(page: Page, run: Run) -> int:
             if flat_s == STALL_WARN_S:  # once per stall
                 ev("STALL", f"at {t}s, no new WebRTC frames for {flat_s}s; still recording")
             if t % every == 0 or t == secs:
-                page.screenshot(path=f"{run.out}/t{t:05d}.png")
+                shot(page, f"{run.out}/t{t:05d}.png")
                 ev("PROGRESS", f"{t}/{secs}s frames={now}")
     except KeyboardInterrupt:
         ev("TAKE_STOPPED", f"at {t}s on request; converting what was recorded")
@@ -352,9 +361,8 @@ def explore(page: Page, run: Run) -> int:
             ev("CLICK_FAIL", f"{target}: {e.__class__.__name__}")
             continue
         page.wait_for_timeout(SETTLE_S * 1000)
-        shot = f"{run.out}/explore_{i:02d}.png"
-        page.screenshot(path=shot)
-        ev("CLICKED", f"{target} -> {shot} frames={frames(page)}")
+        png = shot(page, f"{run.out}/explore_{i:02d}.png")
+        ev("CLICKED", f"{target} -> {png} frames={frames(page)}")
     return 0
 
 
