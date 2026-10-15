@@ -110,6 +110,8 @@ click ripple. Headless runs only show the script's cursor.
 - Mixed: schedule only the script's part, and tell the user where not to click (e.g. the controls the
   script uses) so the two don't fight. The Viewer still reports what each screenshot shows.
 - Start the take only when the user is ready; say when the window will open.
+- The user may end a take early ("stop", "done"). The lead then stops it with `pkill -f 'rec.py .*<OUT>'`; `rec.py`
+  prints `TAKE_STOPPED` and still converts what was recorded.
 
 ## When the request isn't covered
 

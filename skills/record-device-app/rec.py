@@ -19,6 +19,7 @@ import contextlib
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -309,31 +310,35 @@ def screen_fit(p: Playwright, profile: str) -> ViewportSize:
 
 
 def take(page: Page, run: Run) -> int:
-    """Record SECS after the gates; returns 0, or 4 when the stream froze."""
+    """Record SECS after the gates; returns 0, or 4 when the stream froze. A stop request (SIGINT/SIGTERM)
+    ends the take early and keeps what was recorded."""
     secs, actions = run.secs, run.actions
     every = max(10, secs // 30)  # PROGRESS + screenshot interval: about 30 per take, at least every 10 s
-    last, flat_s, t0 = frames(page), 0, time.monotonic()
-    for t in range(1, secs + 1):
-        # wait until second t of the take, so clicks and screenshots don't push the schedule later
-        page.wait_for_timeout(max(0, (t0 + t - time.monotonic()) * 1000))
-        if t in actions:
-            try:
-                click(page, actions[t])
-                ev("ACTION", f"{t}s {actions[t]}")
-            except (PlaywrightError, RuntimeError) as e:
-                ev("ACTION_FAIL", f"{t}s {actions[t]}: {e.__class__.__name__}")
-        # some views pause video: warn first, end the take only after a long stall
-        now = frames(page, last)  # a failed read (app reloading) counts as no new frames
-        flat_s = flat_s + 1 if now == last else 0
-        last = now
-        if flat_s >= STALL_ABORT_S:
-            ev("FROZEN", f"at {t}s, no new WebRTC frames for {flat_s}s; take ended")
-            return 4
-        if flat_s == STALL_WARN_S:  # once per stall
-            ev("STALL", f"at {t}s, no new WebRTC frames for {flat_s}s; still recording")
-        if t % every == 0 or t == secs:
-            page.screenshot(path=f"{run.out}/t{t:05d}.png")
-            ev("PROGRESS", f"{t}/{secs}s frames={now}")
+    last, flat_s, t0, t = frames(page), 0, time.monotonic(), 0
+    try:
+        for t in range(1, secs + 1):
+            # wait until second t of the take, so clicks and screenshots don't push the schedule later
+            page.wait_for_timeout(max(0, (t0 + t - time.monotonic()) * 1000))
+            if t in actions:
+                try:
+                    click(page, actions[t])
+                    ev("ACTION", f"{t}s {actions[t]}")
+                except (PlaywrightError, RuntimeError) as e:
+                    ev("ACTION_FAIL", f"{t}s {actions[t]}: {e.__class__.__name__}")
+            # some views pause video: warn first, end the take only after a long stall
+            now = frames(page, last)  # a failed read (app reloading) counts as no new frames
+            flat_s = flat_s + 1 if now == last else 0
+            last = now
+            if flat_s >= STALL_ABORT_S:
+                ev("FROZEN", f"at {t}s, no new WebRTC frames for {flat_s}s; take ended")
+                return 4
+            if flat_s == STALL_WARN_S:  # once per stall
+                ev("STALL", f"at {t}s, no new WebRTC frames for {flat_s}s; still recording")
+            if t % every == 0 or t == secs:
+                page.screenshot(path=f"{run.out}/t{t:05d}.png")
+                ev("PROGRESS", f"{t}/{secs}s frames={now}")
+    except KeyboardInterrupt:
+        ev("TAKE_STOPPED", f"at {t}s on request; converting what was recorded")
     return 0
 
 
@@ -358,6 +363,7 @@ def main(argv: list[str]) -> int:
         os.execv(sys.executable, [sys.executable, "-m", "playwright", "install", "ffmpeg"])
     run = parse_args(argv)
     os.makedirs(run.out, exist_ok=True)
+    signal.signal(signal.SIGTERM, signal.default_int_handler)  # a plain kill stops a take like Ctrl-C
     code = 1
     try:
         # one throwaway profile dir per run, removed after the browser has exited
