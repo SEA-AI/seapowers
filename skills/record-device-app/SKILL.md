@@ -93,7 +93,7 @@ docstring; `DONE <webm>` is deleted once `MP4` checks out.
 | `GATE unknown` (3), `FROZEN` (4), `NO_CONNECTION` (5) | the Viewer asks the Device for `status` (a dead worker or ended clip looks like an app problem); act on its answer: `ENDED` clip ran out (restart, shorter take) · `CRASH` show the log tail · `RUNNING` app issue, show the screenshot and ask the user · `STOPPED` worker not running, `start` and retry · `NOT_READY` worker still launching, `wait-ready` · `UNREACHABLE` ssh failed, retry |
 | `ERROR` (1) | show the message (often Chrome or the video recorder missing, see Prereqs) and ask the user |
 | `CLICK_FAIL`, `ACTION_FAIL` | show the nearest earlier screenshot (`explore_NN.png` / `tNNNNN.png`); re-find the target with `explore` |
-| `BAD_ARGS` (2) | fix the call and rerun |
+| `BAD_ARGS` (2) | fix the call (or install ffmpeg/ffprobe if that is the message) and rerun |
 | `MP4` | check one late frame, hand over the file |
 | `MP4_FAIL` | convert the webm by hand with the arguments in `rec.py`'s `to_mp4` |
 

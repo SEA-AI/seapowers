@@ -397,7 +397,7 @@ try:
                 ev("DONE", video)
                 if code in (0, 4):  # a frozen take is still worth keeping
                     to_mp4(video, time.monotonic() - video_t0)
-except (PlaywrightError, OSError) as e:  # e.g. Chrome, the recorder or ffmpeg missing: report it as an event
+except (PlaywrightError, OSError) as e:  # e.g. Chrome or the recorder missing: report it as an event
     ev("ERROR", f"{e.__class__.__name__}: {str(e)[:300]}")
     code = 1
 sys.exit(code)
