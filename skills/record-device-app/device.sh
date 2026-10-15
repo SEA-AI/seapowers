@@ -18,6 +18,7 @@ STOP_MARK='== stopped by device.sh =='  # last log line after `stop`, so status 
 READY_TIMEOUT_S=${READY_TIMEOUT_S:-270}  # wait for the worker to start and every camera's WebRTC stream to flow
 KILL_GRACE_S=${KILL_GRACE_S:-3}          # after asking the old worker to stop, before force-killing it
 SSH_TIMEOUT_S=${SSH_TIMEOUT_S:-5}        # ssh connect timeout; raise over VPN or mobile links
+SAMPLE_S=2                               # gap between two byte counts when checking that video flows
 for v in READY_TIMEOUT_S KILL_GRACE_S SSH_TIMEOUT_S; do
   [[ ${!v} =~ ^[1-9][0-9]*$ ]] || { echo "BAD_ARGS $v must be a whole number >= 1"; exit 2; }
 done
@@ -41,9 +42,10 @@ try: [print(p[\"name\"], p.get(\"inboundBytes\", p.get(\"bytesReceived\", 0))) f
 except Exception: print(\"NOAPI\")" 2>/dev/null || echo NOAPI; }'
 tail_log() { r "tail -15 $LOG 2>/dev/null" | tr '\n' ' '; }  # one line, so the event stays one line
 
+case "${1:-}" in preflight|start) [ -n "$DATA_DIR" ] || { echo "BAD_ARGS DATA_DIR is required"; exit 2; };; esac
+
 case "${1:-}" in
 preflight)
-  [ -n "$DATA_DIR" ] || { echo "PREFLIGHT_FAIL DATA_DIR is required"; exit 1; }
   r true 2>/dev/null || { echo "PREFLIGHT_FAIL ssh to $HOST"; exit 1; }
   r "test -d $(printf %q "$DATA_DIR")" || { echo "PREFLIGHT_FAIL data dir missing: $DATA_DIR"; exit 1; }
   if [ -z "$PRODUCT" ]; then
@@ -57,7 +59,7 @@ preflight)
   [ -z "$missing" ] || { echo "PREFLIGHT_FAIL missing on device: $missing"; exit 1; }
   [ "$(r "$H; webrtc_bytes")" != NOAPI ] || echo "WARN MediaMTX API not reachable at $MTX yet (fine if the worker starts it)"
   # something else (a service, another user) already streaming would make READY meaningless
-  r "$H; tmux has-session -t \$S 2>/dev/null && exit 1; a=\$(webrtc_bytes); sleep 2; [ \"\$a\" != \"\$(webrtc_bytes)\" ]" \
+  r "$H; tmux has-session -t \$S 2>/dev/null && exit 1; a=\$(webrtc_bytes); sleep $SAMPLE_S; [ \"\$a\" != \"\$(webrtc_bytes)\" ]" \
     && echo "WARN video is already streaming without this skill's worker; stop it first or READY may be misleading"
   echo "RUN_CMD $run${PRODUCT:+ (PRODUCT=$PRODUCT)}"
   # Each video file is one camera (recordings are never split per camera); the worker stops when the first
@@ -69,11 +71,10 @@ preflight)
   echo "PREFLIGHT_OK"
   ;;
 start)
-  [ -n "$DATA_DIR" ] || { echo "CRASH DATA_DIR is required"; exit 1; }
   # The run command goes into a remote script: no nested quoting, paths with spaces survive.
   # bash -ic because PYTHONPATH and friends often live only in ~/.bashrc.
   env="export DATA_DIR=$(printf %q "$DATA_DIR")${PRODUCT:+; export PRODUCT=$(printf %q "$PRODUCT")}"
-  r "$H; kill_all; cat > $RUNNER" <<<"$env; $CHOOSE; exec \"\$@\"" || { echo "CRASH could not reach device"; exit 1; }
+  r "$H; kill_all; cat > $RUNNER" <<<"$env; $CHOOSE; exec \"\$@\"" || { echo "UNREACHABLE ssh to $HOST failed"; exit 1; }
   r "tmux new -d -s $SESSION \"bash -ic 'bash $RUNNER 2>&1 | tee $LOG'\"" || { echo "CRASH tmux could not start the worker"; exit 1; }
   echo "STARTED $(date +%T%z)"
   exec bash "$0" wait-ready  # the old worker is already dead here, so flowing bytes mean the new one
@@ -85,34 +86,41 @@ wait-ready)
   end=$(( $(date +%s) + READY_TIMEOUT_S )); seen=
   while [ "$(date +%s)" -lt "$end" ]; do
     out=$(r "$H; if worker; then echo WORKER; elif ! tmux has-session -t \$S 2>/dev/null; then echo DEAD; fi
-      webrtc_bytes; echo ---; sleep 2; webrtc_bytes") || { echo "CRASH could not reach device"; exit 1; }
+      webrtc_bytes; echo ---; sleep $SAMPLE_S; webrtc_bytes") || { out=UNREACHABLE; sleep 1; continue; }  # a hiccup isn't a crash
     case "$out" in
       *WORKER*) seen=1;;
       *DEAD*) echo "CRASH $(tail_log)"; exit 1;;
       *) [ -n "$seen" ] && { echo "CRASH worker exited, launcher still running: $(tail_log)"; exit 1; };;
     esac  # NOAPI: MediaMTX not up yet, keep waiting
-    # ready when every path listed before the pause has more bytes after it
-    if awk '/^---$/ { after = 1; next } !/_webrtc/ { next } !after { a[$1] = $2; n++ } after { if ($2 > a[$1]) up++ } END { exit !(n && up == n) }' <<<"$out"; then
-      echo "READY $(date +%T%z) all $(grep -c _webrtc <<<"$out" | awk '{print $1/2}') camera streams flowing"; exit 0
+    # ready when the same paths are listed before and after the pause, each with more bytes after it
+    if n=$(awk '/^---$/ { after = 1; next } !/_webrtc/ { next } !after { a[$1] = $2; n++ } after { m++; if ($2 > a[$1]) up++ }
+        END { if (n && up == n && m == n) print n; else exit 1 }' <<<"$out"); then
+      echo "READY $(date +%T%z) all $n camera streams flowing"; exit 0
     fi
     sleep 1
   done
-  case "$out" in *WORKER*NOAPI*) why="MediaMTX API unreachable";; *WORKER*) why="not every camera streams";;
+  case "$out" in UNREACHABLE) why="device unreachable over ssh";; *WORKER*NOAPI*) why="MediaMTX API unreachable";;
+    *WORKER*) why="not every camera streams";;
     *) why="no worker process yet, launcher still running (building?)";; esac
   echo "NOT_READY $why after ${READY_TIMEOUT_S}s. Run wait-ready again, or check: $(tail_log)"; exit 1
   ;;
 status)
   # The tmux session closes when the worker exits, so without a session the log decides:
   # stopped by us (or never started) = STOPPED, "End-of-stream" (current log text) = ENDED, anything else = CRASH.
+  # A session without a worker is still launching (or a worker died and the launcher hangs): NOT_READY.
   state=$(r "$H; if tmux has-session -t \$S 2>/dev/null; then
-      if grep -q 'End-of-stream' $LOG 2>/dev/null; then echo ENDED; elif worker; then echo RUNNING; else echo CRASH; fi
+      if grep -q 'End-of-stream' $LOG 2>/dev/null; then echo ENDED; elif worker; then echo RUNNING; else echo LAUNCHING; fi
     elif [ ! -s $LOG ] || tail -1 $LOG | grep -qF '$STOP_MARK'; then echo STOPPED
     elif grep -q 'End-of-stream' $LOG; then echo ENDED; else echo CRASH; fi")
-  [ -n "$state" ] || { echo "CRASH could not reach device"; exit 1; }
-  [ "$state" = CRASH ] && echo "CRASH $(tail_log)" || echo "$state"
+  [ -n "$state" ] || { echo "UNREACHABLE ssh to $HOST failed"; exit 1; }
+  case $state in
+    CRASH) echo "CRASH $(tail_log)";;
+    LAUNCHING) echo "NOT_READY launcher running, no worker process yet: $(tail_log)";;
+    *) echo "$state";;
+  esac
   ;;
 stop)
-  r "$H; kill_all; echo '$STOP_MARK' >> $LOG" && echo STOPPED || { echo "CRASH could not reach device"; exit 1; }
+  r "$H; kill_all; echo '$STOP_MARK' >> $LOG" && echo STOPPED || { echo "UNREACHABLE ssh to $HOST failed"; exit 1; }
   ;;
 *) echo "usage: device.sh preflight|start|wait-ready|status|stop"; exit 2;;
 esac

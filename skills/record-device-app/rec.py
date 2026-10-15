@@ -31,11 +31,13 @@ from playwright.sync_api import sync_playwright
 USAGE = (__doc__ or "").split("Run with")[0].strip()
 VIEW = {"width": 1920, "height": 1080}  # default size, also the cap for visible windows
 VIDEO_FPS = 25  # Playwright's screen-recording frame rate
+GLIDE_MS = 600  # drawn cursor's glide to a click target, so viewers can follow it
+SAMPLE_S = 2  # gap between two framesDecoded reads when checking that video decodes
 LOCALE = "en-US"  # gate texts in clear_gates are matched in English; pin the UI language
 
 
 def knob(name, default):
-    """Timing setting: a judgement call, overridable per run with env REC_<NAME> (e.g. REC_DECODE_WAIT_S=60)."""
+    """Setting (`_S` seconds, `_MS` milliseconds, otherwise a count): a judgement call, overridable per run with env REC_<NAME> (e.g. REC_DECODE_WAIT_S=60)."""
     try:
         v = int(os.environ.get(f"REC_{name}", default))
     except ValueError:
@@ -131,17 +133,20 @@ for target in targets:
     if target.startswith("xy=") and not re.fullmatch(r"xy=\d+,\d+", target):
         bad_args(f"target {target!r}: xy targets look like xy=X,Y (integers)")
 actions = dict(actions)
-override = None
-if os.environ.get("VIEWPORT"):
+if os.environ.get("VIEWPORT"):  # explicit VIEWPORT=WxH wins over the default and the screen fit
     try:
         w, h = map(int, os.environ["VIEWPORT"].lower().split("x"))
     except ValueError:
         bad_args("VIEWPORT must look like 1920x1080")
-    override = {"width": w // 2 * 2, "height": h // 2 * 2}
+    VIEW = {"width": w // 2 * 2, "height": h // 2 * 2}
 
 
-def frames(page):
-    return page.evaluate(FRAMES)
+def frames(page, default=0):
+    """Total WebRTC frames decoded, or default while the app navigates (the read fails mid-reload)."""
+    try:
+        return page.evaluate(FRAMES)
+    except PlaywrightError:
+        return default
 
 
 def click(page, target):
@@ -153,8 +158,8 @@ def click(page, target):
         if not box:
             raise RuntimeError("target not visible")
         x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
-    page.evaluate("([x, y]) => window.__recMove && window.__recMove(x, y, 600)", [x, y])
-    page.wait_for_timeout(650)
+    page.evaluate("([x, y, ms]) => window.__recMove && window.__recMove(x, y, ms)", [x, y, GLIDE_MS])
+    page.wait_for_timeout(GLIDE_MS + 50)
     page.evaluate("([x, y]) => { window.__recScripted = true; window.__recClick && window.__recClick(x, y); }", [x, y])
     try:
         page.mouse.click(x, y)  # returns after the page handled the events, so the flag covers them
@@ -165,8 +170,8 @@ def click(page, target):
 def wait_decoding(page, timeout_s=DECODE_WAIT_S):
     """True once WebRTC framesDecoded is increasing."""
     last = frames(page)
-    for _ in range(timeout_s // 2):
-        page.wait_for_timeout(2000)
+    for _ in range(max(1, timeout_s // SAMPLE_S)):
+        page.wait_for_timeout(SAMPLE_S * 1000)
         now = frames(page)
         if now > last > 0:
             return True
@@ -356,10 +361,7 @@ def record(p, view):
                 except (PlaywrightError, RuntimeError) as e:
                     ev("ACTION_FAIL", f"{t}s {actions[t]}: {e.__class__.__name__}")
             # some views pause video: warn first, end the take only after a long stall
-            try:
-                now = frames(page)
-            except PlaywrightError:  # the app reloaded itself mid-read: count it as no new frames
-                now = last
+            now = frames(page, last)  # a failed read (app reloading) counts as no new frames
             flat_s = flat_s + 1 if now == last else 0
             last = now
             if flat_s >= STALL_ABORT_S:
@@ -394,8 +396,7 @@ ARGS = ["--autoplay-policy=no-user-gesture-required", "--window-position=0,0"]
 code = 1
 try:
     with sync_playwright() as p:
-        if override:  # explicit VIEWPORT=WxH wins
-            VIEW = override
+        if os.environ.get("VIEWPORT"):
             ev("VIEWPORT", f"{VIEW['width']}x{VIEW['height']} (from VIEWPORT)")
         elif headed:
             # fit the screen; xy targets then differ from headless
@@ -412,7 +413,7 @@ try:
                 if mode == "explore" and not code:
                     for c in page.evaluate(CONTROLS):
                         ev("CONTROL", c)
-                    for i, target in enumerate(sys.argv[4:], 1):
+                    for i, target in enumerate(targets, 1):
                         try:
                             click(page, target)
                         except (PlaywrightError, RuntimeError) as e:

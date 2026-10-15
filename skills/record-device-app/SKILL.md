@@ -37,14 +37,11 @@ call with `HEADED=1`.
   1920x1080; needs a local display. `VIEWPORT=WxH` overrides either.
 - Click targets depend on the size (`VIEWPORT` event): explore and record with the same settings.
 
-Run command: `make run` if `~/Makefile` exists, otherwise `python3 worker.py` in the worker folder.
-Preflight reports the choice as `RUN_CMD`.
-
 **Device conventions** the scripts rely on (defined in `device.sh`; this list mirrors them. They may change,
 so if a step fails, check these first):
 - device: Linux with `bash`, `tmux`, `curl`, `python3`, `pgrep` (`ffprobe` optional); env from `~/.bashrc`
 - the worker reads the recording and product from the env vars `DATA_DIR` / `PRODUCT`
-- worker: `~/Makefile`, or `worker.py` in `~/Worker` (usual) or `~/Core-Backend/Worker`; either way a process with `worker.py`
+- worker: `make run` if `~/Makefile` exists (preflight reports the choice as `RUN_CMD`), else `python3 worker.py` in `~/Worker` (usual) or `~/Core-Backend/Worker`; either way a process with `worker.py`
   in its command line must start; product inferred from `~/POWER_Const/hardwareVersion*`/`module_info*`
 - registration bypass: `~/POWER_Const/system_successfully_registered`
 - streaming: MediaMTX API on the device at `localhost:9997` (its own service, or started by the worker), one WebRTC path per camera named `*_webrtc`; the web app plays them
@@ -61,11 +58,12 @@ Prereqs on the local machine: ssh key access to the device, `uv`, Google Chrome 
 Chromium; see `rec.py`), `ffmpeg` with libx264 and `ffprobe`. Once, the lead runs `uv run rec.py install` (Playwright's
 video recorder; if it's missing, `rec.py` reports an `ERROR`). Videos are recorded at Playwright's fixed 25 fps.
 
-Timing settings (whole seconds unless named `_MS`) default to a LAN. Override per run with env vars:
+Settings (`_S` seconds, `_MS` milliseconds, otherwise counts) default to a LAN. Override per run with env vars:
 - `device.sh`: `READY_TIMEOUT_S`, `KILL_GRACE_S`, `SSH_TIMEOUT_S`. Keep `READY_TIMEOUT_S` under ~550 s,
   the Device's 600 s command limit.
 - `rec.py`: `REC_<NAME>` for every `knob()` in it. `gates`/`explore` share the Viewer's 600 s limit: keep
-  `PAGE_LOADS × (GOTO_TIMEOUT + GATE_WAIT + REG_WAIT) + DECODE_WAIT` under ~550 s (defaults: ~360 s).
+  `PAGE_LOADS × (GOTO_TIMEOUT + GATE_WAIT + REG_WAIT) + DECODE_WAIT` (+ `CLICK_TIMEOUT + SETTLE + 1` per explore
+  target) under ~550 s (defaults: ~360 s).
 
 ## Roles
 
@@ -82,7 +80,7 @@ Spawn each once per run. Each prompt: the step, the params, the script path, and
 address. Post one short line to the user per event.
 
 Device events: `PREFLIGHT_OK`, `PREFLIGHT_FAIL <why>`, `WARN <why>`, `RUN_CMD <cmd>`, `CLIP_SECONDS <n (cameras)|unknown>`,
-`STARTED`, `READY`, `NOT_READY`, `RUNNING`, `ENDED`, `CRASH <log tail>`, `STOPPED`.
+`STARTED`, `READY`, `NOT_READY`, `RUNNING`, `ENDED`, `CRASH <log tail>`, `STOPPED`, `UNREACHABLE`, `BAD_ARGS`.
 
 Viewer events: `VIEWPORT`, `GATE registration|connection_failed|terms|unknown`, `STREAMING <png>`,
 `CONTROL`, `CLICKED`, `CLICK_FAIL` (explore), `ACTION`, `ACTION_FAIL`, `PROGRESS`, `STALL`, `FROZEN`, `NO_CONNECTION`,
@@ -95,11 +93,12 @@ Viewer events: `VIEWPORT`, `GATE registration|connection_failed|terms|unknown`, 
 | `WARN` | tell the user (a missing registration bypass means a registration gate is likely; something already streaming means READY may mislead; MediaMTX unreachable is fine if the worker starts it) |
 | `READY` | next step |
 | `NOT_READY` | slow, not crashed: tell the user, run `wait-ready` again (or raise `READY_TIMEOUT_S`) |
+| `UNREACHABLE` | ssh failed (network, device off); not a crash. Tell the user, retry (raise `SSH_TIMEOUT_S` on slow links) |
 | `GATE registration` "transient?", `GATE connection_failed` | nothing, `rec.py` reloads |
 | persistent `GATE registration` (3) | show the screenshot, ask the user |
 | `GATE unknown` (3) | ask the Device for `status` first (a dead worker or ended clip looks the same); if `RUNNING`, show the screenshot and ask the user |
 | `STALL` | no new frames for a while; the take continued (a view without video, or trouble). Mention it with the result |
-| `FROZEN` (4), `NO_CONNECTION` (5) | the Viewer asks the Device for `status`; act on its answer: `ENDED` clip ran out (restart, shorter take) · `CRASH` show the log tail · `RUNNING` app issue, show the screenshot · `STOPPED` worker not running, `start` and retry |
+| `FROZEN` (4), `NO_CONNECTION` (5) | the Viewer asks the Device for `status`; act on its answer: `ENDED` clip ran out (restart, shorter take) · `CRASH` show the log tail · `RUNNING` app issue, show the screenshot · `STOPPED` worker not running, `start` and retry · `NOT_READY` launcher without a worker, show the log tail |
 | `ERROR` (1) | show the message (often Chrome or the video recorder missing, see Prereqs) and ask the user |
 | `CLICK_FAIL`, `ACTION_FAIL` | show the nearest earlier screenshot (`explore_NN.png` / `tNNN.png`); re-find the target with `explore` |
 | `BAD_ARGS` (2) | fix the call and rerun |
@@ -110,8 +109,7 @@ Viewer events: `VIEWPORT`, `GATE registration|connection_failed|terms|unknown`, 
 
 The lead speaks in intent ("show RGB, then thermal, then map"). The Viewer turns it into clicks.
 
-- `references/app-ui.md` explains the app in general terms. The Viewer reads it, finds the actual targets
-  with `explore`, and confirms each by screenshot.
+- `references/app-ui.md` explains the app in general terms; the Viewer resolves targets from it.
 - For a take, the Viewer proposes a schedule (`SECONDS=TARGET` args, seconds after `STREAMING`) before recording.
 
 ## Hands-on takes
