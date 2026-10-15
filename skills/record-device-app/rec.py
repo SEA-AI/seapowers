@@ -50,7 +50,7 @@ def knob(name: str, default: int) -> int:
 
 PAGE_LOADS = knob("PAGE_LOADS", 6)  # page loads before giving up (NO_CONNECTION)
 REG_RELOADS = knob("REG_RELOADS", 3)  # registration counts as persistent after this many sightings
-GOTO_TIMEOUT_MS = knob("GOTO_TIMEOUT_MS", 30000)  # one page load
+GOTO_TIMEOUT_MS = knob("GOTO_TIMEOUT_MS", 30000)
 GATE_WAIT_S = knob("GATE_WAIT_S", 15)  # wait for a gate screen or playing video after a load
 DECODE_WAIT_S = knob("DECODE_WAIT_S", 30)  # wait for WebRTC frames after the gates
 CLICK_TIMEOUT_MS = knob("CLICK_TIMEOUT_MS", 5000)
@@ -59,7 +59,7 @@ REG_WAIT_S = knob("REG_WAIT_S", 10)  # pause before reloading while the registra
 SETTLE_S = knob("SETTLE_S", 3)  # after an explore click, before the screenshot
 STALL_WARN_S = knob("STALL_WARN_S", 30)  # no new frames this long: STALL (warning, keeps recording)
 STALL_ABORT_S = knob("STALL_ABORT_S", 120)  # no new frames this long: FROZEN (take ends)
-# Collect every RTCPeerConnection the app creates, so we can read real decode stats.
+# Track every RTCPeerConnection the app creates, for its decode stats.
 HOOK = """(() => { const O = window.RTCPeerConnection; window.__pcs = [];
   window.RTCPeerConnection = function (...a) { const pc = new O(...a); window.__pcs.push(pc); return pc; };
   window.RTCPeerConnection.prototype = O.prototype; })()"""
@@ -194,7 +194,7 @@ def wait_decoding(page: Page, timeout_s: int = DECODE_WAIT_S) -> bool:
 
 
 def clear_gates(page: Page, run: Run) -> int:
-    """Clear the page gates. The texts below are the current UI strings (SKILL.md mirrors them).
+    """Clear the page gates (matched by their current UI texts).
     Returns an exit code: 0 streaming, 3 gate needs a human, 5 no connection."""
     agree = page.get_by_role("button", name="Agree & Continue").first
     failed = page.get_by_text(re.compile("Connection failed|connection was lost", re.IGNORECASE)).first
@@ -243,8 +243,7 @@ def clear_gates(page: Page, run: Run) -> int:
 
 def to_mp4(webm: Path, out: str, length_s: float) -> None:
     """Transcode the raw webm (loading screen included) to OUT/take.mp4, reporting CONVERTING progress.
-    No deadline: speed depends on the machine; the progress events show it is moving. The webm is
-    deleted once the mp4 checks out."""
+    The webm is deleted once the mp4 checks out."""
     mp4 = f"{out}/take.mp4"
     args = [
         "ffmpeg",
@@ -261,8 +260,8 @@ def to_mp4(webm: Path, out: str, length_s: float) -> None:
         "fast",
         "-pix_fmt",
         "yuv420p",
-        # keyframe every second (Playwright records at 25 fps) so players can seek precisely;
-        # faststart puts the index first, the usual setting for shareable mp4s
+        # keyframe every second (Playwright records at 25 fps) for precise seeking;
+        # faststart puts the index first, so playback starts before the download ends
         "-g",
         "25",
         "-movflags",

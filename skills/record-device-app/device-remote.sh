@@ -1,7 +1,7 @@
 # Device-side commands for record-device-app. device.py sends this file over ssh: bash -s -- CMD [ARGS].
 # Everything runs inside main(), so a child that reads stdin (ffprobe) can't eat the rest of the script.
 
-# Device conventions (SKILL.md mirrors them for readers)
+# Device conventions (keep the list in SKILL.md in sync)
 CANDIDATES="Worker Core-Backend/Worker"  # worker folders tried in order, relative to the device home
 MTX=localhost:9997/v3                    # MediaMTX API on the device
 S=rda                                    # tmux session; one run per device at a time
@@ -12,7 +12,7 @@ STOP_MARK='== stopped by record-device-app =='  # last log line after stop, so s
 SAMPLE_S=2                               # gap between two byte counts when checking that video flows
 
 # The worker is found among the tmux pane's descendants by its worker.py argument,
-# so it works whatever launcher make uses and never matches this ssh command itself.
+# so it works whatever launcher make uses.
 tree() { for c in $(pgrep -P "$1"); do echo "$c"; tree "$c"; done; }
 pane() { tmux list-panes -t "$S" -F "#{pane_pid}" 2>/dev/null; }
 worker() {
@@ -54,8 +54,8 @@ preflight() {  # $1 DATA_DIR, $2 PRODUCT ("" = the device infers it), $3 WORKER_
   for c in $tools; do command -v $c >/dev/null || missing+="$c "; done
   [ -z "$missing" ] || { echo "PREFLIGHT_FAIL missing on device: $missing"; return 1; }
   echo "RUN_CMD $PWD: ${RUN[*]}${2:+ (PRODUCT=$2)}"
-  # Each video file is one camera (recordings are never split per camera); the worker stops when the first
-  # stream ends, so the clip is as long as the shortest file.
+  # Each video file is one camera; the worker stops when the first stream ends, so the clip lasts as long as
+  # the shortest file.
   command -v ffprobe >/dev/null && clip=$(find "$1" -type f \( -name '*.mp4' -o -name '*.avi' -o -name '*.mkv' \) \
     -exec ffprobe -v error -show_entries format=duration -of csv=p=0 {} \; 2>/dev/null \
     | awk '/^[0-9.]+$/ { n++; if (m == "" || $1 < m) m = $1 } END { if (n) printf "%.0f (%d cameras)", m, n }')

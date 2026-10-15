@@ -42,7 +42,7 @@ def bad_args(why: str) -> NoReturn:
 
 
 def setting(name: str, default: int) -> int:
-    """Timing setting in whole seconds: a judgement call for a LAN, overridable per run via env."""
+    """Whole seconds, overridable per run via env."""
     v = os.environ.get(name, str(default))
     if not (v.isascii() and v.isdigit()) or int(v) < 1:
         bad_args(f"{name} must be a whole number >= 1, like {default}")
@@ -80,7 +80,7 @@ async def connect() -> asyncssh.SSHClientConnection:
 
 
 async def sh(conn: asyncssh.SSHClientConnection, *args: str) -> tuple[int, str]:
-    """Run one device-remote.sh command: the script goes over stdin, the args as $1..., so nothing is re-quoted."""
+    """Run one device-remote.sh command: the script goes over stdin, the args as $1..."""
     r = await conn.run("bash -s -- " + shlex.join(args), input=REMOTE, check=False, errors="replace")
     return 255 if r.exit_status is None else r.exit_status, str(r.stdout)  # exit None: killed by a signal
 
