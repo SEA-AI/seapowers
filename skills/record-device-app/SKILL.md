@@ -23,7 +23,7 @@ with `SendMessage`. Every step ends with a report, so problems show up where the
 | `DATA_DIR` | absolute path to the recording folder on the device (no `~`) |
 | `PRODUCT` | **usually omit.** Only needed when `~/POWER_Const` has no `hardwareVersion`/`module_info`; preflight says so |
 | `WORKER_DIR` | only if preflight can't find the worker; relative to the device home (write it without `~`), or absolute; ignored when `~/Makefile` exists |
-| `SECS` | take length; must fit in the clip (Flow step 1) and in the Viewer's timeout (its agent file) |
+| `SECS` | take length; must fit in the clip (Flow step 1) |
 | `OUT` | a new dir in the scratchpad |
 | `HEADED` | visible browser or headless (see below) |
 | `VIEWPORT` | optional `WxH` override of the browser size |
@@ -43,20 +43,27 @@ Preflight reports the choice as `RUN_CMD`.
 **Device conventions** the scripts rely on (defined in `device.sh`; this list mirrors them. They may change,
 so if a step fails, check these first):
 - device: Linux with `bash`, `tmux`, `curl`, `python3`, `pgrep` (`ffprobe` optional); env from `~/.bashrc`
+- the worker reads the recording and product from the env vars `DATA_DIR` / `PRODUCT`
 - worker: `~/Makefile`, or `worker.py` in `~/Worker` (usual) or `~/Core-Backend/Worker`; either way a process with `worker.py`
   in its command line must start; product inferred from `~/POWER_Const/hardwareVersion*`/`module_info*`
 - registration bypass: `~/POWER_Const/system_successfully_registered`
-- streaming: MediaMTX API on the device, WebRTC paths named `*_webrtc`
+- streaming: MediaMTX API on the device, one WebRTC path per camera named `*_webrtc`; the web app plays them
+  over WebRTC in the page (that is how `rec.py` sees frames decoding)
+- recording: one video file per camera (`.mp4`, `.avi`, `.mkv`); the clip lasts as long as the shortest file
 - end of clip: the worker logs `End-of-stream`
 - one run per device at a time
 
 Scripts live next to this file. Call them with absolute paths:
-- `device.sh` (bash, on the local machine; talks to the device over ssh; on Windows use Git Bash)
+- `device.sh` (bash, on the local machine; talks to the device over ssh; on Windows Git Bash should work, untested)
 - `rec.py`, run as `uv run rec.py ...` (dependencies are declared inline)
 
 Prereqs on the local machine: ssh key access to the device, `uv`, Google Chrome (not Playwright's bundled
 Chromium; see `rec.py`), `ffmpeg` with libx264 and `ffprobe`. Once, the lead runs `uv run rec.py install` (Playwright's
-video recorder; if it's missing, `rec.py` reports an `ERROR`).
+video recorder; if it's missing, `rec.py` reports an `ERROR`). Videos are recorded at Playwright's fixed 25 fps.
+
+Timing settings default to a LAN and a device that starts within a minute. Override per run with env vars:
+`device.sh` takes `SPAWN_TIMEOUT_S` / `READY_TIMEOUT_S`; `rec.py` takes `REC_<NAME>` for the settings in its
+`knob()` calls (page loads, gate and decode waits, stall thresholds).
 
 ## Roles
 
@@ -72,22 +79,24 @@ If they're missing, spawn `general-purpose` agents and start the prompt with the
 Spawn each once per run. Each prompt: the step, the params, the script path, and for the Viewer the Device's
 address. Post one short line to the user per event.
 
-Device events: `PREFLIGHT_OK`, `PREFLIGHT_FAIL <why>`, `WARN <why>`, `RUN_CMD <cmd>`, `CLIP_SECONDS <n|unknown>`,
-`STARTED`, `READY`, `RUNNING`, `ENDED`, `CRASH <log tail>`, `STOPPED`.
+Device events: `PREFLIGHT_OK`, `PREFLIGHT_FAIL <why>`, `WARN <why>`, `RUN_CMD <cmd>`, `CLIP_SECONDS <n (cameras)|unknown>`,
+`STARTED`, `READY`, `NOT_READY`, `RUNNING`, `ENDED`, `CRASH <log tail>`, `STOPPED`.
 
 Viewer events: `VIEWPORT`, `GATE registration|connection_failed|terms|unknown`, `STREAMING <png>`,
-`CONTROL`, `CLICKED`, `CLICK_FAIL` (explore), `ACTION`, `ACTION_FAIL`, `PROGRESS`, `FROZEN`, `NO_CONNECTION`,
-`ERROR`, `DONE <webm>` (deleted once `MP4` checks out), `MP4 <path> <secs>` (without ffprobe: no secs, webm kept), `MP4_SKIPPED`, `MP4_FAIL`, `BAD_ARGS`.
+`CONTROL`, `CLICKED`, `CLICK_FAIL` (explore), `ACTION`, `ACTION_FAIL`, `PROGRESS`, `STALL`, `FROZEN`, `NO_CONNECTION`,
+`ERROR`, `DONE <webm>` (deleted once `MP4` checks out), `CONVERTING <n%>`, `MP4 <path> <secs>` (without ffprobe: no secs, webm kept), `MP4_SKIPPED`, `MP4_FAIL`, `BAD_ARGS`.
 `rec.py` exit codes are in its docstring.
 
 | Event (exit code) | Lead does |
 |---|---|
 | `PREFLIGHT_FAIL`, `CRASH` | stop and show the user why |
-| `WARN` | tell the user (a missing registration bypass means a registration gate is likely) |
+| `WARN` | tell the user (a missing registration bypass means a registration gate is likely; something already streaming means READY may mislead) |
 | `READY` | next step |
+| `NOT_READY` | slow, not crashed: tell the user, run `wait-ready` again (or raise `READY_TIMEOUT_S`) |
 | `GATE registration` "transient?", `GATE connection_failed` | nothing, `rec.py` reloads |
 | persistent `GATE registration` (3) | show the screenshot, ask the user |
 | `GATE unknown` (3) | Device `status` first (a dead worker or ended clip looks the same); if `RUNNING`, show the screenshot and ask the user |
+| `STALL` | no new frames for a while; the take continues. Ask the Device for `status`: `ENDED`/`CRASH` mean it won't recover |
 | `FROZEN` (4), `NO_CONNECTION` (5) | the Viewer asks the Device for `status`; act on its answer: `ENDED` clip ran out (restart, shorter take) · `CRASH` show the log tail · `RUNNING` app issue, show the screenshot · `STOPPED` worker not running, `start` and retry |
 | `ERROR` (1) | show the message (often Chrome or the video recorder missing, see Prereqs) and ask the user |
 | `CLICK_FAIL`, `ACTION_FAIL` | show the nearest earlier screenshot (`explore_NN.png` / `tNNN.png`); re-find the target with `explore` |
@@ -135,9 +144,10 @@ New view, control, gate or product the references don't cover, or a reference th
    uses up clip time.
 4. **Device: start again**, requested by the lead right before step 5, never through the Viewer. Step 3 used
    up part of the clip, and a take on a stale clip ends in `FROZEN` and a lost-connection page.
-5. **Viewer: record SECS.** The lead gets one report when the take ends; handle its events per the event table.
-6. **Lead: finish.** `OUT/take.mp4` starts with the page loading, so it runs a bit longer than SECS. Copy it
-   where the user wants it.
+5. **Viewer: record SECS.** Runs in the background, so takes of any length work; its output file shows the events
+   live (`PROGRESS`, `STALL`, `CONVERTING`). The Viewer reports once the take is done; handle events per the event table.
+6. **Lead: finish.** `OUT/take.mp4` starts with the page loading, so it runs longer than SECS. Copy it where the
+   user wants it.
 7. **Device: stop** unless the user wants it left running.
 8. **Lead: lessons.** Summarise anything unexpected in one line. Suggest a skill change only for general
    lessons (a new gate type, a navigation concept), never a product-specific selector.

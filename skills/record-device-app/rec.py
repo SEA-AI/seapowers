@@ -9,11 +9,14 @@
   rec.py URL OUT record SECS [SECONDS=TARGET ...]  # clear gates, record SECS (>= 10), click TARGET at that second; writes OUT/take.mp4
   rec.py install                                   # once: Playwright's video recorder, matching this script's Playwright
 SECONDS count from STREAMING; the mp4 starts earlier, with the page loading.
+Timing settings (see knob() below) can be overridden per run with env vars REC_<NAME>.
 Run with: [HEADED=1] [VIEWPORT=WxH] uv run rec.py ...
   HEADED=1: visible browser window. Viewport: VIEWPORT if set, else 1920x1080 (headed: fit to screen, capped at 1920x1080).
 TARGET: a Playwright selector (text=..., [aria-label=...], css=... >> nth=N) or xy=X,Y (viewport pixels, see VIEWPORT event).
 Exit codes: 0 ok, 1 unexpected error, 2 bad arguments, 3 gate needs a human (see screenshot), 4 stream frozen, 5 app never connected.
 """
+
+import contextlib
 import os
 import re
 import shutil
@@ -22,20 +25,28 @@ import sys
 import tempfile
 import time
 
+from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
 
 USAGE = (__doc__ or "").split("Run with")[0].strip()
 VIEW = {"width": 1920, "height": 1080}  # default size, also the cap for visible windows
 VIDEO_FPS = 25  # Playwright's screen-recording frame rate
 LOCALE = "en-US"  # gate texts in clear_gates are matched in English; pin the UI language
-# Timing knobs: judgement calls, raise them for slow devices.
-PAGE_LOADS = 6        # page loads before giving up (NO_CONNECTION)
-REG_RELOADS = 3       # registration screen counts as persistent after this many sightings
-DECODE_WAIT_S = 30    # wait for WebRTC frames after the page loads
-CLICK_TIMEOUT_MS = 5000
-PROGRESS_EVERY_S = 10  # PROGRESS event and screenshot interval
-FROZEN_AFTER = 3       # flat PROGRESS intervals in a row before FROZEN
-CONVERT_TIMEOUT_S = 180  # shared deadline for the mp4 conversion and its duration check
+
+
+def knob(name, default):
+    """Timing setting: a judgement call, overridable per run with env REC_<NAME> (e.g. REC_DECODE_WAIT_S=60)."""
+    return type(default)(os.environ.get(f"REC_{name}", default))
+
+
+PAGE_LOADS = knob("PAGE_LOADS", 6)  # page loads before giving up (NO_CONNECTION)
+REG_RELOADS = knob("REG_RELOADS", 3)  # registration counts as persistent after this many sightings
+GOTO_TIMEOUT_MS = knob("GOTO_TIMEOUT_MS", 30000)  # one page load
+GATE_WAIT_S = knob("GATE_WAIT_S", 15)  # wait for a gate screen or playing video after a load
+DECODE_WAIT_S = knob("DECODE_WAIT_S", 30)  # wait for WebRTC frames after the gates
+CLICK_TIMEOUT_MS = knob("CLICK_TIMEOUT_MS", 5000)
+STALL_WARN_S = knob("STALL_WARN_S", 30)  # no new frames this long: STALL (warning, keeps recording)
+STALL_ABORT_S = knob("STALL_ABORT_S", 120)  # no new frames this long: FROZEN (take ends)
 # Collect every RTCPeerConnection the app creates, so we can read real decode stats.
 HOOK = """(() => { const O = window.RTCPeerConnection; window.__pcs = [];
   window.RTCPeerConnection = function (...a) { const pc = new O(...a); window.__pcs.push(pc); return pc; };
@@ -155,20 +166,22 @@ def clear_gates(page, tag):
     """Clear the page gates. The texts below are the current UI strings (SKILL.md mirrors them).
     Returns an exit code: 0 streaming, 3 gate needs a human, 5 no connection."""
     agree = page.get_by_role("button", name="Agree & Continue").first
-    failed = page.get_by_text(re.compile("Connection failed|connection was lost", re.I)).first
+    failed = page.get_by_text(re.compile("Connection failed|connection was lost", re.IGNORECASE)).first
     register = page.get_by_text("Register to SEA.AI").first
     reg_seen = 0
     for attempt in range(PAGE_LOADS):
         try:
-            page.goto(url)
-        except Exception as e:  # refused or unreachable: same as a failed load
+            page.goto(url, timeout=GOTO_TIMEOUT_MS)
+        except PlaywrightError as e:  # refused or unreachable: same as a failed load
             ev("GATE connection_failed", f"{e.__class__.__name__}, reload {attempt + 1}/{PAGE_LOADS}")
             page.wait_for_timeout(5000)
             continue
-        try:
-            agree.or_(failed).or_(register).first.wait_for(timeout=15000)
-        except Exception:
-            pass
+        # wait for a gate screen, or stop early once video plays (not every product shows a gate)
+        start_frames = frames(page)
+        for _ in range(GATE_WAIT_S):
+            if agree.or_(failed).or_(register).first.is_visible() or frames(page) > start_frames > 0:
+                break
+            page.wait_for_timeout(1000)
         if register.is_visible():
             # shows briefly while the worker starts; only a gate if it persists
             reg_seen += 1
@@ -197,37 +210,69 @@ def clear_gates(page, tag):
     return 5
 
 
-def to_mp4(webm):
-    """Transcode the raw webm (loading screen included) to OUT/take.mp4; the webm is deleted once the mp4 checks out."""
+def to_mp4(webm, length_s):
+    """Transcode the raw webm (loading screen included) to OUT/take.mp4, reporting CONVERTING progress.
+    No deadline: speed depends on the machine; the progress events show it is moving. The webm is
+    deleted once the mp4 checks out."""
     if not shutil.which("ffmpeg"):
         ev("MP4_SKIPPED", "ffmpeg not found; webm is in DONE")
         return
     mp4 = f"{out}/take.mp4"
-    deadline = time.monotonic() + CONVERT_TIMEOUT_S
-    left = lambda: max(1, deadline - time.monotonic())
-    try:
-        r = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", webm, "-c:v", "libx264",
-                            "-crf", "23", "-preset", "fast", "-pix_fmt", "yuv420p",
-                            # keyframe every second (VIDEO_FPS frames) so players can seek precisely;
-                            # faststart puts the index first, the usual setting for shareable mp4s
-                            "-g", str(VIDEO_FPS), "-movflags", "+faststart", mp4],
-                           capture_output=True, text=True, timeout=left())
-    except subprocess.TimeoutExpired:
-        ev("MP4_FAIL", f"conversion took over {CONVERT_TIMEOUT_S}s; webm kept")
-        return
-    if r.returncode:
-        ev("MP4_FAIL", r.stderr.strip()[-200:])
+    args = [
+        "ffmpeg",
+        "-v",
+        "error",
+        "-y",
+        "-i",
+        webm,
+        "-c:v",
+        "libx264",
+        "-crf",
+        "23",
+        "-preset",
+        "fast",
+        "-pix_fmt",
+        "yuv420p",
+        # keyframe every second (VIDEO_FPS frames) so players can seek precisely;
+        # faststart puts the index first, the usual setting for shareable mp4s
+        "-g",
+        str(VIDEO_FPS),
+        "-movflags",
+        "+faststart",
+        "-progress",
+        "pipe:1",
+        "-nostats",
+        mp4,
+    ]
+    with tempfile.TemporaryFile("w+") as err:
+        proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=err, text=True)
+        shown = 0
+        for line in proc.stdout:  # ffmpeg's progress lines: out_time_us=<microseconds encoded>
+            if line.startswith("out_time_us=") and line[12:].strip().isdigit() and length_s > 0:
+                pct = min(99, int(int(line[12:]) / 1e6 / length_s * 100))
+                if pct >= shown + 10:
+                    shown = pct - pct % 10
+                    ev("CONVERTING", f"{shown}%")
+        proc.wait()
+        err.seek(0)
+        error = err.read().strip()[-200:]
+    if proc.returncode:
+        if os.path.exists(mp4):
+            os.remove(mp4)  # half-written: never hand it over
+        ev("MP4_FAIL", error or f"ffmpeg exit {proc.returncode}")
         return
     if not shutil.which("ffprobe"):
         ev("MP4", f"{mp4} (duration unknown: no ffprobe; webm kept)")
         return
-    try:
-        dur = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", mp4],
-                             capture_output=True, text=True, timeout=left()).stdout.strip()
-    except subprocess.TimeoutExpired:
-        dur = ""  # treated as unreadable below, so the webm is kept
+    dur = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", mp4],
+        capture_output=True,
+        text=True,
+        check=False,
+    ).stdout.strip()
     if not re.fullmatch(r"[0-9.]+", dur) or float(dur) <= 0:  # exit 0 doesn't prove a playable file
-        ev("MP4_FAIL", f"{mp4} has no readable duration; webm kept")
+        os.remove(mp4)
+        ev("MP4_FAIL", "mp4 has no readable duration; webm kept")
         return
     os.remove(webm)
     ev("MP4", f"{mp4} {dur}s")
@@ -236,9 +281,14 @@ def to_mp4(webm):
 def open_browser(p, view, video):
     """Fresh throwaway profile per run. Visible: Chrome app mode (no tabs/address bar), pinned top-left."""
     profile = tempfile.mkdtemp(prefix="rec-profile-")
-    kw = dict(channel="chrome", headless=not headed, chromium_sandbox=True,  # sandbox off shows a warning bar
-              args=ARGS + ([f"--app={url}"] if headed else []),
-              viewport=view, locale=LOCALE)
+    kw = {
+        "channel": "chrome",
+        "headless": not headed,
+        "chromium_sandbox": True,  # sandbox off shows a warning bar
+        "args": ARGS + ([f"--app={url}"] if headed else []),
+        "viewport": view,
+        "locale": LOCALE,
+    }
     if video:
         kw.update(record_video_dir=out, record_video_size=view)
     ctx = p.chromium.launch_persistent_context(profile, **kw)
@@ -253,25 +303,37 @@ def screen_fit(p):
     """Largest viewport (capped at VIEW) that fits the usable screen in an app-mode window."""
     profile = tempfile.mkdtemp(prefix="rec-probe-")
     # about:blank ignores --app (opens a normal window), so probe with a tiny real page
-    ctx = p.chromium.launch_persistent_context(profile, channel="chrome", headless=False, chromium_sandbox=True,
-                                               args=ARGS + ["--app=data:text/html,<title>probe</title>"], no_viewport=True)
+    ctx = p.chromium.launch_persistent_context(
+        profile,
+        channel="chrome",
+        headless=False,
+        chromium_sandbox=True,
+        args=ARGS + ["--app=data:text/html,<title>probe</title>"],
+        no_viewport=True,
+    )
     pg = ctx.pages[0] if ctx.pages else ctx.new_page()
     sw, sh, bars = pg.evaluate("[screen.availWidth, screen.availHeight, outerHeight - innerHeight]")
     ctx.close()
     shutil.rmtree(profile, ignore_errors=True)
-    view = {"width": min(VIEW["width"], sw) // 2 * 2, "height": min(VIEW["height"], sh - bars) // 2 * 2}  # even sizes for the encoder
+    view = {
+        "width": min(VIEW["width"], sw) // 2 * 2,
+        "height": min(VIEW["height"], sh - bars) // 2 * 2,
+    }  # even sizes for the encoder
     ev("VIEWPORT", f"{view['width']}x{view['height']} (screen {sw}x{sh}, window bar {bars})")
     return view
 
 
 def record(p, view):
     ctx, page, profile = open_browser(p, view, video=True)
+    video_t0 = time.monotonic()  # the video starts with the page
+    every = max(10, secs // 30)  # PROGRESS + screenshot interval: about 30 per take, at least every 10 s
+    width = max(3, len(str(secs)))  # t010.png … t3600.png sort correctly
     code = 0
     try:
         code = clear_gates(page, "rec")
         if code:
             return code
-        last, flat, t0 = frames(page), 0, time.monotonic()
+        last, flat_s, t0 = frames(page), 0, time.monotonic()
         for t in range(1, secs + 1):
             # wait until second t of the take, so clicks and screenshots don't push the schedule later
             page.wait_for_timeout(max(0, (t0 + t - time.monotonic()) * 1000))
@@ -279,33 +341,33 @@ def record(p, view):
                 try:
                     click(page, actions[t])
                     ev("ACTION", f"{t}s {actions[t]}")
-                except Exception as e:
+                except (PlaywrightError, RuntimeError) as e:
                     ev("ACTION_FAIL", f"{t}s {actions[t]}: {e.__class__.__name__}")
-            if t % PROGRESS_EVERY_S:
+            if t % every and t != secs:
                 continue
-            page.screenshot(path=f"{out}/t{t:03d}.png")
+            page.screenshot(path=f"{out}/t{t:0{width}d}.png")
             now = frames(page)
-            ev("PROGRESS", f"{t}/{secs}s decoded~{(now - last) / PROGRESS_EVERY_S:.0f}/s (approx., all streams)")
-            # some views may pause video, so only give up after several flat intervals
-            flat = flat + 1 if now == last else 0
+            ev("PROGRESS", f"{t}/{secs}s decoded~{(now - last) / every:.0f}/s (approx., all streams)")
+            # some views pause video: warn first, end the take only after a long stall
+            flat_s = flat_s + every if now == last else 0
             last = now
-            if flat >= FROZEN_AFTER:
-                ev("FROZEN", f"at {t}s, no new WebRTC frames for {flat * PROGRESS_EVERY_S}s; ask Device for status")
+            if flat_s >= STALL_ABORT_S:
+                ev("FROZEN", f"at {t}s, no new WebRTC frames for {flat_s}s; take ended")
                 code = 4
                 break
-    except Exception as e:  # page crash etc.: still finalize the video
+            if flat_s >= STALL_WARN_S:
+                ev("STALL", f"at {t}s, no new WebRTC frames for {flat_s}s; still recording, ask Device for status")
+    except (PlaywrightError, OSError) as e:  # page or browser crash: still finalize the video and report it
         ev("ERROR", f"{e.__class__.__name__}: {str(e)[:200]}")
         code = code or 1
     finally:
         video = page.video.path()
-        try:
+        with contextlib.suppress(PlaywrightError):  # browser already gone: the webm may still be usable
             ctx.close()  # finalizes the webm
-        except Exception:  # browser already gone: the webm may still be usable
-            pass
         shutil.rmtree(profile, ignore_errors=True)
         ev("DONE", video)
         if not code or code == 4:  # a frozen take is still worth keeping
-            to_mp4(video)
+            to_mp4(video, time.monotonic() - video_t0)
     return code
 
 
@@ -338,7 +400,7 @@ try:
                     for i, target in enumerate(sys.argv[4:], 1):
                         try:
                             click(page, target)
-                        except Exception as e:
+                        except (PlaywrightError, RuntimeError) as e:
                             ev("CLICK_FAIL", f"{target}: {e.__class__.__name__}")
                             continue
                         page.wait_for_timeout(3000)
@@ -346,12 +408,10 @@ try:
                         page.screenshot(path=shot)
                         ev("CLICKED", f"{target} -> {shot} frames={frames(page)}")
             finally:
-                try:
+                with contextlib.suppress(PlaywrightError):  # browser already gone
                     ctx.close()
-                except Exception:  # browser already gone
-                    pass
                 shutil.rmtree(profile, ignore_errors=True)
-except Exception as e:  # e.g. Chrome or Playwright's recorder missing: report it as an event
+except (PlaywrightError, OSError) as e:  # e.g. Chrome or the recorder missing: report it as an event
     ev("ERROR", f"{e.__class__.__name__}: {str(e)[:300]}")
     code = 1
 sys.exit(code)

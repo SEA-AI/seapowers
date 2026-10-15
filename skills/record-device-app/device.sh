@@ -14,6 +14,9 @@ SESSION=rda                               # tmux session; one run per device at 
 LOG=/tmp/record_device_app.log
 RUNNER=/tmp/record_device_app_run.sh
 STOP_MARK='== stopped by device.sh =='  # last log line after `stop`, so status can tell a stop from a crash
+# Timing settings: defaults suit a LAN and a device that starts in under a minute; override per run via env.
+SPAWN_TIMEOUT_S=${SPAWN_TIMEOUT_S:-30}   # wait for the worker process to appear after `start`
+READY_TIMEOUT_S=${READY_TIMEOUT_S:-240}  # wait for every camera's WebRTC stream to receive bytes
 r() { ssh -o BatchMode=yes -o ConnectTimeout=5 "$HOST" "$@"; }
 
 # Remote snippet that picks the run command: `make run` if ~/Makefile exists, else worker.py in WORKER_DIR or
@@ -30,7 +33,7 @@ worker() { p=$(pane); [ -n "$p" ] || return 1; for c in $(tree "$p"); do grep -q
 kill_all() { p=$(pane); pids=$( [ -n "$p" ] && tree "$p"); tmux kill-session -t "$S" 2>/dev/null
   [ -n "$pids" ] && { kill $pids 2>/dev/null; sleep 3; kill -9 $pids 2>/dev/null; }; true; }
 webrtc_bytes() { curl -s -m3 "$MTX/paths/list" | python3 -c "import json,sys
-try: print(sum(p.get(\"inboundBytes\", p.get(\"bytesReceived\", 0)) for p in json.load(sys.stdin).get(\"items\", []) if p.get(\"name\", \"\").endswith(\"_webrtc\")))
+try: [print(p[\"name\"], p.get(\"inboundBytes\", p.get(\"bytesReceived\", 0))) for p in json.load(sys.stdin).get(\"items\", []) if p.get(\"name\", \"\").endswith(\"_webrtc\")]
 except Exception: print(\"NOAPI\")" 2>/dev/null || echo NOAPI; }'
 tail_log() { r "tail -15 $LOG 2>/dev/null" | tr '\n' ' '; }  # one line, so the event stays one line
 
@@ -49,11 +52,16 @@ preflight)
   missing=$(r 'for c in tmux curl python3 pgrep; do command -v $c >/dev/null || printf "%s " $c; done')
   [ -z "$missing" ] || { echo "PREFLIGHT_FAIL missing on device: $missing"; exit 1; }
   [ "$(r "$H; webrtc_bytes")" != NOAPI ] || { echo "PREFLIGHT_FAIL MediaMTX API not reachable at $MTX on the device"; exit 1; }
+  # something else (a service, another user) already streaming would make READY meaningless
+  r "$H; tmux has-session -t \$S 2>/dev/null && exit 1; a=\$(webrtc_bytes); sleep 2; [ \"\$a\" != \"\$(webrtc_bytes)\" ]" \
+    && echo "WARN video is already streaming without this skill's worker; stop it first or READY may be misleading"
   echo "RUN_CMD $run${PRODUCT:+ (PRODUCT=$PRODUCT)}"
-  # estimate = longest single video file (cameras play in parallel); wrong for segmented recordings or other formats
-  secs=$(r "command -v ffprobe >/dev/null && find $(printf %q "$DATA_DIR") -type f \( -name '*.mp4' -o -name '*.mkv' -o -name '*.h264' -o -name '*.ts' \) \
-    -exec ffprobe -v error -show_entries format=duration -of csv=p=0 {} \; 2>/dev/null | grep -E '^[0-9.]+$' | sort -n | tail -1")
-  echo "CLIP_SECONDS ${secs:-unknown}"
+  # Each video file is one camera (recordings are never split per camera); the worker stops when the first
+  # stream ends, so the clip is as long as the shortest file.
+  clip=$(r "command -v ffprobe >/dev/null && find $(printf %q "$DATA_DIR") -type f \\( -name '*.mp4' -o -name '*.avi' -o -name '*.mkv' \\) \\
+    -exec ffprobe -v error -show_entries format=duration -of csv=p=0 {} \\; 2>/dev/null \\
+    | awk '/^[0-9.]+\$/ { n++; if (m == \"\" || \$1 < m) m = \$1 } END { if (n) printf \"%.0f (%d cameras)\", m, n }'")
+  echo "CLIP_SECONDS ${clip:-unknown}"
   echo "PREFLIGHT_OK"
   ;;
 start)
@@ -65,20 +73,26 @@ start)
   r "tmux new -d -s $SESSION \"bash -ic 'bash $RUNNER 2>&1 | tee $LOG'\"" || { echo "CRASH tmux could not start the worker"; exit 1; }
   echo "STARTED $(date +%T%z)"
   # the launcher takes a few seconds to spawn the worker; wait-ready treats "no worker" as a crash
-  r "$H; for i in \$(seq 30); do worker && exit 0; sleep 1; done; exit 1" || { echo "CRASH worker never spawned: $(tail_log)"; exit 1; }
+  if ! r "$H; for i in \$(seq $SPAWN_TIMEOUT_S); do worker && exit 0; tmux has-session -t \$S 2>/dev/null || exit 2; sleep 1; done; exit 1"; then
+    [ $? = 2 ] && { echo "CRASH launcher exited before the worker started: $(tail_log)"; exit 1; }
+    echo "NOT_READY no worker process after ${SPAWN_TIMEOUT_S}s but the launcher is still running (building?); run wait-ready again"; exit 1
+  fi
   exec bash "$0" wait-ready  # the old worker is already dead here, so flowing bytes mean the new one
   ;;
 wait-ready)
-  # Ready = video bytes flowing into MediaMTX (open ports and its "ready" flag can be stale).
-  # Crash = the worker process is gone (the log has harmless tracebacks).
-  for _ in $(seq 60); do
-    out=$(r "$H; worker || echo DEAD; webrtc_bytes; sleep 2; webrtc_bytes")
+  # Ready = every camera's WebRTC path receiving bytes (open ports and MediaMTX's "ready" flag can be stale).
+  # Crash = the worker process is gone (the log has harmless tracebacks). Slow is not a crash: NOT_READY.
+  end=$(( $(date +%s) + READY_TIMEOUT_S ))
+  while [ "$(date +%s)" -lt "$end" ]; do
+    out=$(r "$H; worker || echo DEAD; webrtc_bytes; echo ---; sleep 2; webrtc_bytes")
     case "$out" in *DEAD*) echo "CRASH $(tail_log)"; exit 1;; *NOAPI*) echo "CRASH MediaMTX API unreachable"; exit 1;; esac
-    a=$(sed -n 1p <<<"$out"); b=$(sed -n 2p <<<"$out")
-    [ "${b:-0}" -gt "${a:-0}" ] && { echo "READY $(date +%T%z) webrtc bytes flowing"; exit 0; }
+    # ready when every path listed before the pause has more bytes after it
+    if awk '/^---$/ { after = 1; next } !after { a[$1] = $2; n++ } after { if ($2 > a[$1]) up++ } END { exit !(n && up == n) }' <<<"$out"; then
+      echo "READY $(date +%T%z) all $(grep -c _webrtc <<<"$out" | awk '{print $1/2}') camera streams flowing"; exit 0
+    fi
     sleep 1
   done
-  echo "CRASH no webrtc bytes after 60 checks: $(tail_log)"; exit 1
+  echo "NOT_READY not every camera streams after ${READY_TIMEOUT_S}s; worker still running. Run wait-ready again, or check: $(tail_log)"; exit 1
   ;;
 status)
   # The tmux session closes when the worker exits, so without a session the log decides:
