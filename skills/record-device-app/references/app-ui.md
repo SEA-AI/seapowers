@@ -31,7 +31,7 @@ read this as "what to look for", then confirm on a screenshot. Nothing here is a
 
 ## Navigating
 - View switches apply at once. Some views may stop decoding video; that's not necessarily a fault
-  (`rec.py` waits several intervals before reporting FROZEN).
+  (`rec.py` warns with `STALL`, and reports FROZEN only after `STALL_ABORT_S` without new frames).
 - Panels (split, instruments) tend to stay open across view switches; clicking the same icon again closes them.
 - Every `rec.py` run uses a fresh browser profile, so each run starts at the default view.
 - Anything that opens a dialog you didn't expect: close it, screenshot, report.

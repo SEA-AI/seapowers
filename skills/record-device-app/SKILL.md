@@ -47,7 +47,7 @@ so if a step fails, check these first):
 - worker: `~/Makefile`, or `worker.py` in `~/Worker` (usual) or `~/Core-Backend/Worker`; either way a process with `worker.py`
   in its command line must start; product inferred from `~/POWER_Const/hardwareVersion*`/`module_info*`
 - registration bypass: `~/POWER_Const/system_successfully_registered`
-- streaming: MediaMTX API on the device, one WebRTC path per camera named `*_webrtc`; the web app plays them
+- streaming: MediaMTX API on the device at `localhost:9997` (its own service, or started by the worker), one WebRTC path per camera named `*_webrtc`; the web app plays them
   over WebRTC in the page (that is how `rec.py` sees frames decoding)
 - recording: one video file per camera (`.mp4`, `.avi`, `.mkv`); the clip lasts as long as the shortest file
 - end of clip: the worker logs `End-of-stream`
@@ -61,9 +61,11 @@ Prereqs on the local machine: ssh key access to the device, `uv`, Google Chrome 
 Chromium; see `rec.py`), `ffmpeg` with libx264 and `ffprobe`. Once, the lead runs `uv run rec.py install` (Playwright's
 video recorder; if it's missing, `rec.py` reports an `ERROR`). Videos are recorded at Playwright's fixed 25 fps.
 
-Timing settings default to a LAN and a device that starts within a minute. Override per run with env vars:
-`device.sh` takes `SPAWN_TIMEOUT_S` / `READY_TIMEOUT_S` (keep their sum under ~550 s, the Device's command limit) and `KILL_GRACE_S`; `rec.py` takes `REC_<NAME>` for the settings in its
-`knob()` calls (page loads, gate, reload, decode and settle waits, stall thresholds).
+Timing settings (whole seconds unless named `_MS`) default to a LAN. Override per run with env vars:
+- `device.sh`: `READY_TIMEOUT_S`, `KILL_GRACE_S`, `SSH_TIMEOUT_S`. Keep `READY_TIMEOUT_S` under ~550 s,
+  the Device's 600 s command limit.
+- `rec.py`: `REC_<NAME>` for every `knob()` in it. `gates`/`explore` share the Viewer's 600 s limit: keep
+  `PAGE_LOADS × (GOTO_TIMEOUT + GATE_WAIT + REG_WAIT) + DECODE_WAIT` under ~550 s (defaults: ~360 s).
 
 ## Roles
 
@@ -90,12 +92,12 @@ Viewer events: `VIEWPORT`, `GATE registration|connection_failed|terms|unknown`, 
 | Event (exit code) | Lead does |
 |---|---|
 | `PREFLIGHT_FAIL`, `CRASH` | stop and show the user why |
-| `WARN` | tell the user (a missing registration bypass means a registration gate is likely; something already streaming means READY may mislead) |
+| `WARN` | tell the user (a missing registration bypass means a registration gate is likely; something already streaming means READY may mislead; MediaMTX unreachable is fine if the worker starts it) |
 | `READY` | next step |
 | `NOT_READY` | slow, not crashed: tell the user, run `wait-ready` again (or raise `READY_TIMEOUT_S`) |
 | `GATE registration` "transient?", `GATE connection_failed` | nothing, `rec.py` reloads |
 | persistent `GATE registration` (3) | show the screenshot, ask the user |
-| `GATE unknown` (3) | Device `status` first (a dead worker or ended clip looks the same); if `RUNNING`, show the screenshot and ask the user |
+| `GATE unknown` (3) | ask the Device for `status` first (a dead worker or ended clip looks the same); if `RUNNING`, show the screenshot and ask the user |
 | `STALL` | no new frames for a while; the take continued (a view without video, or trouble). Mention it with the result |
 | `FROZEN` (4), `NO_CONNECTION` (5) | the Viewer asks the Device for `status`; act on its answer: `ENDED` clip ran out (restart, shorter take) · `CRASH` show the log tail · `RUNNING` app issue, show the screenshot · `STOPPED` worker not running, `start` and retry |
 | `ERROR` (1) | show the message (often Chrome or the video recorder missing, see Prereqs) and ask the user |
@@ -163,6 +165,6 @@ New view, control, gate or product the references don't cover, or a reference th
 | "Connection failed" / "…connection was lost" | worker not up yet, or the clip ended | wait for `READY`; `rec.py` reloads; mid-take, see the event table |
 | Tracebacks or warnings in a CRASH log tail | many are caught and harmless | usually not the cause; a crash means the worker process is gone |
 | Stream stops, worker hangs in shutdown | clip hit end-of-stream | Flow step 4; keep `SECS` under the clip |
-| `CRASH MediaMTX API unreachable` / no webrtc bytes | streaming config differs from the conventions above | ask the user how the stream is served |
+| `NOT_READY MediaMTX API unreachable` / no webrtc bytes | streaming config differs from the conventions above | ask the user how the stream is served |
 
 Security: if device dotfiles or logs show tokens, flag them to the user and advise rotation. Never copy them.

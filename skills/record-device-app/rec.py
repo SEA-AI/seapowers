@@ -37,10 +37,13 @@ LOCALE = "en-US"  # gate texts in clear_gates are matched in English; pin the UI
 def knob(name, default):
     """Timing setting: a judgement call, overridable per run with env REC_<NAME> (e.g. REC_DECODE_WAIT_S=60)."""
     try:
-        return type(default)(os.environ.get(f"REC_{name}", default))
+        v = int(os.environ.get(f"REC_{name}", default))
     except ValueError:
-        print(f"BAD_ARGS REC_{name} must be a whole number like {default}", flush=True)
+        v = 0
+    if v < 1:
+        print(f"BAD_ARGS REC_{name} must be a whole number >= 1, like {default}", flush=True)
         sys.exit(2)
+    return v
 
 
 PAGE_LOADS = knob("PAGE_LOADS", 6)  # page loads before giving up (NO_CONNECTION)
@@ -52,7 +55,6 @@ CLICK_TIMEOUT_MS = knob("CLICK_TIMEOUT_MS", 5000)
 RELOAD_WAIT_S = knob("RELOAD_WAIT_S", 5)  # pause before reloading after a lost connection
 REG_WAIT_S = knob("REG_WAIT_S", 10)  # pause before reloading while the registration screen shows
 SETTLE_S = knob("SETTLE_S", 3)  # after an explore click, before the screenshot
-STALL_CHECK_S = 10  # how often frames are checked for a stall, independent of the screenshot interval
 STALL_WARN_S = knob("STALL_WARN_S", 30)  # no new frames this long: STALL (warning, keeps recording)
 STALL_ABORT_S = knob("STALL_ABORT_S", 120)  # no new frames this long: FROZEN (take ends)
 # Collect every RTCPeerConnection the app creates, so we can read real decode stats.
@@ -121,11 +123,13 @@ if mode == "record":
         t, _, target = a.partition("=")
         if not t.isdigit() or not target or not 1 <= int(t) <= secs:
             bad_args(f"action {a!r} must be SECONDS=TARGET with 1 <= SECONDS <= {secs}")
-        if target.startswith("xy=") and not re.fullmatch(r"xy=\d+,\d+", target):
-            bad_args(f"action {a!r}: xy targets look like xy=X,Y (integers)")
         actions.append((int(t), target))
     if len({t for t, _ in actions}) < len(actions):
         bad_args("two actions at the same second")
+targets = [t for _, t in actions] if mode == "record" else sys.argv[4:]
+for target in targets:
+    if target.startswith("xy=") and not re.fullmatch(r"xy=\d+,\d+", target):
+        bad_args(f"target {target!r}: xy targets look like xy=X,Y (integers)")
 actions = dict(actions)
 override = None
 if os.environ.get("VIEWPORT"):
@@ -185,9 +189,8 @@ def clear_gates(page, tag):
             page.wait_for_timeout(RELOAD_WAIT_S * 1000)
             continue
         # wait for a gate screen, or stop early once video plays (not every product shows a gate)
-        start_frames = frames(page)
         for _ in range(GATE_WAIT_S):
-            if agree.or_(failed).or_(register).first.is_visible() or frames(page) > start_frames > 0:
+            if agree.or_(failed).or_(register).first.is_visible() or frames(page) > 0:
                 break
             page.wait_for_timeout(1000)
         if register.is_visible():
@@ -352,20 +355,21 @@ def record(p, view):
                     ev("ACTION", f"{t}s {actions[t]}")
                 except (PlaywrightError, RuntimeError) as e:
                     ev("ACTION_FAIL", f"{t}s {actions[t]}: {e.__class__.__name__}")
-            if t % STALL_CHECK_S == 0:
-                # some views pause video: warn first, end the take only after a long stall
+            # some views pause video: warn first, end the take only after a long stall
+            try:
                 now = frames(page)
-                flat_s = flat_s + STALL_CHECK_S if now == last else 0
-                last = now
-                if flat_s >= STALL_ABORT_S:
-                    ev("FROZEN", f"at {t}s, no new WebRTC frames for {flat_s}s; take ended")
-                    code = 4
-                    break
-                if flat_s >= STALL_WARN_S and flat_s % STALL_WARN_S == 0:
-                    ev("STALL", f"at {t}s, no new WebRTC frames for {flat_s}s; still recording")
+            except PlaywrightError:  # the app reloaded itself mid-read: count it as no new frames
+                now = last
+            flat_s = flat_s + 1 if now == last else 0
+            last = now
+            if flat_s >= STALL_ABORT_S:
+                ev("FROZEN", f"at {t}s, no new WebRTC frames for {flat_s}s; take ended")
+                code = 4
+                break
+            if flat_s == STALL_WARN_S:  # once per stall
+                ev("STALL", f"at {t}s, no new WebRTC frames for {flat_s}s; still recording")
             if t % every == 0 or t == secs:
                 page.screenshot(path=f"{out}/t{t:0{width}d}.png")
-                now = frames(page)
                 ev("PROGRESS", f"{t}/{secs}s decoded~{(now - last_progress) / every:.0f}/s (approx., all streams)")
                 last_progress = now
     except (PlaywrightError, OSError) as e:  # page or browser crash: still finalize the video and report it
