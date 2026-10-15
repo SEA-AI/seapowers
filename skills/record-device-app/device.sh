@@ -17,6 +17,7 @@ STOP_MARK='== stopped by device.sh =='  # last log line after `stop`, so status 
 # Timing settings: defaults suit a LAN and a device that starts in under a minute; override per run via env.
 SPAWN_TIMEOUT_S=${SPAWN_TIMEOUT_S:-30}   # wait for the worker process to appear after `start`
 READY_TIMEOUT_S=${READY_TIMEOUT_S:-240}  # wait for every camera's WebRTC stream to receive bytes
+KILL_GRACE_S=${KILL_GRACE_S:-3}          # after asking the old worker to stop, before force-killing it
 r() { ssh -o BatchMode=yes -o ConnectTimeout=5 "$HOST" "$@"; }
 
 # Remote snippet that picks the run command: `make run` if ~/Makefile exists, else worker.py in WORKER_DIR or
@@ -27,11 +28,11 @@ CHOOSE="cd ~; if [ -f Makefile ]; then set -- make run; else $FIND; [ -f \"\$d/w
 
 # Remote helpers. The worker is tracked as a descendant of the tmux pane, not by command-line pattern,
 # so it works whatever launcher make uses and never matches this ssh command itself.
-H="S=$SESSION; MTX=$MTX; "'tree() { for c in $(pgrep -P "$1"); do echo "$c"; tree "$c"; done; }
+H="S=$SESSION; MTX=$MTX; G=$KILL_GRACE_S; "'tree() { for c in $(pgrep -P "$1"); do echo "$c"; tree "$c"; done; }
 pane() { tmux list-panes -t "$S" -F "#{pane_pid}" 2>/dev/null; }
 worker() { p=$(pane); [ -n "$p" ] || return 1; for c in $(tree "$p"); do grep -qa worker.py /proc/$c/cmdline 2>/dev/null && return 0; done; return 1; }
 kill_all() { p=$(pane); pids=$( [ -n "$p" ] && tree "$p"); tmux kill-session -t "$S" 2>/dev/null
-  [ -n "$pids" ] && { kill $pids 2>/dev/null; sleep 3; kill -9 $pids 2>/dev/null; }; true; }
+  [ -n "$pids" ] && { kill $pids 2>/dev/null; sleep "$G"; kill -9 $pids 2>/dev/null; }; true; }
 webrtc_bytes() { curl -s -m3 "$MTX/paths/list" | python3 -c "import json,sys
 try: [print(p[\"name\"], p.get(\"inboundBytes\", p.get(\"bytesReceived\", 0))) for p in json.load(sys.stdin).get(\"items\", []) if p.get(\"name\", \"\").endswith(\"_webrtc\")]
 except Exception: print(\"NOAPI\")" 2>/dev/null || echo NOAPI; }'
@@ -73,18 +74,21 @@ start)
   r "tmux new -d -s $SESSION \"bash -ic 'bash $RUNNER 2>&1 | tee $LOG'\"" || { echo "CRASH tmux could not start the worker"; exit 1; }
   echo "STARTED $(date +%T%z)"
   # the launcher takes a few seconds to spawn the worker; wait-ready treats "no worker" as a crash
-  if ! r "$H; for i in \$(seq $SPAWN_TIMEOUT_S); do worker && exit 0; tmux has-session -t \$S 2>/dev/null || exit 2; sleep 1; done; exit 1"; then
-    [ $? = 2 ] && { echo "CRASH launcher exited before the worker started: $(tail_log)"; exit 1; }
-    echo "NOT_READY no worker process after ${SPAWN_TIMEOUT_S}s but the launcher is still running (building?); run wait-ready again"; exit 1
-  fi
+  r "$H; for i in \$(seq $SPAWN_TIMEOUT_S); do worker && exit 0; tmux has-session -t \$S 2>/dev/null || exit 2; sleep 1; done; exit 1"
+  case $? in
+    0) ;;
+    1) echo "NOT_READY no worker process after ${SPAWN_TIMEOUT_S}s but the launcher is still running (building?); run wait-ready again"; exit 1;;
+    2) echo "CRASH launcher exited before the worker started: $(tail_log)"; exit 1;;
+    *) echo "CRASH could not reach device"; exit 1;;
+  esac
   exec bash "$0" wait-ready  # the old worker is already dead here, so flowing bytes mean the new one
   ;;
 wait-ready)
   # Ready = every camera's WebRTC path receiving bytes (open ports and MediaMTX's "ready" flag can be stale).
-  # Crash = the worker process is gone (the log has harmless tracebacks). Slow is not a crash: NOT_READY.
+  # Crash = worker and launcher both gone (the log has harmless tracebacks). Slow is not a crash: NOT_READY.
   end=$(( $(date +%s) + READY_TIMEOUT_S ))
   while [ "$(date +%s)" -lt "$end" ]; do
-    out=$(r "$H; worker || echo DEAD; webrtc_bytes; echo ---; sleep 2; webrtc_bytes")
+    out=$(r "$H; worker || tmux has-session -t \$S 2>/dev/null || echo DEAD; webrtc_bytes; echo ---; sleep 2; webrtc_bytes")
     case "$out" in *DEAD*) echo "CRASH $(tail_log)"; exit 1;; *NOAPI*) echo "CRASH MediaMTX API unreachable"; exit 1;; esac
     # ready when every path listed before the pause has more bytes after it
     if awk '/^---$/ { after = 1; next } !after { a[$1] = $2; n++ } after { if ($2 > a[$1]) up++ } END { exit !(n && up == n) }' <<<"$out"; then

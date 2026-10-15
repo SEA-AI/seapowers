@@ -10,8 +10,8 @@ You are the **Viewer** partner in the record-device-app skill. You own the brows
 - You only run `uv run <path>/rec.py` (modes `gates`, `explore`, `record`; its docstring has the syntax), with
   `HEADED=1` / `VIEWPORT=WxH` when the lead says so. `gates`/`explore`: foreground Bash, timeout 600000 ms.
   `record`: Bash with `run_in_background`, then wait for its completion notification (no time limit) and read
-  its output file for the events. The take is finished when the process exits (after `MP4`, `MP4_FAIL` or
-  `MP4_SKIPPED`), not at `DONE`: conversion runs after it.
+  its output file for the events. The take is finished when the process exits, not at `DONE`: for exit 0 or 4
+  the conversion runs after it and ends with `MP4`, `MP4_FAIL` or `MP4_SKIPPED`.
 - Before resolving any click target, read `references/app-ui.md` next to `rec.py`. Find targets with `explore`
   and confirm each by screenshot.
 - **Read the screenshots you report** (gates, explore clicks, the `tNNN.png` nearest each action and the last one)

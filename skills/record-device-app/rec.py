@@ -6,7 +6,7 @@
 
   rec.py URL OUT gates                             # clear gates, screenshot, exit
   rec.py URL OUT explore [TARGET ...]              # clear gates, list controls, click each TARGET in order, screenshot after each
-  rec.py URL OUT record SECS [SECONDS=TARGET ...]  # clear gates, record SECS (>= 10), click TARGET at that second; writes OUT/take.mp4
+  rec.py URL OUT record SECS [SECONDS=TARGET ...]  # clear gates, record SECS, click TARGET at that second; writes OUT/take.mp4
   rec.py install                                   # once: Playwright's video recorder, matching this script's Playwright
 SECONDS count from STREAMING; the mp4 starts earlier, with the page loading.
 Timing settings (see knob() below) can be overridden per run with env vars REC_<NAME>.
@@ -36,7 +36,11 @@ LOCALE = "en-US"  # gate texts in clear_gates are matched in English; pin the UI
 
 def knob(name, default):
     """Timing setting: a judgement call, overridable per run with env REC_<NAME> (e.g. REC_DECODE_WAIT_S=60)."""
-    return type(default)(os.environ.get(f"REC_{name}", default))
+    try:
+        return type(default)(os.environ.get(f"REC_{name}", default))
+    except ValueError:
+        print(f"BAD_ARGS REC_{name} must be a whole number like {default}", flush=True)
+        sys.exit(2)
 
 
 PAGE_LOADS = knob("PAGE_LOADS", 6)  # page loads before giving up (NO_CONNECTION)
@@ -45,6 +49,10 @@ GOTO_TIMEOUT_MS = knob("GOTO_TIMEOUT_MS", 30000)  # one page load
 GATE_WAIT_S = knob("GATE_WAIT_S", 15)  # wait for a gate screen or playing video after a load
 DECODE_WAIT_S = knob("DECODE_WAIT_S", 30)  # wait for WebRTC frames after the gates
 CLICK_TIMEOUT_MS = knob("CLICK_TIMEOUT_MS", 5000)
+RELOAD_WAIT_S = knob("RELOAD_WAIT_S", 5)  # pause before reloading after a lost connection
+REG_WAIT_S = knob("REG_WAIT_S", 10)  # pause before reloading while the registration screen shows
+SETTLE_S = knob("SETTLE_S", 3)  # after an explore click, before the screenshot
+STALL_CHECK_S = 10  # how often frames are checked for a stall, independent of the screenshot interval
 STALL_WARN_S = knob("STALL_WARN_S", 30)  # no new frames this long: STALL (warning, keeps recording)
 STALL_ABORT_S = knob("STALL_ABORT_S", 120)  # no new frames this long: FROZEN (take ends)
 # Collect every RTCPeerConnection the app creates, so we can read real decode stats.
@@ -106,8 +114,8 @@ if len(sys.argv) < 4 or sys.argv[3] not in ("gates", "explore", "record"):
 url, out, mode = sys.argv[1:4]
 secs, actions = 0, []
 if mode == "record":
-    if len(sys.argv) < 5 or not sys.argv[4].isdigit() or int(sys.argv[4]) < 10:
-        bad_args("record needs SECS (integer >= 10)")
+    if len(sys.argv) < 5 or not sys.argv[4].isdigit() or int(sys.argv[4]) < 1:
+        bad_args("record needs SECS (a positive integer)")
     secs = int(sys.argv[4])
     for a in sys.argv[5:]:
         t, _, target = a.partition("=")
@@ -174,7 +182,7 @@ def clear_gates(page, tag):
             page.goto(url, timeout=GOTO_TIMEOUT_MS)
         except PlaywrightError as e:  # refused or unreachable: same as a failed load
             ev("GATE connection_failed", f"{e.__class__.__name__}, reload {attempt + 1}/{PAGE_LOADS}")
-            page.wait_for_timeout(5000)
+            page.wait_for_timeout(RELOAD_WAIT_S * 1000)
             continue
         # wait for a gate screen, or stop early once video plays (not every product shows a gate)
         start_frames = frames(page)
@@ -187,14 +195,14 @@ def clear_gates(page, tag):
             reg_seen += 1
             if reg_seen < REG_RELOADS:
                 ev("GATE registration", f"transient? reload {reg_seen}/{REG_RELOADS}")
-                page.wait_for_timeout(10000)
+                page.wait_for_timeout(REG_WAIT_S * 1000)
                 continue
             page.screenshot(path=f"{out}/{tag}_gate.png")
             ev("GATE registration", f"persistent; {out}/{tag}_gate.png")
             return 3
         if failed.is_visible():
             ev("GATE connection_failed", f"reload {attempt + 1}/{PAGE_LOADS}")
-            page.wait_for_timeout(5000)
+            page.wait_for_timeout(RELOAD_WAIT_S * 1000)
             continue
         if agree.is_visible():
             agree.click()
@@ -334,6 +342,7 @@ def record(p, view):
         if code:
             return code
         last, flat_s, t0 = frames(page), 0, time.monotonic()
+        last_progress = last
         for t in range(1, secs + 1):
             # wait until second t of the take, so clicks and screenshots don't push the schedule later
             page.wait_for_timeout(max(0, (t0 + t - time.monotonic()) * 1000))
@@ -343,20 +352,22 @@ def record(p, view):
                     ev("ACTION", f"{t}s {actions[t]}")
                 except (PlaywrightError, RuntimeError) as e:
                     ev("ACTION_FAIL", f"{t}s {actions[t]}: {e.__class__.__name__}")
-            if t % every and t != secs:
-                continue
-            page.screenshot(path=f"{out}/t{t:0{width}d}.png")
-            now = frames(page)
-            ev("PROGRESS", f"{t}/{secs}s decoded~{(now - last) / every:.0f}/s (approx., all streams)")
-            # some views pause video: warn first, end the take only after a long stall
-            flat_s = flat_s + every if now == last else 0
-            last = now
-            if flat_s >= STALL_ABORT_S:
-                ev("FROZEN", f"at {t}s, no new WebRTC frames for {flat_s}s; take ended")
-                code = 4
-                break
-            if flat_s >= STALL_WARN_S:
-                ev("STALL", f"at {t}s, no new WebRTC frames for {flat_s}s; still recording, ask Device for status")
+            if t % STALL_CHECK_S == 0:
+                # some views pause video: warn first, end the take only after a long stall
+                now = frames(page)
+                flat_s = flat_s + STALL_CHECK_S if now == last else 0
+                last = now
+                if flat_s >= STALL_ABORT_S:
+                    ev("FROZEN", f"at {t}s, no new WebRTC frames for {flat_s}s; take ended")
+                    code = 4
+                    break
+                if flat_s >= STALL_WARN_S and flat_s % STALL_WARN_S == 0:
+                    ev("STALL", f"at {t}s, no new WebRTC frames for {flat_s}s; still recording")
+            if t % every == 0 or t == secs:
+                page.screenshot(path=f"{out}/t{t:0{width}d}.png")
+                now = frames(page)
+                ev("PROGRESS", f"{t}/{secs}s decoded~{(now - last_progress) / every:.0f}/s (approx., all streams)")
+                last_progress = now
     except (PlaywrightError, OSError) as e:  # page or browser crash: still finalize the video and report it
         ev("ERROR", f"{e.__class__.__name__}: {str(e)[:200]}")
         code = code or 1
@@ -403,7 +414,7 @@ try:
                         except (PlaywrightError, RuntimeError) as e:
                             ev("CLICK_FAIL", f"{target}: {e.__class__.__name__}")
                             continue
-                        page.wait_for_timeout(3000)
+                        page.wait_for_timeout(SETTLE_S * 1000)
                         shot = f"{out}/explore_{i:02d}.png"
                         page.screenshot(path=shot)
                         ev("CLICKED", f"{target} -> {shot} frames={frames(page)}")

@@ -62,8 +62,8 @@ Chromium; see `rec.py`), `ffmpeg` with libx264 and `ffprobe`. Once, the lead run
 video recorder; if it's missing, `rec.py` reports an `ERROR`). Videos are recorded at Playwright's fixed 25 fps.
 
 Timing settings default to a LAN and a device that starts within a minute. Override per run with env vars:
-`device.sh` takes `SPAWN_TIMEOUT_S` / `READY_TIMEOUT_S`; `rec.py` takes `REC_<NAME>` for the settings in its
-`knob()` calls (page loads, gate and decode waits, stall thresholds).
+`device.sh` takes `SPAWN_TIMEOUT_S` / `READY_TIMEOUT_S` (keep their sum under ~550 s, the Device's command limit) and `KILL_GRACE_S`; `rec.py` takes `REC_<NAME>` for the settings in its
+`knob()` calls (page loads, gate, reload, decode and settle waits, stall thresholds).
 
 ## Roles
 
@@ -96,7 +96,7 @@ Viewer events: `VIEWPORT`, `GATE registration|connection_failed|terms|unknown`, 
 | `GATE registration` "transient?", `GATE connection_failed` | nothing, `rec.py` reloads |
 | persistent `GATE registration` (3) | show the screenshot, ask the user |
 | `GATE unknown` (3) | Device `status` first (a dead worker or ended clip looks the same); if `RUNNING`, show the screenshot and ask the user |
-| `STALL` | no new frames for a while; the take continues. Ask the Device for `status`: `ENDED`/`CRASH` mean it won't recover |
+| `STALL` | no new frames for a while; the take continued (a view without video, or trouble). Mention it with the result |
 | `FROZEN` (4), `NO_CONNECTION` (5) | the Viewer asks the Device for `status`; act on its answer: `ENDED` clip ran out (restart, shorter take) · `CRASH` show the log tail · `RUNNING` app issue, show the screenshot · `STOPPED` worker not running, `start` and retry |
 | `ERROR` (1) | show the message (often Chrome or the video recorder missing, see Prereqs) and ask the user |
 | `CLICK_FAIL`, `ACTION_FAIL` | show the nearest earlier screenshot (`explore_NN.png` / `tNNN.png`); re-find the target with `explore` |
@@ -136,8 +136,8 @@ New view, control, gate or product the references don't cover, or a reference th
 
 ## Flow
 
-1. **Device: preflight.** `CLIP_SECONDS` is an estimate (longest video file); if it's `unknown` or the
-   recording is split into segments, ask the user. The clip starts playing at `start`, so the take has to
+1. **Device: preflight.** `CLIP_SECONDS` is the shortest video file (one per camera); if it's `unknown`, ask
+   the user. The clip starts playing at `start`, so the take has to
    finish before the clip does: clip length minus startup, gates, and a margin. Warn if it doesn't fit.
 2. **Device: start.**
 3. **Viewer: gates** (or `explore` for targets the references cover). Proves the live view works before a take
