@@ -4,7 +4,6 @@
 # ///
 """Viewer side of record-device-app. Prints one-line events: EVENT detail.
 
-  rec.py URL OUT gates                             # clear gates, screenshot, exit
   rec.py URL OUT explore [TARGET ...]              # clear gates, list controls, click each TARGET in order, screenshot after each
   rec.py URL OUT record SECS [SECONDS=TARGET ...]  # clear gates, record SECS, click TARGET at that second; writes OUT/take.mp4
   rec.py install                                   # once: Playwright's video recorder, matching this script's Playwright
@@ -108,8 +107,8 @@ def bad_args(why):
 # --- arguments: validate everything before opening a browser ---
 if sys.argv[1:] == ["install"]:  # hand over to Playwright's installer in this script's own environment
     os.execv(sys.executable, [sys.executable, "-m", "playwright", "install", "ffmpeg"])
-if len(sys.argv) < 4 or sys.argv[3] not in ("gates", "explore", "record"):
-    bad_args("need URL OUT gates|explore|record, or install")
+if len(sys.argv) < 4 or sys.argv[3] not in ("explore", "record"):
+    bad_args("need URL OUT explore|record, or install")
 url, out, mode = sys.argv[1:4]
 secs, actions = 0, []
 if mode == "record":
@@ -386,7 +385,7 @@ try:
         video_t0 = time.monotonic()  # the video starts with the page
         try:
             code = clear_gates(page, mode)
-            if not code and mode != "gates":
+            if not code:
                 code = 1  # stays 1 if the take raises: no mp4 from a crashed take
                 code = take(page) if mode == "record" else explore(page)
         finally:

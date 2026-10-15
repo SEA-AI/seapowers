@@ -59,7 +59,7 @@ video recorder; if it's missing, `rec.py` reports an `ERROR`). Videos are record
 Settings (`_S` seconds, `_MS` milliseconds, otherwise counts) default to a LAN. Override per run with env vars:
 - `device.py`: `READY_TIMEOUT_S`, `KILL_GRACE_S`, `SSH_TIMEOUT_S`. Keep `READY_TIMEOUT_S` under ~550 s,
   the Device's 600 s command limit.
-- `rec.py`: `REC_<NAME>` for every `knob()` in it. `gates`/`explore` share the Viewer's 600 s limit: keep
+- `rec.py`: `REC_<NAME>` for every `knob()` in it. `explore` shares the Viewer's 600 s limit: keep
   `PAGE_LOADS × (GOTO_TIMEOUT + GATE_WAIT + REG_WAIT) + DECODE_WAIT` (+ `CLICK_TIMEOUT + SETTLE + 1` per explore
   target) under ~550 s (defaults: ~360 s).
 
@@ -128,17 +128,15 @@ New view, control, gate or product the references don't cover, or a reference th
 1. **Device: preflight.** `CLIP_SECONDS` is the shortest video file (one per camera); if it's `unknown`, ask
    the user. The clip starts playing at `start`, so the take has to
    finish before the clip does: clip length minus startup, gates, and a margin. Warn if it doesn't fit.
-2. **Device: start.**
-3. **Viewer: gates** (or `explore` for targets the references cover). Proves the live view works before a take
-   uses up clip time.
-4. **Device: start again**, requested by the lead right before step 5, never through the Viewer. Step 3 used
-   up part of the clip, and a take on a stale clip ends in `FROZEN` and a lost-connection page.
-5. **Viewer: record SECS.** Runs in the background, so takes of any length work; its output file shows the events
+2. **Only if the take clicks something: Device `start`, then Viewer `explore`** to find the targets. It uses up
+   clip time, so step 3 starts a fresh clip.
+3. **Device: start**, requested by the lead, never through the Viewer.
+4. **Viewer: record SECS.** It clears the gates itself and exits before the take if one needs a human. Runs in the background, so takes of any length work; its output file shows the events
    live (`PROGRESS`, `STALL`, `CONVERTING`). The Viewer reports once the take is done; handle events per the event table.
-6. **Lead: finish.** `OUT/take.mp4` starts with the page loading, so it runs longer than SECS. Copy it where the
+5. **Lead: finish.** `OUT/take.mp4` starts with the page loading, so it runs longer than SECS. Copy it where the
    user wants it.
-7. **Device: stop** unless the user wants it left running.
-8. **Lead: lessons.** Summarise anything unexpected in one line. Suggest a skill change only for general
+6. **Device: stop** unless the user wants it left running.
+7. **Lead: lessons.** Summarise anything unexpected in one line. Suggest a skill change only for general
    lessons (a new gate type, a navigation concept).
 
 ## Known gates and pitfalls
