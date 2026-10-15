@@ -373,7 +373,7 @@ def record(p, view):
                 page.screenshot(path=f"{out}/t{t:0{width}d}.png")
                 ev(
                     "PROGRESS",
-                    f"{t}/{secs}s decoded~{(now - last_progress) / (t - last_progress_t):.0f}/s (approx., all streams)",
+                    f"{t}/{secs}s decoded~{max(0, now - last_progress) / (t - last_progress_t):.0f}/s (approx., all streams)",
                 )
                 last_progress, last_progress_t = now, t
     except (PlaywrightError, OSError) as e:  # page or browser crash: still finalize the video and report it

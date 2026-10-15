@@ -92,6 +92,7 @@ Viewer events: `VIEWPORT`, `GATE registration|connection_failed|terms|unknown`, 
 | `PREFLIGHT_FAIL`, `CRASH` | stop and show the user why |
 | `WARN` | tell the user (a missing registration bypass means a registration gate is likely; something already streaming means READY may mislead; MediaMTX unreachable is fine if the worker starts it) |
 | `READY` | next step |
+| `start`/`wait-ready` ends in `ENDED` or `STOPPED` | the clip or launcher ended before `READY`: show the log tail (`status` gives it on a crash) and ask the user |
 | `NOT_READY` | slow, not crashed: tell the user, run `wait-ready` again (or raise `READY_TIMEOUT_S`) |
 | `UNREACHABLE` | ssh failed (network, device off); not a crash. Tell the user, retry (raise `SSH_TIMEOUT_S` on slow links) |
 | `GATE registration` "transient?", `GATE connection_failed` | nothing, `rec.py` reloads |

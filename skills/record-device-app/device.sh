@@ -36,7 +36,7 @@ CHOOSE="cd ~; if [ -f Makefile ]; then set -- make run; else $FIND; [ -f \"\$d/w
 # so it works whatever launcher make uses and never matches this ssh command itself.
 H="S=$SESSION; MTX=$MTX; G=$KILL_GRACE_S; SEEN=$SEEN; "'tree() { for c in $(pgrep -P "$1"); do echo "$c"; tree "$c"; done; }
 pane() { tmux list-panes -t "$S" -F "#{pane_pid}" 2>/dev/null; }
-worker() { p=$(pane); [ -n "$p" ] || return 1; for c in $(tree "$p"); do grep -qa worker.py /proc/$c/cmdline 2>/dev/null && { touch "$SEEN"; return 0; }; done; return 1; }
+worker() { p=$(pane); [ -n "$p" ] || return 1; for c in $(tree "$p"); do tr "\0" "\n" </proc/$c/cmdline 2>/dev/null | grep -qxE "(.*/)?worker\.py" && { touch "$SEEN"; return 0; }; done; return 1; }
 kill_all() { p=$(pane); pids=$( [ -n "$p" ] && tree "$p"); tmux kill-session -t "$S" 2>/dev/null; rm -f "$SEEN"
   [ -n "$pids" ] && { kill $pids 2>/dev/null; sleep "$G"; kill -9 $pids 2>/dev/null; }; true; }
 webrtc_bytes() { curl -s -m3 "$MTX/paths/list" | python3 -c "import json,sys
@@ -84,15 +84,14 @@ start)
   ;;
 wait-ready)
   # Ready = every camera's WebRTC path receiving bytes (open ports and MediaMTX's "ready" flag can be stale).
-  # Launcher gone: status decides (STOPPED, ENDED or CRASH). Worker gone after it was seen: CRASH (the log has
-  # harmless tracebacks). The launcher may take a while to spawn the worker (building?). Slow is not a crash: NOT_READY.
+  # Launcher gone, or this run's worker gone: status decides (STOPPED, ENDED or CRASH; the log has harmless
+  # tracebacks). The launcher may take a while to spawn the worker (building?). Slow is not a crash: NOT_READY.
   end=$(( $(date +%s) + READY_TIMEOUT_S ))
   while [ "$(date +%s)" -lt "$end" ]; do
     out=$(r "$H; if worker; then echo WORKER; elif ! tmux has-session -t \$S 2>/dev/null; then echo DEAD; elif [ -e \$SEEN ]; then echo GONE; fi
       webrtc_bytes; echo ---; sleep $SAMPLE_S; webrtc_bytes") || { out=UNREACHABLE; sleep 1; continue; }  # a hiccup isn't a crash
     case "$out" in
-      *DEAD*) exec bash "$0" status;;
-      *GONE*) echo "CRASH worker exited, launcher still running: $(tail_log)"; exit 1;;
+      *DEAD*|*GONE*) exec bash "$0" status;;  # status tells an ended clip, a stop and a crash apart
     esac  # NOAPI: MediaMTX not up yet, keep waiting
     # ready when the same paths are listed before and after the pause, each with more bytes after it
     if n=$(awk '/^---$/ { after = 1; next } !/_webrtc/ { next } !after { a[$1] = $2; n++ } after { m++; if ($2 > a[$1]) up++ }
@@ -112,13 +111,13 @@ status)
   # A session without a worker: CRASH if this run's worker was already seen, else still launching (NOT_READY).
   state=$(r "$H; if tmux has-session -t \$S 2>/dev/null; then
       if grep -q 'End-of-stream' $LOG 2>/dev/null; then echo ENDED; elif worker; then echo RUNNING; elif [ -e \$SEEN ]; then echo GONE; else echo LAUNCHING; fi
-    elif [ ! -s $LOG ] || tail -1 $LOG | grep -qF '$STOP_MARK'; then echo STOPPED
+    elif [ ! -e $LOG ] || tail -1 $LOG | grep -qF '$STOP_MARK'; then echo STOPPED
     elif grep -q 'End-of-stream' $LOG; then echo ENDED; else echo CRASH; fi")
   [ -n "$state" ] || { echo "UNREACHABLE ssh to $HOST failed"; exit 1; }
   case $state in
-    CRASH) echo "CRASH $(tail_log)";;
+    CRASH) echo "CRASH $(tail_log)"; exit 1;;
     GONE) echo "CRASH worker exited, launcher still running: $(tail_log)"; exit 1;;
-    LAUNCHING) echo "NOT_READY launcher running, no worker process yet: $(tail_log)";;
+    LAUNCHING) echo "NOT_READY launcher running, no worker process yet: $(tail_log)"; exit 1;;
     *) echo "$state";;
   esac
   ;;
