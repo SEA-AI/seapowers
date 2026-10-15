@@ -60,11 +60,11 @@ a whole `explore` (default ~360 s) under ~550 s.
 |---|---|---|---|
 | **Device** | `record-device` | ssh, `device.py` | whoever asked |
 | **Viewer** | `record-viewer` | the browser, `rec.py`, screenshots | Device, for `status` only |
-| **Lead** | you | params, decisions, every `start`, the user | everyone |
+| **Lead** | you | params, decisions, every `start`, the user, user-approved one-off writes on the device (overrides file, registration bypass) | everyone |
 
 Agent files: `../../agents/` (a plugin may prefix them, e.g. `seapowers:record-device`). Missing? Spawn
 `general-purpose` agents with the file's text atop the prompt. Spawn each once per run with the step,
-params, script path, and for the Viewer the Device's address. Speak in intent ("show RGB, then thermal, then map"); the Viewer proposes the schedule.
+params, script path, and for the Viewer the Device's address. Clicks on modes or settings persist on the device: only with the user's OK, and restore them afterwards. Speak in intent ("show RGB, then thermal, then map"); the Viewer proposes the schedule.
 
 ## Events
 
@@ -73,7 +73,8 @@ One short line to the user per event. Unlisted events need nothing more.
 | Event (exit) | You do |
 |---|---|
 | `READY` | next step |
-| `WARN`, `STALL`, `GATE registration` "transient?", `GATE connection_failed` | nothing beyond the line (`rec.py` reloads); mention `STALL` with the result |
+| `WARN video is already streaming` | `READY` can't be trusted: ask the user before stopping that stream |
+| other `WARN`, `STALL`, `GATE registration` "transient?", `GATE connection_failed` | nothing beyond the line (`rec.py` reloads); mention `STALL` with the result |
 | `PREFLIGHT_FAIL`, `CRASH` | stop, show the user why |
 | `start`/`wait-ready` ends `ENDED` or `STOPPED` | died before `READY` (`ENDED`: clip shorter than startup); ask the user |
 | `NOT_READY` | slow, not dead: `wait-ready` again (or raise `READY_TIMEOUT_S`) |
@@ -103,14 +104,14 @@ user (blue core). Ask who does what.
 - Fully hands-on: `record SECS`, no actions. Mixed: schedule only the script's part and tell the user
   which controls to leave alone.
 - Start when the user is ready, and say when the window opens.
-- "Stop" / "done": run `pkill -f 'rec.py .*<OUT>'`. `rec.py` prints `TAKE_STOPPED` and keeps what it recorded.
+- "Stop" / "done": run `pkill -f '[r]ec.py .*<OUT>'` (the brackets keep it from matching your own shell). `rec.py` prints `TAKE_STOPPED` and keeps what it recorded.
 
 ## When the request isn't covered
 
 New view, control, gate or product, or a wrong reference:
 1. **Ask the user first.** Screenshot, one line on what's unclear, options ("explore the right column",
    "skip this view", "you tell me where it is"). They usually know faster.
-2. Only if they say so: the Viewer explores.
+2. Only if they say so: the Viewer explores the unknown UI. (Flow step 2, finding known targets, needs no OK.)
 3. Findings go to `<OUT>/notes.md`. Nobody edits the skill's files: selectors drift, so the references
    stay general on purpose.
 

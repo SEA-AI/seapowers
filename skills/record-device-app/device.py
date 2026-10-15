@@ -12,7 +12,7 @@ SETTINGS_OVERRIDES: a JSON file on the device, deep-merged over the worker's use
 WORKER_DIR: relative to the device home, or absolute. The commands that run on the device live in device-remote.sh.
 ssh settings (user, keys, agent, ProxyJump, known hosts) come from ~/.ssh/config as usual.
 Settings (whole seconds, env): READY_TIMEOUT_S, KILL_GRACE_S, SSH_TIMEOUT_S; defaults in parse_args().
-Exit codes: 0 ok, 1 not ready / crash / unreachable, 2 bad arguments.
+Exit codes: 0 ok, 1 not ready / crash / unreachable / preflight failed, 2 bad arguments.
 """
 
 import asyncio
