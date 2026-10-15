@@ -50,7 +50,7 @@ so if a step fails, check these first):
 Scripts live next to this file. Call them with absolute paths:
 - `device.py`, run as `uv run device.py ...`: talks to the device over ssh (asyncssh; settings from `~/.ssh/config`)
   and sends it `device-remote.sh`, the part that runs on the device
-- `rec.py`, run as `uv run rec.py ...` (dependencies are declared inline)
+- `rec.py`, run as `uv run rec.py ...` (dependencies are declared inline); it injects `page.js` (frame counting, drawn cursors) into the page
 
 Prereqs on the local machine: ssh key access to the device (host already in `known_hosts`), `uv`, Google Chrome (not Playwright's bundled
 Chromium; see `rec.py`), `ffmpeg` with libx264 and `ffprobe`. Videos are recorded at Playwright's fixed 25 fps.

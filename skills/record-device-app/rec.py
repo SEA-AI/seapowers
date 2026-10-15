@@ -57,45 +57,7 @@ REG_WAIT_S = knob("REG_WAIT_S", 10)  # pause before reloading while the registra
 SETTLE_S = knob("SETTLE_S", 3)  # after an explore click, before the screenshot
 STALL_WARN_S = knob("STALL_WARN_S", 30)  # no new frames this long: STALL (warning, keeps recording)
 STALL_ABORT_S = knob("STALL_ABORT_S", 120)  # no new frames this long: FROZEN (take ends)
-# Track every RTCPeerConnection the app creates, for its decode stats.
-HOOK = """(() => { window.__pcs = [];
-  window.RTCPeerConnection = class extends window.RTCPeerConnection {
-    constructor(...a) { super(...a); window.__pcs.push(this); } }; })()"""
-# Playwright videos show no OS cursor, so draw two: the script's (red core, moved by rec.py) and the user's
-# (blue core, follows the mouse). rec.py marks its own clicks so they don't move the user cursor.
-CURSOR = """(() => {
-  const dot = (css) => { const d = document.createElement('div');
-    Object.assign(d.style, { position: 'fixed', borderRadius: '50%', pointerEvents: 'none', zIndex: 2147483647 }, css);
-    document.documentElement.appendChild(d); return d; };
-  // SEA.AI brand colours. The core is a hard-edged radial fill, not a soft gradient; no shadows.
-  const RED = '#CB0D00', BLUE = '#0B1731';
-  const style = (core) => ({ width: '22px', height: '22px', margin: '-11px 0 0 -11px', boxSizing: 'border-box',
-    border: '2px solid #fff', background: `radial-gradient(circle, ${core} 0 4px, rgba(11,23,49,.35) 4.5px)` });
-  const ripple = (x, y, color) => { const r = dot({ left: x + 'px', top: y + 'px', width: '22px', height: '22px',
-      margin: '-11px 0 0 -11px', boxSizing: 'border-box', border: `2px solid ${color}`,
-      transition: 'transform .7s ease-out, opacity .7s ease-out' });
-    r.getBoundingClientRect(); r.style.transform = 'scale(2.6)'; r.style.opacity = '0'; setTimeout(() => r.remove(), 800); };
-  const keep = (get) => { let el = null; return () => el && el.isConnected ? el : (el = get()); };
-  const script = keep(() => dot({ left: innerWidth / 2 + 'px', top: innerHeight / 2 + 'px', ...style(RED) }));
-  const user = keep(() => dot({ ...style(BLUE) }));
-  window.__recMove = (x, y, ms) => { const d = script(); d.getBoundingClientRect();
-    d.style.transition = `left ${ms}ms ease-in-out, top ${ms}ms ease-in-out`; d.style.left = x + 'px'; d.style.top = y + 'px'; };
-  window.__recClick = (x, y) => ripple(x, y, RED);
-  addEventListener('mousemove', e => { if (window.__recScripted) return;
-    const d = user(); d.style.left = e.clientX + 'px'; d.style.top = e.clientY + 'px'; }, true);
-  addEventListener('mousedown', e => { if (!window.__recScripted) ripple(e.clientX, e.clientY, BLUE); }, true);
-})()"""
-FRAMES = """async () => { let n = 0; for (const pc of window.__pcs || []) try {
-  (await pc.getStats()).forEach(r => { if (r.type === 'inbound-rtp' && r.kind === 'video') n += r.framesDecoded || 0; });
-  } catch (e) {} return n; }"""  # per connection, so one closed connection can't hide the others
-# Visible clickable things with whatever names they have, plus their centre.
-CONTROLS = """() => [...document.querySelectorAll('button,a,[role=button],[onclick],svg')]
-  .map(e => e.closest('button,a,[role=button],[onclick]') || e).filter((e, i, a) => a.indexOf(e) === i)
-  .map(e => { const r = e.getBoundingClientRect();
-    return { text: (e.innerText || '').trim().replace(/\\s+/g, ' ').slice(0, 40), aria: e.getAttribute('aria-label'),
-      title: e.getAttribute('title'), cls: (e.className?.baseVal ?? e.className ?? '').toString().slice(0, 60),
-      xy: [Math.round(r.x + r.width / 2), Math.round(r.y + r.height / 2)], w: Math.round(r.width), h: Math.round(r.height) }; })
-  .filter(c => c.w > 8 && c.h > 8 && c.xy[0] < innerWidth && c.xy[1] < innerHeight)"""
+PAGE_JS = Path(__file__).parent / "page.js"  # frame counting and the drawn cursors, called through window.__rec
 
 
 def ev(name: str, detail: object = "") -> None:
@@ -162,7 +124,7 @@ def parse_args(argv: list[str]) -> Run:
 def frames(page: Page, default: int = 0) -> int:
     """Total WebRTC frames decoded, or default while the app navigates (the read fails mid-reload)."""
     try:
-        return page.evaluate(FRAMES)
+        return page.evaluate("window.__rec.frames()")
     except PlaywrightError:
         return default
 
@@ -176,13 +138,13 @@ def click(page: Page, target: str) -> None:
         if not box:
             raise RuntimeError("target not visible")
         x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
-    page.evaluate("([x, y, ms]) => window.__recMove && window.__recMove(x, y, ms)", [x, y, GLIDE_MS])
+    page.evaluate("([x, y, ms]) => window.__rec?.move(x, y, ms)", [x, y, GLIDE_MS])
     page.wait_for_timeout(GLIDE_MS + 50)
-    page.evaluate("([x, y]) => { window.__recScripted = true; window.__recClick && window.__recClick(x, y); }", [x, y])
+    page.evaluate("([x, y]) => window.__rec?.click(x, y)", [x, y])
     try:
         page.mouse.click(x, y)  # returns after the page handled the events, so the flag covers them
     finally:
-        page.evaluate("() => { window.__recScripted = false; }")
+        page.evaluate("window.__rec?.clickDone()")
 
 
 def wait_decoding(page: Page, timeout_s: int = DECODE_WAIT_S) -> bool:
@@ -322,8 +284,7 @@ def open_browser(p: Playwright, run: Run, view: ViewportSize, profile: str) -> t
         record_video_dir=run.out if video else None,
         record_video_size=view if video else None,
     )
-    ctx.add_init_script(HOOK)
-    ctx.add_init_script(CURSOR)
+    ctx.add_init_script(path=PAGE_JS)
     # app mode may already show the URL without our scripts; clear_gates loads it again, which applies them
     page = ctx.pages[0] if ctx.pages else ctx.new_page()
     return ctx, page
@@ -377,7 +338,7 @@ def take(page: Page, run: Run) -> int:
 
 
 def explore(page: Page, run: Run) -> int:
-    for c in page.evaluate(CONTROLS):
+    for c in page.evaluate("window.__rec.controls()"):
         ev("CONTROL", c)
     for i, target in enumerate(run.targets, 1):
         try:
