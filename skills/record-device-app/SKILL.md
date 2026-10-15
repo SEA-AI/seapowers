@@ -53,8 +53,7 @@ Scripts live next to this file. Call them with absolute paths:
 - `rec.py`, run as `uv run rec.py ...` (dependencies are declared inline)
 
 Prereqs on the local machine: ssh key access to the device (host already in `known_hosts`), `uv`, Google Chrome (not Playwright's bundled
-Chromium; see `rec.py`), `ffmpeg` with libx264 and `ffprobe`. Once, the lead runs `uv run rec.py install` (Playwright's
-video recorder; if it's missing, `rec.py` reports an `ERROR`). Videos are recorded at Playwright's fixed 25 fps.
+Chromium; see `rec.py`), `ffmpeg` with libx264 and `ffprobe`. Videos are recorded at Playwright's fixed 25 fps.
 
 Settings (`_S` seconds, `_MS` milliseconds, otherwise counts) default to a LAN. Override per run with env vars:
 - `device.py`: `READY_TIMEOUT_S`, `KILL_GRACE_S`, `SSH_TIMEOUT_S`. Keep `READY_TIMEOUT_S` under ~550 s,
@@ -92,7 +91,7 @@ docstring; `DONE <webm>` is deleted once `MP4` checks out.
 | persistent `GATE registration` (3) | show the screenshot, ask the user |
 | `STALL` | no new frames for a while; the take continued (a view without video, or trouble). Mention it with the result |
 | `GATE unknown` (3), `FROZEN` (4), `NO_CONNECTION` (5) | the Viewer asks the Device for `status` (a dead worker or ended clip looks like an app problem); act on its answer: `ENDED` clip ran out (restart, shorter take) · `CRASH` show the log tail · `RUNNING` app issue, show the screenshot and ask the user · `STOPPED` worker not running, `start` and retry · `NOT_READY` worker still launching, `wait-ready` · `UNREACHABLE` ssh failed, retry |
-| `ERROR` (1) | show the message (often Chrome or the video recorder missing, see Prereqs) and ask the user |
+| `ERROR` (1) | show the message (often Chrome missing, see Prereqs, or the video recorder, see Flow step 1) and ask the user |
 | `CLICK_FAIL`, `ACTION_FAIL` | show the nearest earlier screenshot (`explore_NN.png` / `tNNNNN.png`); re-find the target with `explore` |
 | `BAD_ARGS` (2) | fix the call (or install ffmpeg/ffprobe if that is the message) and rerun |
 | `MP4` | check one late frame, hand over the file |
@@ -125,7 +124,8 @@ New view, control, gate or product the references don't cover, or a reference th
 
 ## Flow
 
-1. **Device: preflight.** `CLIP_SECONDS` is the shortest video file (one per camera); if it's `unknown`, ask
+1. **Device: preflight.** Meanwhile the lead runs `uv run rec.py install` (Playwright's video recorder; under a
+   second when it's already there). `CLIP_SECONDS` is the shortest video file (one per camera); if it's `unknown`, ask
    the user. The clip starts playing at `start`, so the take has to
    finish before the clip does: clip length minus startup, gates, and a margin. Warn if it doesn't fit.
 2. **Only if the take clicks something: Device `start`, then Viewer `explore`** to find the targets. It uses up
