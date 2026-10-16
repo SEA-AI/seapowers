@@ -42,7 +42,7 @@ Local prereqs: ssh key access (host in `known_hosts`), `uv`, Google Chrome (not 
 
 Timings default to a LAN. Override per run: `READY_TIMEOUT_S`, `KILL_GRACE_S`, `SSH_TIMEOUT_S`
 (device.py), `REC_<NAME>` per `knob()` (rec.py). Partner commands die at 600 s: keep `READY_TIMEOUT_S` and
-a whole `explore` (default ~360 s) under ~550 s.
+a whole `explore` (default ~360 s, plus ~9 s per target) under ~550 s.
 
 **Device conventions.** Preflight checks tools and paths. When a step still fails, suspect these:
 - `make run` if `~/Makefile` exists, else `python3 worker.py` in `~/Worker` or `~/Core-Backend/Worker`. A
@@ -74,6 +74,7 @@ One short line to the user per event. Unlisted events need nothing more.
 |---|---|
 | `READY` | next step |
 | `WARN video is already streaming` | `READY` can't be trusted: ask the user before stopping that stream |
+| `WARN registration bypass file missing` | tell the user a registration gate is likely |
 | other `WARN`, `STALL`, `GATE registration` "transient?", `GATE connection_failed` | nothing beyond the line (`rec.py` reloads); mention `STALL` with the result |
 | `PREFLIGHT_FAIL`, `CRASH` | stop, show the user why |
 | `start`/`wait-ready` ends `ENDED` or `STOPPED` | died before `READY` (`ENDED`: clip shorter than startup); ask the user |
@@ -82,7 +83,7 @@ One short line to the user per event. Unlisted events need nothing more.
 | persistent `GATE registration` (3) | show the screenshot, ask the user |
 | `GATE unknown` (3), `FROZEN` (4), `NO_CONNECTION` (5) | the Viewer got the Device's `status`. `ENDED`: restart, shorter take · `CRASH`: show the log tail · `RUNNING`: app issue, show the screenshot, ask · `STOPPED`: `start`, retry · `NOT_READY`: `wait-ready` · `UNREACHABLE`: retry |
 | `CLICK_FAIL`, `ACTION_FAIL` | show the last screenshot before it; re-find the target with `explore` |
-| `ERROR` (1), `BAD_ARGS` (2) | fix the call or setup (Chrome, ffmpeg, `rec.py install`) and rerun; else ask |
+| `ERROR` (1), `BAD_ARGS` (2) | fix the call and rerun. Setup missing (Chrome, ffmpeg, `rec.py install`): show the message and ask before installing anything |
 | `MP4` | check one late frame, hand over the file |
 | `MP4_FAIL` (1) | convert the webm by hand with `rec.py`'s `to_mp4` arguments |
 
@@ -104,7 +105,7 @@ user (blue core). Ask who does what.
 - Fully hands-on: `record SECS`, no actions. Mixed: schedule only the script's part and tell the user
   which controls to leave alone.
 - Start when the user is ready, and say when the window opens.
-- "Stop" / "done": run `pkill -f '^[^ ]*python[^ ]* [^ ]*rec\.py .*<OUT>'` (only the recorder, not `uv` or a waiting shell). `rec.py` prints `TAKE_STOPPED` and keeps what it recorded.
+- "Stop" / "done": run `pkill -f '^[^ ]*python[^ ]* .*rec\.py .*<OUT>'` (only the recorder, not `uv` or a waiting shell). `rec.py` prints `TAKE_STOPPED` and keeps what it recorded.
 
 ## When the request isn't covered
 

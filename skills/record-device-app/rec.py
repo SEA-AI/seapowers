@@ -368,7 +368,12 @@ def main(argv: list[str]) -> int:
                 if not code:
                     code = 1  # stays 1 if the take raises: no mp4 from a crashed take
                     code = take(page, run) if run.mode == Mode.RECORD else explore(page, run)
+            except KeyboardInterrupt:  # stopped before the take began
+                ev("TAKE_STOPPED", "before the take; converting what was recorded")
+                code = 0
             finally:
+                for sig in (signal.SIGINT, signal.SIGTERM):  # a repeated stop must not break the conversion
+                    signal.signal(sig, signal.SIG_IGN)
                 video = page.video.path() if page.video else None
                 with contextlib.suppress(PlaywrightError):  # browser already gone: the webm may still be usable
                     ctx.close()  # finalizes the webm

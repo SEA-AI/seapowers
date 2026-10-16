@@ -1,7 +1,7 @@
 # Device-side commands for record-device-app. device.py sends this file over ssh: bash -s -- CMD [ARGS].
 # Everything runs inside main(), so a child that reads stdin (ffprobe) can't eat the rest of the script.
 
-# Device conventions (keep the list in SKILL.md in sync)
+# Device conventions (SKILL.md lists the ones to suspect when a step fails)
 CANDIDATES="Worker Core-Backend/Worker"  # worker folders tried in order, relative to the device home
 MTX=localhost:9997/v3                    # MediaMTX API on the device
 PIDF=/tmp/record_device_app.pid          # launcher's pid; one run per device at a time
