@@ -104,7 +104,7 @@ user (blue core). Ask who does what.
 - Fully hands-on: `record SECS`, no actions. Mixed: schedule only the script's part and tell the user
   which controls to leave alone.
 - Start when the user is ready, and say when the window opens.
-- "Stop" / "done": run `pkill -f '[r]ec.py .*<OUT>'` (the brackets keep it from matching your own shell). `rec.py` prints `TAKE_STOPPED` and keeps what it recorded.
+- "Stop" / "done": run `pkill -f '^[^ ]*python[^ ]* [^ ]*rec\.py .*<OUT>'` (only the recorder, not `uv` or a waiting shell). `rec.py` prints `TAKE_STOPPED` and keeps what it recorded.
 
 ## When the request isn't covered
 
