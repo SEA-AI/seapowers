@@ -68,8 +68,11 @@ Find the bottleneck per `references/pipeline.md` §6: compare stage 1 and stage 
 
 ```bash
 python3 $SKILL/scripts/make_timeline.py --scenario "100 objects=<local>/pmp" [--scenario "20 objects=<other>/pmp"] \
-    --element <element> --out timeline.html [--pool 4 --interval 1 --camera-fps 12]
+    --element <element> --out timeline.html [--pool 4 --interval 1 --camera-fps 12] \
+    [--eyebrow "SEA-1517 · Kraken unit · Orin NX 20 W" --title "What alertsocket costs in the worker pipeline"]
 ```
+
+The page follows the SEA.AI Brand Book (white background, the 7 brand colours, Barlow Semi Condensed, logo top-right, "SEA.AI CONFIDENTIAL" footer). `--eyebrow` becomes the red section label: keep it short and ALL CAPS-friendly. No em dashes in titles or notes.
 
 It prints model vs measured cycle time per case, gap = (model − measured) / measured. A few percent negative is normal, because the model leaves out untraced steps. More than 10 % apart in either direction means the stage times or the assumptions do not describe the run: find out why before showing it. Take `--pool` and `--interval` from the step-1 check. Publish the page as an Artifact if the user wants to share it (it is self-contained, theme-aware, hover works on touch).
 
