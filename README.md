@@ -1,7 +1,7 @@
 # seapowers
 
 [![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-7c3aed?logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQyIDAtOC0zLjU4LTgtOHMzLjU4LTggOC04IDggMy41OCA4IDgtMy41OCA4LTggOHoiLz48L3N2Zz4=&style=flat-square)](https://docs.anthropic.com/en/docs/claude-code/skills)
-[![Skills & Plugins](https://img.shields.io/badge/Skills%20%26%20Plugins-4-blue?style=flat-square)](#-available-skills-and-plugins)
+[![Skills & Plugins](https://img.shields.io/badge/Skills%20%26%20Plugins-5-blue?style=flat-square)](#-available-skills-and-plugins)
 [![Upstream Sync](https://img.shields.io/github/actions/workflow/status/SEA-AI/seapowers/sync-upstream-skills.yml?label=Upstream%20Sync&style=flat-square)](https://github.com/SEA-AI/seapowers/actions/workflows/sync-upstream-skills.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
@@ -17,6 +17,14 @@
 | 🐍 `python-best-practices` | Modern Python tooling and patterns (uv, ruff, pytest, typing, async, project layout) | Internal |
 | ⚛️ `react-best-practices` | React & Next.js performance optimization (70 rules across 8 categories) | [Vercel Labs](https://github.com/vercel-labs/agent-skills) |
 | 🎨 `sea-ai-brand` | Brand Book 2026 guidelines for all SEA.AI outputs (docs, Word, PDFs, diagrams, decks incl. Defence, social, video, UI) | Internal |
+| 🎥 `record-device-app` | Run a product on a device from a recording and screen-record its web app, with Device and Viewer partner agents | Internal |
+
+### Agents
+
+| Agent | Description |
+|-------|-------------|
+| `record-device` | Device partner for `record-device-app`: controls the worker over ssh with `device.py` |
+| `record-viewer` | Viewer partner for `record-device-app`: drives the web app in a browser with `rec.py` |
 
 ### Plugins
 
@@ -39,6 +47,8 @@ seapowers/                             # Repository root = plugin root
 │   └── workflows/
 │       ├── ci.yml                     # Version check + skill lint on PRs
 │       └── sync-upstream-skills.yml   # Weekly upstream sync
+├── agents/                            # Subagent definitions used by skills
+│   └── my-agent.md
 ├── skills/
 │   └── my-skill/
 │       └── SKILL.md
