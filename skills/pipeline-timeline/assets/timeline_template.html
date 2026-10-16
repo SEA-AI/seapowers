@@ -1,0 +1,209 @@
+<title>__TITLE__</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<style>
+/* layout: one column, 1000px: title -> results table -> one timeline per scenario -> method note */
+:root {
+  --bg: #f7f8f8; --surface: #ffffff; --fg: #15202b; --muted: #5c6b78; --line: #d9dfe3; --lane: #eef1f3;
+  --c0: #1f6fd1; --c1: #d9531c; --accent: #0b4f8a;
+  --net: #3a6fd8; --copy: #7a8dd6; --pre: #a9b4c8; --rest: #c7a14a; --el: #d9531c; --other: #7d8a9c; --inf: #3a6fd8; --wait: #9aa7b2;
+  --display: "Barlow Semi Condensed", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #101418; --surface: #181e24; --fg: #e8ecef; --muted: #9aa7b2; --line: #2b343c; --lane: #1f262d;
+  --c0: #4f93e8; --c1: #f0763c; --accent: #7fb6ee;
+  --net: #5b8ff0; --copy: #8e9fe6; --pre: #6f7c92; --rest: #d8b45a; --el: #f0763c; --other: #6b7889; --inf: #5b8ff0; --wait: #56616d; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #101418; --surface: #181e24; --fg: #e8ecef; --muted: #9aa7b2; --line: #2b343c; --lane: #1f262d;
+  --c0: #4f93e8; --c1: #f0763c; --accent: #7fb6ee;
+  --net: #5b8ff0; --copy: #8e9fe6; --pre: #6f7c92; --rest: #d8b45a; --el: #f0763c; --other: #6b7889; --inf: #5b8ff0; --wait: #56616d; color-scheme: dark; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--body); margin: 0; }
+.wrap { max-width: 1000px; margin: 0 auto; padding-block: 28px 56px; padding-inline: 20px; }
+h1, h2 { font-family: var(--display); text-wrap: balance; margin: 0; }
+h1 { font-size: 32px; font-weight: 700; line-height: 1.1; margin-top: 6px; }
+h2 { font-size: 21px; font-weight: 600; margin-top: 34px; }
+p { max-width: 72ch; margin: 8px 0; } .sub { color: var(--muted); font-size: 14px; }
+.eyebrow { font-family: var(--display); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; font-size: 12px; color: var(--accent); }
+.tablewrap { overflow-x: auto; margin-top: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; background: var(--surface); border: 1px solid var(--line); }
+th, td { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-family: var(--display); font-weight: 600; font-size: 13px; color: var(--muted); }
+.fig { position: relative; background: var(--surface); border: 1px solid var(--line); padding: 14px 16px; margin-top: 12px; overflow-x: auto; }
+.fig svg { display: block; width: 100%; height: auto; min-width: 760px; }
+svg text { font-family: var(--body); fill: var(--fg); font-variant-numeric: tabular-nums; }
+svg .mu { fill: var(--muted); } svg .grid { stroke: var(--line); }
+.key { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+.key i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; }
+.key i.w { background: repeating-linear-gradient(45deg, var(--wait) 0 3px, transparent 3px 6px); border: 1px solid var(--wait); }
+#tip { position: fixed; z-index: 10; pointer-events: none; max-width: 330px; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font: 12.5px/1.45 var(--body); box-shadow: 0 6px 20px rgba(0,0,0,.18); font-variant-numeric: tabular-nums; }
+#tip b { font-family: var(--display); font-size: 15px; }
+#tip .row { display: flex; justify-content: space-between; gap: 14px; }
+#tip .row span:first-child { color: var(--muted); }
+#tip .step { margin: 6px 0 4px; padding: 5px 7px; border-radius: 4px; background: var(--lane); }
+#tip .note { color: var(--muted); margin-top: 4px; }
+svg [data-b] { transition: opacity .12s; cursor: default; }
+svg.focus [data-b] { opacity: .18; }
+svg.focus [data-b].hl { opacity: 1; }
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">__EYEBROW__</div>
+  <h1>__TITLE__</h1>
+  <p class="sub">__SUBTITLE__</p>
+
+  <h2>Results</h2>
+  __TABLES__
+
+  <h2>Frame by frame</h2>
+  <p>Each lane is one thread of the worker. <b>N</b> = batch where the network runs, <b>S</b> = skipped batch. Stage 1 = inference thread, stage 2 = post-processing thread (runs on every batch). <b>Hover or tap a block</b> to follow that batch through all lanes.</p>
+  <div id="figs"></div>
+  <div class="key">
+    <span><i style="background:var(--copy)"></i>copy image to CPU</span>
+    <span><i style="background:var(--net)"></i>network (GPU)</span>
+    <span><i style="background:var(--rest)"></i>objects and metadata</span>
+    <span><i style="background:var(--inf)"></i>inference (not split)</span>
+    <span><i style="background:var(--other)"></i>other post-processing</span>
+    <span><i style="background:var(--el)"></i>__ELEMENT__</span>
+    <span><i class="w"></i>waiting</span>
+  </div>
+  <p class="sub">__MODEL_NOTE__</p>
+  <p class="sub">__FOOTER__</p>
+</div>
+
+<script>
+const GROUPS = __GROUPS_JSON__;
+const ELEMENT = "__ELEMENT__";
+const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const sum = (p) => p.reduce((a, x) => a + x[1], 0);
+const R = (x) => Math.round(x);
+const STEP = { copy: "copy images to the CPU", net: "network on the GPU", rest: "objects and metadata", inf: "inference",
+  other: "other post-processing plugins", el: ELEMENT };
+// model of the threads: muxer (pool of batch buffers, one camera frame per tick), stage 1, stage 2
+function simulate(c, g, n = 80) {
+  const tick = 1000 / g.camera_fps, b = [];
+  for (let i = 0; i < n; i++) {
+    const kind = i % (g.interval + 1) === 0 ? 0 : 1;
+    const rel = i >= g.pool ? b[i - g.pool].s2e : 0;
+    const cam = b.length ? (Math.floor(b[i - 1].mux / tick + 1e-6) + 1) * tick : 0;
+    const mux = Math.max(rel, cam);
+    const s1s = Math.max(mux, b.length ? b[i - 1].s1e : 0), s1e = s1s + sum(c.s1[kind]);
+    const s2s = Math.max(s1e, b.length ? b[i - 1].s2e : 0), s2e = s2s + sum(c.s2[kind]);
+    b.push({ kind, mux, s1s, s1e, s2s, s2e, bufferBound: rel > cam + 0.5 });
+  }
+  return b;
+}
+const INFO = {};
+function draw(gi, g) {
+  const C = {}; ["net", "copy", "pre", "rest", "el", "other", "inf", "wait", "c0", "c1", "lane", "fg"].forEach((k) => (C[k] = css("--" + k)));
+  const id = `fig${gi}`, W = 960, L = 92, Rr = 20, laneH = 34, gap = 12, blockH = 26;
+  const span = g.span_ms, sx = (W - L - Rr) / span;
+  const caseH = 30 + 3 * (laneH + gap) + 26, H = 24 + g.cases.length * caseH + 22;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${g.title}">`;
+  s += `<defs><pattern id="hatch-${id}" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="6" fill="${C.wait}"/></pattern><clipPath id="win-${id}"><rect x="${L}" y="0" width="${W - L - Rr}" height="${H}"/></clipPath></defs>`;
+  const step = span > 1000 ? 200 : 100;
+  for (let t = 0; t <= span; t += step) {
+    const x = L + t * sx;
+    s += `<line class="grid" x1="${x}" y1="18" x2="${x}" y2="${H - 22}" stroke-width="1"/><text class="mu" x="${x}" y="${H - 6}" font-size="12" text-anchor="middle">${t} ms</text>`;
+  }
+  const cyc = g.interval + 1;
+  g.cases.forEach((c, ci) => {
+    const b = simulate(c, g), t0 = 0, t1 = span, X = (t) => L + (t - t0) * sx;
+    const y0 = 24 + ci * caseH, col = C["c" + (ci % 2)];
+    const period = b[60].s1e - b[60 - cyc].s1e;
+    s += `<text x="0" y="${y0 + 14}" font-size="15" font-weight="600" fill="${col}">${c.title}</text>`;
+    s += `<text class="mu" x="${W - Rr}" y="${y0 + 14}" font-size="13" text-anchor="end">model, settled: ${cyc} batches every ${R(period)} ms → ${(1000 * cyc / period).toFixed(1)} batches/s${c.measured_cycle_ms ? ` · measured ${R(c.measured_cycle_ms)} ms` : ""}</text>`;
+    const yMux = y0 + 30, y1 = yMux + laneH + gap, y2 = y1 + laneH + gap;
+    ["Muxer", "Stage 1", "Stage 2"].forEach((name, li) => {
+      const y = yMux + li * (laneH + gap);
+      s += `<rect x="${L}" y="${y}" width="${W - L - Rr}" height="${laneH}" rx="4" fill="${C.lane}"/><text class="mu" x="${L - 10}" y="${y + laneH / 2 + 4}" font-size="12" text-anchor="end">${name}</text>`;
+    });
+    s += `<g clip-path="url(#win-${id})">`;
+    const box = (a, z, y, fill, extra, attrs) => {
+      const A = Math.max(a, t0), Z = Math.min(z, t1);
+      if (Z <= A) return "";
+      return `<rect x="${X(A)}" y="${y + 4}" width="${Math.max((Z - A) * sx - 1.5, 2)}" height="${blockH}" rx="4" fill="${fill}" ${extra || ""} ${attrs}/>`;
+    };
+    for (let i = 0; i < 40; i++) {
+      const bi = b[i], prev = b[i - 1];
+      if (bi.mux > t1) break;
+      const lab = `B${i + 1} ${bi.kind ? "S" : "N"}`, key = `${id}-${ci}-${i}`;
+      INFO[key] = { lab, kind: bi.kind, title: c.title, bi, prevS1e: prev ? prev.s1e : null, prevS2e: prev ? prev.s2e : null };
+      const att = (st) => `data-b="${key}" data-step="${st}"`;
+      if (bi.s1e > t0 && bi.s2s < t1) {
+        const xa = X(Math.max(bi.s1e, t0)), xb = X(Math.min(bi.s2s, t1));
+        s += `<path d="M${xa} ${y1 + blockH + 4} C ${xa} ${y1 + blockH + 10}, ${xb} ${y2 - 2}, ${xb} ${y2 + 4}" fill="none" stroke="${C.wait}" stroke-width="1.3" stroke-dasharray="2 3" ${att("queue2")}/>`;
+      }
+      const cy = yMux + (bi.kind ? 24 : 10);
+      s += `<circle cx="${X(bi.mux)}" cy="${cy}" r="5" fill="${col}" ${att("mux")}/><text x="${X(bi.mux) + 7}" y="${cy + 4}" font-size="10.5" font-weight="600" ${att("mux")}>${lab}</text>`;
+      if (prev && bi.s1s - prev.s1e > 4) {
+        s += box(prev.s1e, bi.s1s, y1, `url(#hatch-${id})`, 'opacity="0.85"', att("wait1"));
+        const w = Math.min(bi.s1s, t1) - Math.max(prev.s1e, t0);
+        if (w * sx > 56) s += `<text x="${X((Math.max(prev.s1e, t0) + Math.min(bi.s1s, t1)) / 2)}" y="${y1 + 21}" font-size="11" text-anchor="middle" ${att("wait1")}>waits ${R(bi.s1s - prev.s1e)}</text>`;
+      }
+      if (prev && bi.s2s - prev.s2e > 4) s += box(prev.s2e, bi.s2s, y2, `url(#hatch-${id})`, 'opacity="0.85"', att("idle2"));
+      [[c.s1[bi.kind], bi.s1s, y1, 1], [c.s2[bi.kind], bi.s2s, y2, 2]].forEach(([parts, start, y, lane]) => {
+        let x = start;
+        parts.forEach(([kk, ms, est], pi) => {
+          const nm = lane === 1 && bi.kind ? "pass" : kk === "pre" ? (pi <= 1 ? "pre" : "post") : kk;
+          s += box(x, x + ms, y, C[kk], est ? `stroke="${C.fg}" stroke-width="0.8" stroke-dasharray="2 1.5"` : "", att(`s${lane}:${nm}:${R(x)}:${ms}:${est ? 1 : 0}`));
+          const A = Math.max(x, t0), Z = Math.min(x + ms, t1);
+          if ((Z - A) * sx > 24) s += `<text x="${X((A + Z) / 2)}" y="${y + 21}" font-size="11" text-anchor="middle" fill="#fff" style="pointer-events:none" data-b="${key}">${ms}</text>`;
+          x += ms;
+        });
+        if (start >= t0 - 1 && start < t1) {
+          if (lane === 1 && !bi.kind) s += `<text x="${X(start) + 2}" y="${y + 1}" font-size="10" font-weight="600" ${att("label")}>${lab}</text>`;
+          if (lane === 2) s += `<text x="${X(start) + 1}" y="${bi.kind ? y + laneH + 11 : y + 1}" font-size="10" font-weight="600" ${att("label")}>${lab}</text>`;
+        }
+      });
+    }
+    s += `</g>`;
+  });
+  s += `</svg>`;
+  let host = document.getElementById(id);
+  if (!host) { host = document.createElement("div"); host.className = "fig"; host.id = id; document.getElementById("figs").appendChild(host); }
+  host.innerHTML = `<div style="font-family:var(--display);font-weight:600;font-size:16px;margin-bottom:4px">${g.title}</div>` + s;
+  const svg = host.querySelector("svg");
+  const hl = (k) => { svg.classList.toggle("focus", !!k); svg.querySelectorAll("[data-b]").forEach((el) => el.classList.toggle("hl", el.dataset.b === k)); };
+  const on = (e) => { const el = e.target.closest("[data-b]"); if (!el || !el.dataset.step) { hideTip(); hl(null); return; } hl(el.dataset.b); showTip(e, el.dataset.b, el.dataset.step); };
+  svg.addEventListener("mousemove", on); svg.addEventListener("click", on);
+  svg.addEventListener("mouseleave", () => { hideTip(); hl(null); });
+}
+const tip = document.createElement("div"); tip.id = "tip"; tip.hidden = true; document.body.appendChild(tip);
+function hideTip() { tip.hidden = true; }
+const row = (k, v) => `<div class="row"><span>${k}</span><span>${v}</span></div>`;
+function showTip(e, key, step) {
+  const d = INFO[key]; if (!d) return;
+  const b = d.bi, kindTxt = d.kind ? "S: network skipped" : "N: network runs";
+  let h = "";
+  const [lane, name, start, ms, est] = step.split(":");
+  if (lane === "s1" || lane === "s2") {
+    const st = name === "pass" ? "passes through, network skipped" : name === "pre" ? "preprocess" : name === "post" ? "postprocess" : STEP[name];
+    h = `<div class="step"><b style="font-size:13px">${lane === "s1" ? "Stage 1" : "Stage 2"}: ${st}</b>${row("from – to", `${start} – ${+start + +ms} ms`)}${row("takes", `${ms} ms${est === "1" ? " (estimate)" : ""}`)}</div>`;
+  } else if (step === "wait1") {
+    const why = b.bufferBound ? "no free batch buffer: all are in use, the oldest batch is still in stage 2" : "the next camera frame is not there yet";
+    h = `<div class="step"><b style="font-size:13px">Stage 1 waits before ${d.lab}</b>${row("from – to", `${R(d.prevS1e)} – ${R(b.s1s)} ms`)}${row("waits", `${R(b.s1s - d.prevS1e)} ms`)}<div class="note">Why: ${why}.</div></div>`;
+  } else if (step === "idle2") {
+    h = `<div class="step"><b style="font-size:13px">Stage 2 idle before ${d.lab}</b>${row("from – to", `${R(d.prevS2e)} – ${R(b.s2s)} ms`)}<div class="note">Nothing to do: ${d.lab} is still in stage 1.</div></div>`;
+  } else if (step === "queue2") {
+    h = `<div class="step"><b style="font-size:13px">${d.lab} waits in front of stage 2</b>${row("from – to", `${R(b.s1e)} – ${R(b.s2s)} ms`)}${row("waits", `${R(b.s2s - b.s1e)} ms`)}<div class="note">Stage 2 is still busy with earlier batches.</div></div>`;
+  } else if (step === "mux") {
+    h = `<div class="step"><b style="font-size:13px">Muxer builds ${d.lab}</b>${row("at", `${R(b.mux)} ms`)}<div class="note">${b.bufferBound ? "Had to wait for a free batch buffer." : "Built as soon as the camera frame arrived."}</div></div>`;
+  }
+  tip.innerHTML = `<b>${d.lab}</b> <span style="color:var(--muted)">· ${kindTxt} · ${d.title}</span>${h}`
+    + row("built by the muxer", `${R(b.mux)} ms`) + row("waits for stage 1", `${R(b.s1s - b.mux)} ms`)
+    + row("stage 1", `${R(b.s1s)} – ${R(b.s1e)} ms (${R(b.s1e - b.s1s)} ms)`) + row("waits for stage 2", `${R(b.s2s - b.s1e)} ms`)
+    + row("stage 2", `${R(b.s2s)} – ${R(b.s2e)} ms (${R(b.s2e - b.s2s)} ms)`)
+    + `<div class="row" style="margin-top:4px;font-weight:600"><span style="color:var(--fg)">latency, muxer to end of stage 2</span><span>${R(b.s2e - b.mux)} ms</span></div>`;
+  tip.hidden = false;
+  const pad = 14, w = tip.offsetWidth, hh = tip.offsetHeight;
+  let x = e.clientX + pad, y = e.clientY + pad;
+  if (x + w > window.innerWidth - 8) x = e.clientX - w - pad;
+  if (y + hh > window.innerHeight - 8) y = e.clientY - hh - pad;
+  tip.style.left = Math.max(8, x) + "px"; tip.style.top = Math.max(8, y) + "px";
+}
+const drawAll = () => GROUPS.forEach((g, i) => draw(i, g));
+drawAll();
+const mq = window.matchMedia("(prefers-color-scheme: dark)"); mq.addEventListener && mq.addEventListener("change", drawAll);
+new MutationObserver(drawAll).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+</script>
