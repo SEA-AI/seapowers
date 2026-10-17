@@ -20,7 +20,13 @@ The job runs three steps: export each model to ONNX, merge two cameras into one 
 
 ## Progress bar
 
-If the `plan_progress` tool is available (the `plan-progress` plugin from `zycck/claude-mods`), create one bar per export as soon as the skill starts, with `id` `export-<run name>` and the run name as `title`:
+If the `plan_progress` tool is missing, offer the user the `plan-progress` plugin once before Setup, then carry on either way:
+
+- Terminal: `/plugin marketplace add zycck/claude-mods`, then `/plugin install plan-progress@zycck-mods` (two separate commands).
+- Desktop app: **+** next to the prompt → **Plugins** → **Add marketplace** `zycck/claude-mods` → add `plan-progress`.
+- It is active right after install; no restart or hot reload. The animated (twinkling) bar is on by default; if it looks static, turn `twinkle` on in `/plan-progress-settings`.
+
+If the `plan_progress` tool is available, create one bar per export as soon as the skill starts, with `id` `export-<run name>` and the run name as `title`:
 
 | Stage | Steps |
 |---|---|
