@@ -42,7 +42,14 @@ def estimate(api, run) -> tuple[float | None, int]:
     return (sum(samples) / len(samples), len(samples)) if samples else (None, 0)
 
 
+def builds_engine(run) -> bool:
+    """Same rule as the job's coerce_trt_bool: only "false" (any case) or False skips TRT."""
+    return str(run.config.get("trt", True)).lower() != "false"
+
+
 def stage(run) -> str:
+    if not builds_engine(run):
+        return "ONNX export"
     types = {a.type for a in run.logged_artifacts()}
     return "TRT compile" if "onnx-model" in types else "ONNX export"
 
@@ -51,7 +58,7 @@ def main() -> None:
     path, poll = sys.argv[1], int(sys.argv[2]) if len(sys.argv) > 2 else 30
     api = wandb.Api()
     run = api.run(path)
-    total, n = estimate(api, run)
+    total, n = estimate(api, run) if builds_engine(run) else (None, 0)
     eta = f"{total / 60:.0f}" if total else "none"
     print(f"start {run.name} {run.url} estimate={eta} samples={n}", flush=True)
     started = datetime.fromisoformat(run.created_at.replace("Z", "+00:00"))

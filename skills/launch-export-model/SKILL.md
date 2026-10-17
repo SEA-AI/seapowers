@@ -33,7 +33,7 @@ If the `plan_progress` tool is available, create one bar per export as soon as t
 | Setup | Check gh, wandb · Fetch schema · Build config · Validate config |
 | Launch | Confirm with user · Queue run · Agent picks up |
 | ONNX | Export models · Compose DAN (single model: `skipped`) |
-| TensorRT | With an estimate of N min: 20 steps `Compile 5%` … `Compile 100%` (each about N/20 min), so the compile, which takes nearly all the time, fills most of the bar. Without one: a single `Compile` step |
+| TensorRT | With `trt: false`: one step `Compile` with status `skipped`. With an estimate of N min: 20 steps `Compile 5%` … `Compile 100%` (each about N/20 min), so the compile, which takes nearly all the time, fills most of the bar. Without one: a single `Compile` step |
 | Cleanup | Report artifacts · Stop watcher |
 
 Move it with `{id, next: true}` as each step finishes. Before asking the user anything, set `state: "needs_input"`. On a failure, send `failed` with the cause as `note`. After cleanup, send `state: "done"`. Without the tool, report each step in one short chat line instead.
