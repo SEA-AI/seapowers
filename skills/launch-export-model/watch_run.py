@@ -5,6 +5,7 @@ Usage: uv run -q --with wandb python watch_run.py <entity/project/run_id> [poll_
 Output, one line each:
   start <name> <url> estimate=<min|none> samples=<n>
   stage <ONNX export|TRT compile> elapsed=<min>
+  progress <5..95> elapsed=<min>   (TRT compile, every 5% of the estimate; only with one)
   end <finished|failed|crashed|killed> elapsed=<min> artifacts=<type:name,...>
 
 The estimate is the mean runtime of past finished runs that built an engine on the
@@ -54,7 +55,7 @@ def main() -> None:
     eta = f"{total / 60:.0f}" if total else "none"
     print(f"start {run.name} {run.url} estimate={eta} samples={n}", flush=True)
     started = datetime.fromisoformat(run.created_at.replace("Z", "+00:00"))
-    last = None
+    last, reported = None, 0
     while True:
         run = api.run(path)
         if run.state != "running":
@@ -62,10 +63,16 @@ def main() -> None:
             print(f"end {run.state} elapsed={run.summary.get('_runtime', 0) / 60:.0f} artifacts={artifacts}", flush=True)
             return
         current = stage(run)
+        elapsed = (datetime.now(timezone.utc) - started).total_seconds() / 60
         if current != last:
-            elapsed = (datetime.now(timezone.utc) - started).total_seconds() / 60
             print(f"stage {current} elapsed={elapsed:.0f}", flush=True)
             last = current
+        if total and current == "TRT compile":
+            # 5% slices of the estimate, held at 95% until the run really ends
+            pct = min(int(elapsed * 60 / total * 20) * 5, 95)
+            while reported < pct:
+                reported += 5
+                print(f"progress {reported} elapsed={elapsed:.0f}", flush=True)
         time.sleep(poll)
 
 

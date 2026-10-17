@@ -33,7 +33,7 @@ If the `plan_progress` tool is available, create one bar per export as soon as t
 | Setup | Check gh, wandb · Fetch schema · Build config · Validate config |
 | Launch | Confirm with user · Queue run · Agent picks up |
 | ONNX | Export models · Compose DAN (single model: `skipped`) |
-| TensorRT | Compile (~N min), with N from the watcher's `estimate`; just `Compile` without one |
+| TensorRT | With an estimate of N min: 20 steps `Compile 5%` … `Compile 100%` (each about N/20 min), so the compile, which takes nearly all the time, fills most of the bar. Without one: a single `Compile` step |
 | Cleanup | Report artifacts · Stop watcher |
 
 Move it with `{id, next: true}` as each step finishes. Before asking the user anything, set `state: "needs_input"`. On a failure, send `failed` with the cause as `note`. After cleanup, send `state: "done"`. Without the tool, report each step in one short chat line instead.
@@ -124,7 +124,7 @@ Fix and re-run on a validation error.
 
 ## 3. Confirm, then launch
 
-Show the user the run name and the resolved table (model, type, detection, horizon, imgsz, infsz, batch_size, trt_flags, queue). Launch only after an explicit yes:
+Show the user the run name, the resolved table (model, type, detection, horizon, imgsz, infsz, batch_size, trt_flags, ssh_host, queue) and the full launch JSON exactly as it will be sent, in a `json` code block. Launch only after an explicit yes:
 
 ```bash
 wandb launch -j sea-ai/export-model/export-model:latest -e sea-ai -p export-model \
@@ -143,9 +143,10 @@ uv run -q --with wandb python "<this skill's folder>/watch_run.py" sea-ai/export
 
 It prints one line per stage change, and each line moves the bar:
 
-- `start ... estimate=<min|none>`: write the estimate into the TensorRT step title.
-- `stage ONNX export`: `Export models` active. `stage TRT compile`: ONNX done, `Compile` active.
-- `end finished ...`: `Compile` done, then the Cleanup steps. `end failed|crashed|killed`: `failed` on the active step.
+- `start ... estimate=<min|none>`: with an estimate, resend the stages with the 20 `Compile n%` steps.
+- `stage ONNX export`: `Export models` active. `stage TRT compile`: ONNX done, first compile step active.
+- `progress <n>`: `next` once per line (one per 5%). It stops at 95% until the run ends.
+- `end finished ...`: all compile steps done, then the Cleanup steps. `end failed|crashed|killed`: `failed` on the active step.
 
 The estimate is the mean runtime of past finished runs on the same compile device (SSH host) for the same network type (`dan`, `ahoy`, `yolo`). Other devices never count: compile times differ across Jetson models. W&B keeps every run, so the estimate sharpens with each export; nothing is stored locally. Export takes about a minute; nearly all the time is TRT compile.
 
