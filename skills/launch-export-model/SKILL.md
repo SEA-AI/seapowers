@@ -20,7 +20,7 @@ The job runs three steps: export each model to ONNX, merge two cameras into one 
 
 ## Progress bar
 
-If the `plan_progress` tool is missing, offer the user the `plan-progress` plugin once before Setup, then carry on either way:
+If the `plan_progress` tool is missing, offer the `plan-progress` plugin first, before any other question, and say it is optional: the export works the same without it. Then carry on either way:
 
 - Terminal: `/plugin marketplace add zycck/claude-mods`, then `/plugin install plan-progress@zycck-mods` (two separate commands).
 - Desktop app: **+** next to the prompt → **Plugins** → **Add marketplace** `zycck/claude-mods` → add `plan-progress`.
@@ -69,20 +69,18 @@ done
 
 ## 1. Collect inputs
 
-Read `$JOB/config_schema.py` and `$JOB/platforms.yaml` for the current fields and product defaults. Then ask only for what the request leaves open:
+Read `$JOB/config_schema.py` and `$JOB/platforms.yaml`. Skip any question the request already answers. Ask in this order:
 
-- **product**: a key of `platforms.yaml` (e.g. `watchkeeper`, `sentry`).
-- **models**: one entry per camera. One model = single ONNX, two = DAN. Per model:
-  - `name`, `type` (`thermal` | `rgb`)
-  - `detection`: list of W&B artifact refs (`collection:version`). Two+ refs = ensemble.
-  - `horizon`: ref, or omit for plain YOLO (sets AHOY).
-  - `imgsz`, `infsz`, `batch_size`: omit to use the product default. `imgsz`/`infsz` are `["H", "W"]` strings.
-- **trt**: `false` stops after ONNX.
-- **trt_flags**: full `trtexec` flag string; omit for the product default. Show the default from `platforms.yaml` when asking.
-- **ssh_host**, **fname**, **yolov5_branch**, **export.fuse/half**: omit unless the user asks.
-- **queue**: W&B launch queue name. Suggest the one recent `export-model` runs used (`_wandb.launch_queue_name` in their config) and confirm.
+1. **Product**: Sentry, Watchkeeper, or another device.
+2. **Defaults**, depending on the answer:
+   - **Sentry or Watchkeeper**: show that product's defaults from `platforms.yaml` as one table and ask the user to accept or change each value: compile device (`ssh_host`), `trt_flags`, and per camera `imgsz`, `infsz` (empty = same as `imgsz`) and `batch_size`.
+   - **Another device**: there are no defaults, so ask for each value: `ssh_host` (`user@host` if it needs a user), `trt_flags`, and per camera `imgsz`, `infsz` and `batch_size`. Also ask whether its TensorRT is 7 (older Jetsons) or 8+; the config has no field for this, so pick the product whose `trt7_compatible` matches (`sentry` = TRT 7, `watchkeeper` = TRT 8+) and override everything else.
+3. **Inputs**: which cameras (`thermal`, `rgb`, or both = DAN) and per camera:
+   - `detection`: W&B artifact refs (`collection:version` or `entity/project/artifact:version`). Two+ refs = ensemble. For "latest", check the registry and the newest training runs, and show which version you picked and why.
+   - `horizon`: ref for AHOY, or none for plain YOLO.
+4. **Queue**: suggest the one recent `export-model` runs used (`_wandb.launch_queue_name` in their config) and confirm.
 
-Omit every key the user did not set so the job applies `platforms.yaml` defaults.
+`trt: false` stops after ONNX. `fname`, `yolov5_branch` and `export.fuse/half` stay out unless the user asks. In the config, set only the values that differ from the product defaults, so the job applies `platforms.yaml` for the rest.
 
 ## 2. Write and validate
 
