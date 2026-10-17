@@ -124,7 +124,7 @@ Fix and re-run on a validation error.
 
 ## 3. Confirm, then launch
 
-Show the user the run name, the resolved table (model, type, detection, horizon, imgsz, infsz, batch_size, trt_flags, ssh_host, queue) and the full launch JSON exactly as it will be sent, in a `json` code block. Launch only after an explicit yes:
+Show the user the run name, the resolved table (model, type, detection, horizon, imgsz, infsz, batch_size, trt_flags, ssh_host, queue) and the full launch JSON exactly as it will be sent, in a `json` code block. Show the JSON again in the same message as every launch question, even when nothing changed since it was last shown, so the yes always answers a JSON on screen. Launch only after an explicit yes:
 
 ```bash
 wandb launch -j sea-ai/export-model/export-model:latest -e sea-ai -p export-model \
