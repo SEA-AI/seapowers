@@ -1,22 +1,22 @@
-"""Watch an export-model run: current stage plus a progress bar against past runtimes.
+"""Watch an export-model run and print one line per stage change.
 
 Usage: uv run -q --with wandb python watch_run.py <entity/project/run_id> [poll_seconds]
+
+Output, one line each:
+  start <name> <url> estimate=<min|none> samples=<n>
+  stage <ONNX export|TRT compile> elapsed=<min>
+  end <finished|failed|crashed|killed> elapsed=<min> artifacts=<type:name,...>
 
 The estimate is the mean runtime of past finished runs that built an engine on the
 same compile device (SSH host) for the same network type (dan, ahoy, yolo). No match
 means no estimate: compile times are not comparable across devices.
 """
 
-import json
 import sys
 import time
 from datetime import datetime, timezone
-from pathlib import Path
 
 import wandb
-
-# Read by the export-progress Claude Code mod to draw a live bar above the prompt.
-STATUS_FILE = Path.home() / ".claude" / "export-progress.json"
 
 
 def build_key(run) -> tuple[str, str]:
@@ -42,18 +42,8 @@ def estimate(api, run) -> tuple[float | None, int]:
 
 
 def stage(run) -> str:
-    if run.state != "running":
-        return run.state
     types = {a.type for a in run.logged_artifacts()}
     return "TRT compile" if "onnx-model" in types else "ONNX export"
-
-
-def bar(elapsed: float, total: float | None, width: int = 20) -> str:
-    if not total:
-        return f"{elapsed / 60:.0f} min elapsed (no past run of this network type on this device)"
-    frac = min(elapsed / total, 1.0 if elapsed == total else 0.99)
-    filled = int(frac * width)
-    return f"[{'#' * filled}{'-' * (width - filled)}] {frac:.0%} · {elapsed / 60:.0f}/{total / 60:.0f} min"
 
 
 def main() -> None:
@@ -61,21 +51,21 @@ def main() -> None:
     api = wandb.Api()
     run = api.run(path)
     total, n = estimate(api, run)
-    print(f"{run.name} {run.url} · estimate from {n} past run(s)", flush=True)
+    eta = f"{total / 60:.0f}" if total else "none"
+    print(f"start {run.name} {run.url} estimate={eta} samples={n}", flush=True)
     started = datetime.fromisoformat(run.created_at.replace("Z", "+00:00"))
+    last = None
     while True:
         run = api.run(path)
-        current = stage(run)
-        elapsed = run.summary.get("_runtime") if run.state != "running" else (datetime.now(timezone.utc) - started).total_seconds()
-        print(f"{current:<12} {bar(elapsed, elapsed if run.state == 'finished' else total)}", flush=True)
-        STATUS_FILE.write_text(json.dumps({
-            "name": run.name, "url": run.url, "stage": current, "state": run.state,
-            "elapsed_min": elapsed / 60, "total_min": total / 60 if total else None,
-            "updated_ms": int(time.time() * 1000),
-        }))
         if run.state != "running":
-            print("artifacts:", [f"{a.type}:{a.name}" for a in run.logged_artifacts()], flush=True)
+            artifacts = ",".join(f"{a.type}:{a.name}" for a in run.logged_artifacts())
+            print(f"end {run.state} elapsed={run.summary.get('_runtime', 0) / 60:.0f} artifacts={artifacts}", flush=True)
             return
+        current = stage(run)
+        if current != last:
+            elapsed = (datetime.now(timezone.utc) - started).total_seconds() / 60
+            print(f"stage {current} elapsed={elapsed:.0f}", flush=True)
+            last = current
         time.sleep(poll)
 
 

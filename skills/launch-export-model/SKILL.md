@@ -18,6 +18,20 @@ The job runs three steps: export each model to ONNX, merge two cameras into one 
 - **`trt_flags`**: `trtexec` syntax depends on the device's TensorRT version (e.g. `--memPoolSize=workspace:8G` on TRT 10+, `--workspace=<MB>` on older). Start from the product default in `platforms.yaml` and change only what the user asks for.
 - **Engines are hardware-specific**: they only run on the GPU they were built on, so the SSH host must be the target device type.
 
+## Progress bar
+
+If the `plan_progress` tool is available (the `plan-progress` plugin from `zycck/claude-mods`), create one bar per export as soon as the skill starts, with `id` `export-<run name>` and the run name as `title`:
+
+| Stage | Steps |
+|---|---|
+| Setup | Check gh, wandb · Fetch schema · Build config · Validate config |
+| Launch | Confirm with user · Queue run · Agent picks up |
+| ONNX | Export models · Compose DAN (single model: `skipped`) |
+| TensorRT | Compile (~N min), with N from the watcher's `estimate`; just `Compile` without one |
+| Cleanup | Report artifacts · Stop watcher |
+
+Move it with `{id, next: true}` as each step finishes. Before asking the user anything, set `state: "needs_input"`. On a failure, send `failed` with the cause as `note`. After cleanup, send `state: "done"`. Without the tool, report each step in one short chat line instead.
+
 ## 0. Find the job
 
 First run `gh auth status`. If `gh` is missing, stop and propose an install for the user's OS, then `gh auth login`:
@@ -117,12 +131,18 @@ Report the queued run link from the output.
 
 ## 4. Watch progress
 
-`wandb launch` only queues the run. Find it as the newest run in `sea-ai/export-model` once an agent picks it up, then run the bundled watcher so each line reaches the user in the chat (Claude Code: the `Monitor` tool, re-armed when it expires; otherwise a background command you read and relay). Also give the W&B run link; its Logs tab shows the live console:
+`wandb launch` only queues the run. Find it as the newest run in `sea-ai/export-model` once an agent picks it up (step `Agent picks up`), give the W&B run link (its Logs tab shows the live console), then run the bundled watcher with the `Monitor` tool (re-armed when it expires; without `Monitor`, a background command you read):
 
 ```bash
 uv run -q --with wandb python "<this skill's folder>/watch_run.py" sea-ai/export-model/<run_id>
 ```
 
-Each line shows the stage (`ONNX export` → `TRT compile` → final state) and a bar of elapsed time against the mean runtime of past finished runs on the same compile device (SSH host) for the same network type (`dan`, `ahoy`, `yolo`). Other devices never count: compile times differ across Jetson models. No match shows elapsed time only. W&B keeps every run, so the estimate sharpens with each export; there is nothing to store locally. Export takes about a minute; nearly all the time is TRT compile.
+It prints one line per stage change, and each line moves the bar:
 
-If the run fails, read the tail of its `output.log` and report the cause. SSH errors (unreachable host, authentication failed) need a fix on the launch agent's SSH setup, not in the config.
+- `start ... estimate=<min|none>`: write the estimate into the TensorRT step title.
+- `stage ONNX export`: `Export models` active. `stage TRT compile`: ONNX done, `Compile` active.
+- `end finished ...`: `Compile` done, then the Cleanup steps. `end failed|crashed|killed`: `failed` on the active step.
+
+The estimate is the mean runtime of past finished runs on the same compile device (SSH host) for the same network type (`dan`, `ahoy`, `yolo`). Other devices never count: compile times differ across Jetson models. W&B keeps every run, so the estimate sharpens with each export; nothing is stored locally. Export takes about a minute; nearly all the time is TRT compile.
+
+If the run fails, read the tail of its `output.log` and report the cause. SSH errors (unreachable host, authentication failed) need a fix on the launch agent's SSH setup, not in the config. A host that needs a specific user goes in as `user@host`.
