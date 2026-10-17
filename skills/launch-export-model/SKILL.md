@@ -1,11 +1,22 @@
 ---
 name: launch-export-model
-description: Launch the ml-ops export_model W&B job (.pt → .onnx → TensorRT .engine) from a plain-language request instead of the W&B Launch UI. Use when the user wants to export, convert, or compile a model to ONNX or TensorRT, build a DAN, or launch export-model-job.
+description: Launch the ml-ops export_model W&B job (.pt → .onnx → TensorRT .engine) from a plain-language request instead of the W&B Launch UI. Use when the user wants to export, convert, or compile a model to ONNX or TensorRT, build a DAN, or launch the export-model job.
 ---
 
 # Launch export_model
 
 Turn the user's request into a run config, show it, and on approval submit it with `wandb launch`.
+
+## Context
+
+The job runs three steps: export each model to ONNX, merge two cameras into one DAN ONNX if two models are given, then compile a TensorRT engine over SSH on the target device.
+
+- **YOLO vs AHOY**: `detection` only = object detection (YOLO). Adding `horizon` weights = object + horizon detection (AHOY).
+- **DAN** (Day And Night): thermal + RGB in one ONNX, one inference call. Only for dual-camera products; single-camera products export one model.
+- **`imgsz` vs `infsz`**: `imgsz` is the ONNX input, the camera frame size. `infsz` is the network size; when it differs, a resize + pad is baked into the graph and boxes are scaled back to `imgsz`. Leave `infsz` empty to run at `imgsz`.
+- **Weight refs**: W&B registry `Collection:version` or run artifact `entity/project/artifact:version`.
+- **`trt_flags`**: `trtexec` syntax depends on the device's TensorRT version (e.g. `--memPoolSize=workspace:8G` on TRT 10+, `--workspace=<MB>` on older). Start from the product default in `platforms.yaml` and change only what the user asks for.
+- **Engines are hardware-specific**: they only run on the GPU they were built on, so the SSH host must be the target device type.
 
 ## 0. Find the job
 
@@ -49,16 +60,17 @@ Read `$JOB/config_schema.py` and `$JOB/platforms.yaml` for the current fields an
 - **trt**: `false` stops after ONNX.
 - **trt_flags**: full `trtexec` flag string; omit for the product default. Show the default from `platforms.yaml` when asking.
 - **ssh_host**, **fname**, **yolov5_branch**, **export.fuse/half**: omit unless the user asks.
-- **queue**: W&B launch queue name. Ask; there is no default.
+- **queue**: W&B launch queue name. Suggest the one recent `export-model` runs used (`_wandb.launch_queue_name` in their config) and confirm.
 
 Omit every key the user did not set so the job applies `platforms.yaml` defaults.
 
 ## 2. Write and validate
 
-Write the config to a temp file (e.g. `$TMPDIR/export-<product>-<yyyymmdd-HHMM>.json`), with the run config under `overrides.run_config` as `wandb launch` expects:
+Write the config to a temp file (e.g. `$TMPDIR/export-<product>-<yyyymmdd-HHMM>.json`), with the run config under `overrides.run_config` as `wandb launch` expects. Top-level `name` becomes the W&B run name:
 
 ```json
 {
+  "name": "dan-watchkeeper-ir-1312x640-rgb-1920x576-inf960x576",
   "overrides": {
     "run_config": {
       "product": "watchkeeper",
@@ -71,6 +83,12 @@ Write the config to a temp file (e.g. `$TMPDIR/export-<product>-<yyyymmdd-HHMM>.
   }
 }
 ```
+
+Build `name` from the resolved values (step below prints them), sizes as `WxH`:
+
+- `<arch>-<product>`, with `arch` = `dan` for two models, else `yolo` or `ahoy` (horizon set).
+- Then per model: `-<camera>-<imgsz WxH>`, with `ir` for thermal and `rgb` for rgb. Add `-inf<infsz WxH>` when `infsz` differs from `imgsz`.
+- Example: `dan-sentry-ir-640x512-rgb-1280x960`, `ahoy-watchkeeper-rgb-3600x1080-inf1920x576`.
 
 Validate it against the schema and print the resolved per-model values:
 
@@ -88,11 +106,23 @@ Fix and re-run on a validation error.
 
 ## 3. Confirm, then launch
 
-Show the user the resolved table (model, type, detection, horizon, imgsz, infsz, batch_size, trt_flags, queue). Launch only after an explicit yes:
+Show the user the run name and the resolved table (model, type, detection, horizon, imgsz, infsz, batch_size, trt_flags, queue). Launch only after an explicit yes:
 
 ```bash
-wandb launch -j sea-ai/export-model/export-model-job:latest -e sea-ai -p export-model \
+wandb launch -j sea-ai/export-model/export-model:latest -e sea-ai -p export-model \
   --queue <queue> --config <config.json>
 ```
 
 Report the queued run link from the output.
+
+## 4. Watch progress
+
+`wandb launch` only queues the run. Find it as the newest run in `sea-ai/export-model` once an agent picks it up, then run the bundled watcher in the background and relay its lines:
+
+```bash
+uv run -q --with wandb python "<this skill's folder>/watch_run.py" sea-ai/export-model/<run_id>
+```
+
+Each line shows the stage (`ONNX export` → `TRT compile` → final state) and a bar of elapsed time against the mean runtime of past finished runs for the same product and cameras. W&B keeps every run, so the estimate sharpens with each export; there is nothing to store locally. Export takes about a minute; nearly all the time is TRT compile.
+
+If the run fails, read the tail of its `output.log` and report the cause. SSH errors (unreachable host, authentication failed) need a fix on the launch agent's SSH setup, not in the config.
