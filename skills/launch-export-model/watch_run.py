@@ -7,11 +7,16 @@ same compile device (SSH host) for the same network type (dan, ahoy, yolo). No m
 means no estimate: compile times are not comparable across devices.
 """
 
+import json
 import sys
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 
 import wandb
+
+# Read by the export-progress Claude Code mod to draw a live bar above the prompt.
+STATUS_FILE = Path.home() / ".claude" / "export-progress.json"
 
 
 def build_key(run) -> tuple[str, str]:
@@ -63,6 +68,11 @@ def main() -> None:
         current = stage(run)
         elapsed = run.summary.get("_runtime") if run.state != "running" else (datetime.now(timezone.utc) - started).total_seconds()
         print(f"{current:<12} {bar(elapsed, elapsed if run.state == 'finished' else total)}", flush=True)
+        STATUS_FILE.write_text(json.dumps({
+            "name": run.name, "url": run.url, "stage": current, "state": run.state,
+            "elapsed_min": elapsed / 60, "total_min": total / 60 if total else None,
+            "updated_ms": int(time.time() * 1000),
+        }))
         if run.state != "running":
             print("artifacts:", [f"{a.type}:{a.name}" for a in run.logged_artifacts()], flush=True)
             return
