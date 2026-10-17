@@ -117,7 +117,7 @@ Report the queued run link from the output.
 
 ## 4. Watch progress
 
-`wandb launch` only queues the run. Find it as the newest run in `sea-ai/export-model` once an agent picks it up, then run the bundled watcher in the background and relay its lines:
+`wandb launch` only queues the run. Find it as the newest run in `sea-ai/export-model` once an agent picks it up, then run the bundled watcher so each line reaches the user in the chat (Claude Code: the `Monitor` tool, re-armed when it expires; otherwise a background command you read and relay). Also give the W&B run link; its Logs tab shows the live console:
 
 ```bash
 uv run -q --with wandb python "<this skill's folder>/watch_run.py" sea-ai/export-model/<run_id>
