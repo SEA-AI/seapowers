@@ -123,6 +123,6 @@ Report the queued run link from the output.
 uv run -q --with wandb python "<this skill's folder>/watch_run.py" sea-ai/export-model/<run_id>
 ```
 
-Each line shows the stage (`ONNX export` → `TRT compile` → final state) and a bar of elapsed time against the mean runtime of past finished runs for the same product and cameras. W&B keeps every run, so the estimate sharpens with each export; there is nothing to store locally. Export takes about a minute; nearly all the time is TRT compile.
+Each line shows the stage (`ONNX export` → `TRT compile` → final state) and a bar of elapsed time against the mean runtime of past finished runs with the same product, compile device (SSH host), `trt_flags` and networks (weights, sizes, batch). Other devices never count: compile times differ across Jetson models. No match shows elapsed time only. W&B keeps every run, so the estimate sharpens with each export; there is nothing to store locally. Export takes about a minute; nearly all the time is TRT compile.
 
 If the run fails, read the tail of its `output.log` and report the cause. SSH errors (unreachable host, authentication failed) need a fix on the launch agent's SSH setup, not in the config.

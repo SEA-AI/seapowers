@@ -2,8 +2,9 @@
 
 Usage: uv run -q --with wandb python watch_run.py <entity/project/run_id> [poll_seconds]
 
-The estimate is the mean runtime of past finished runs that produced an engine
-for the same product and cameras, so it improves with every run.
+The estimate is the mean runtime of past finished runs that built an engine with
+the same product, compile device (SSH host), trt_flags and networks. No match means
+no estimate: compile times are not comparable across devices.
 """
 
 import sys
@@ -13,25 +14,28 @@ from datetime import datetime, timezone
 import wandb
 
 
-def cameras(run) -> tuple:
-    return tuple(sorted(m.get("type", "") for m in run.config.get("models", []) if isinstance(m, dict)))
+def build_key(run) -> tuple:
+    """Runs compile in the same time only on the same device with the same networks."""
+    host = (run.config.get("ssh_host") or "default").split("@")[-1]
+    models = tuple(
+        (m.get("type"), tuple(m.get("detection") or []), m.get("horizon"),
+         tuple(m.get("imgsz") or []), tuple(m.get("infsz") or []), str(m.get("batch_size")))
+        for m in run.config.get("models", []) if isinstance(m, dict)
+    )
+    return run.config.get("product"), host, run.config.get("trt_flags") or "", models
 
 
 def estimate(api, run) -> tuple[float | None, int]:
-    product, cams = run.config.get("product"), cameras(run)
-    same_product, same_cams = [], []
-    for past in api.runs(f"{run.entity}/{run.project}", filters={"state": "finished"}, per_page=100):
-        if past.id == run.id or past.config.get("product") != product:
-            continue
-        if not any(a.type == "trt-engine" for a in past.logged_artifacts()):
-            continue
-        runtime = past.summary.get("_runtime")
-        if runtime:
-            same_product.append(runtime)
-            if cameras(past) == cams:
-                same_cams.append(runtime)
+    key = build_key(run)
+    samples = [
+        past.summary["_runtime"]
+        for past in api.runs(f"{run.entity}/{run.project}", filters={"state": "finished"}, per_page=100)
+        if past.id != run.id
+        and past.summary.get("_runtime")
+        and build_key(past) == key
+        and any(a.type == "trt-engine" for a in past.logged_artifacts())
+    ]
     # ponytail: plain mean, filter outliers if a stuck run ever skews it
-    samples = same_cams or same_product
     return (sum(samples) / len(samples), len(samples)) if samples else (None, 0)
 
 
@@ -44,7 +48,7 @@ def stage(run) -> str:
 
 def bar(elapsed: float, total: float | None, width: int = 20) -> str:
     if not total:
-        return f"{elapsed / 60:.0f} min elapsed (no past runs to estimate from)"
+        return f"{elapsed / 60:.0f} min elapsed (no past run on this device with these networks)"
     frac = min(elapsed / total, 1.0 if elapsed == total else 0.99)
     filled = int(frac * width)
     return f"[{'#' * filled}{'-' * (width - filled)}] {frac:.0%} · {elapsed / 60:.0f}/{total / 60:.0f} min"
