@@ -2,9 +2,9 @@
 
 Usage: uv run -q --with wandb python watch_run.py <entity/project/run_id> [poll_seconds]
 
-The estimate is the mean runtime of past finished runs that built an engine with
-the same product, compile device (SSH host), trt_flags and networks. No match means
-no estimate: compile times are not comparable across devices.
+The estimate is the mean runtime of past finished runs that built an engine on the
+same compile device (SSH host) for the same network type (dan, ahoy, yolo). No match
+means no estimate: compile times are not comparable across devices.
 """
 
 import sys
@@ -14,15 +14,12 @@ from datetime import datetime, timezone
 import wandb
 
 
-def build_key(run) -> tuple:
-    """Runs compile in the same time only on the same device with the same networks."""
-    host = (run.config.get("ssh_host") or "default").split("@")[-1]
-    models = tuple(
-        (m.get("type"), tuple(m.get("detection") or []), m.get("horizon"),
-         tuple(m.get("imgsz") or []), tuple(m.get("infsz") or []), str(m.get("batch_size")))
-        for m in run.config.get("models", []) if isinstance(m, dict)
-    )
-    return run.config.get("product"), host, run.config.get("trt_flags") or "", models
+def build_key(run) -> tuple[str, str]:
+    """Compile time depends on the device and the network type, not on the weights."""
+    models = [m for m in run.config.get("models", []) if isinstance(m, dict)]
+    net = "dan" if len(models) > 1 else "ahoy" if any(m.get("horizon") for m in models) else "yolo"
+    host = (run.config.get("ssh_host") or f"default-{run.config.get('product')}").split("@")[-1]
+    return host, net
 
 
 def estimate(api, run) -> tuple[float | None, int]:
@@ -48,7 +45,7 @@ def stage(run) -> str:
 
 def bar(elapsed: float, total: float | None, width: int = 20) -> str:
     if not total:
-        return f"{elapsed / 60:.0f} min elapsed (no past run on this device with these networks)"
+        return f"{elapsed / 60:.0f} min elapsed (no past run of this network type on this device)"
     frac = min(elapsed / total, 1.0 if elapsed == total else 0.99)
     filled = int(frac * width)
     return f"[{'#' * filled}{'-' * (width - filled)}] {frac:.0%} · {elapsed / 60:.0f}/{total / 60:.0f} min"
