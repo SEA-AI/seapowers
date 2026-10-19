@@ -64,7 +64,7 @@ def main() -> None:
     started = datetime.fromisoformat(run.created_at.replace("Z", "+00:00"))
     last, reported = None, 0
     while True:
-        run = api.run(path)
+        run.load(force=True)  # Api caches runs; without a forced reload the state never changes
         if run.state != "running":
             artifacts = ",".join(f"{a.type}:{a.name}" for a in run.logged_artifacts())
             print(f"end {run.state} elapsed={run.summary.get('_runtime', 0) / 60:.0f} artifacts={artifacts}", flush=True)
