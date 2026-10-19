@@ -108,15 +108,24 @@ Build `name` from the resolved values (step below prints them), sizes as `WxH`:
 - Then per model: `-<camera>-<imgsz WxH>`, with `ir` for thermal and `rgb` for rgb. Add `-inf<infsz WxH>` when `infsz` differs from `imgsz`.
 - Example: `dan-sentry-ir-640x512-rgb-1280x960`, `ahoy-watchkeeper-rgb-3600x1080-inf1920x576`.
 
-Validate it against the schema and print the resolved per-model values:
+Then validate it and expand it into the **full config**: every field the job reads, with the `platforms.yaml` defaults filled in (per-model `imgsz`, `infsz`, `batch_size`, plus `trt_flags`, `ssh_host`). The full config replaces the draft and is what gets launched, so the run uses exactly what the user approved, even if `platforms.yaml` changes later:
 
 ```bash
-cd "$JOB" && uv run --with pydantic --with pyyaml python -c "
+cd "$JOB" && uv run -q --with pydantic --with pyyaml python -c "
 import json, sys
 from config_schema import ExportJobConfig
-c = ExportJobConfig.model_validate(json.load(open(sys.argv[1]))['overrides']['run_config'])
-for m in c.resolved_models(): print(m.model_dump(mode='json'))
-print('trt:', c.trt, '| trt_flags:', c.trt_flags or c.platforms()[c.product.value]['trt_flags'])
+path = sys.argv[1]
+launch = json.load(open(path))
+c = ExportJobConfig.model_validate(launch['overrides']['run_config'])
+platform = c.platforms()[c.product.value]
+full = c.model_dump(mode='json')
+full['models'] = [m.model_dump(mode='json') for m in c.resolved_models()]
+full['trt_flags'] = c.trt_flags or platform['trt_flags']
+full['ssh_host'] = c.ssh_host or platform['ssh_host']
+launch['overrides']['run_config'] = full
+json.dump(launch, open(path, 'w'), indent=2)
+print(json.dumps(launch, indent=2))
+print('trt7_compatible (fixed by product, not in the config):', platform['trt7_compatible'])
 " <config.json>
 ```
 
@@ -124,7 +133,7 @@ Fix and re-run on a validation error.
 
 ## 3. Confirm, then launch
 
-Show the user the run name, the resolved table (model, type, detection, horizon, imgsz, infsz, batch_size, trt_flags, ssh_host, queue) and the full launch JSON exactly as it will be sent: pretty-printed (`json.dumps(..., indent=2)`, one key per line, nested lists and objects expanded), in a `json` code block in the chat message. Never put the JSON inside a question dialog (`AskUserQuestion`), which strips the indentation; ask the yes/no question separately. Show the JSON again in the same message as every launch question, even when nothing changed since it was last shown, so the yes always answers a JSON on screen. Launch only after an explicit yes:
+Show the user the run name, the resolved table (model, type, detection, horizon, imgsz, infsz, batch_size, trt_flags, ssh_host, queue) and the **full** launch JSON from step 2 exactly as it will be sent, never a shortened draft: pretty-printed (`json.dumps(..., indent=2)`, one key per line, nested lists and objects expanded), in a `json` code block in the chat message. Never put the JSON inside a question dialog (`AskUserQuestion`), which strips the indentation; ask the yes/no question separately. Show the JSON again in the same message as every launch question, even when nothing changed since it was last shown, so the yes always answers a JSON on screen. Launch only after an explicit yes:
 
 ```bash
 wandb launch -j sea-ai/export-model/export-model:latest -e sea-ai -p export-model \
