@@ -75,7 +75,7 @@ Read `$JOB/config_schema.py` and `$JOB/platforms.yaml`. Skip any question the re
 2. **Defaults**, depending on the answer:
    - **Sentry or Watchkeeper**: show that product's defaults from `platforms.yaml` as one table and ask the user to accept or change each value: compile device (`ssh_host`), `trt_flags`, and per camera `imgsz`, `infsz` (empty = same as `imgsz`) and `batch_size`.
    - **Another device**: there are no defaults, so ask for each value: `ssh_host` (`user@host` if it needs a user), `trt_flags`, and per camera `imgsz`, `infsz` and `batch_size`. Also ask whether its TensorRT is 7 (older Jetsons) or 8+; the config has no field for this, so pick the product whose `trt7_compatible` matches (`sentry` = TRT 7, `watchkeeper` = TRT 8+) and override everything else.
-3. **Inputs**: which cameras (`thermal`, `rgb`, or both = DAN) and per camera:
+3. **Inputs**: which cameras (`thermal`, `rgb`, or both = DAN) and per camera. Model `name` is `ir` for the thermal camera and `rgb` for the RGB camera, with thermal listed first: Core-Backend finds DAN inputs by the `ir_`/`rgb_` prefixes, and older job images take the prefix from `name`.
    - `detection`: W&B artifact refs (`collection:version` or `entity/project/artifact:version`). Two+ refs = ensemble. For "latest", check the registry and the newest training runs, and show which version you picked and why.
    - `horizon`: ref for AHOY, or none for plain YOLO.
 4. **Queue**: suggest the one recent `export-model` runs used (`_wandb.launch_queue_name` in their config) and confirm.
@@ -93,7 +93,7 @@ Write the config to a temp file (e.g. `$TMPDIR/export-<product>-<yyyymmdd-HHMM>.
     "run_config": {
       "product": "watchkeeper",
       "models": [
-        {"name": "thermal", "type": "thermal", "detection": ["YOLOv5n-IR:latest"]},
+        {"name": "ir", "type": "thermal", "detection": ["YOLOv5n-IR:latest"]},
         {"name": "rgb", "type": "rgb", "detection": ["YOLOv5n-RGB:latest"], "infsz": ["576", "960"]}
       ],
       "trt_flags": "--inputIOFormats=uint8:chw --memPoolSize=workspace:8G --fp16"
@@ -124,7 +124,7 @@ Fix and re-run on a validation error.
 
 ## 3. Confirm, then launch
 
-Show the user the run name, the resolved table (model, type, detection, horizon, imgsz, infsz, batch_size, trt_flags, ssh_host, queue) and the full launch JSON exactly as it will be sent, in a `json` code block. Show the JSON again in the same message as every launch question, even when nothing changed since it was last shown, so the yes always answers a JSON on screen. Launch only after an explicit yes:
+Show the user the run name, the resolved table (model, type, detection, horizon, imgsz, infsz, batch_size, trt_flags, ssh_host, queue) and the full launch JSON exactly as it will be sent: pretty-printed (`json.dumps(..., indent=2)`, one key per line, nested lists and objects expanded), in a `json` code block in the chat message. Never put the JSON inside a question dialog (`AskUserQuestion`), which strips the indentation; ask the yes/no question separately. Show the JSON again in the same message as every launch question, even when nothing changed since it was last shown, so the yes always answers a JSON on screen. Launch only after an explicit yes:
 
 ```bash
 wandb launch -j sea-ai/export-model/export-model:latest -e sea-ai -p export-model \
