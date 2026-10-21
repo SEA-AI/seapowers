@@ -160,3 +160,20 @@ It prints one line per stage change, and each line moves the bar:
 The estimate is the mean runtime of past finished runs on the same compile device (SSH host) for the same network type (`dan`, `ahoy`, `yolo`). Other devices never count: compile times differ across Jetson models. W&B keeps every run, so the estimate sharpens with each export; nothing is stored locally. Export takes about a minute; nearly all the time is TRT compile.
 
 If the run fails, read the tail of its `output.log` and report the cause. SSH errors (unreachable host, authentication failed) need a fix on the launch agent's SSH setup, not in the config. A host that needs a specific user goes in as `user@host`.
+
+## 5. After a release build: link the weights in the registry
+
+When the user says an engine goes to the devices (not for test exports), offer once to link its source weights into the product collections of the W&B model registry, so `<product>-<camera>:latest` is always what the shipped engine contains:
+
+- Collections: `watchkeeper-IR`, `watchkeeper-RGB`, `sentry-IR`, `sentry-RGB` (one per product and camera). Skip a camera whose weights are already the collection's `latest`.
+- Link, do not copy, and only after an explicit yes, since `latest` moves for everyone who loads it:
+
+```bash
+uv run -q --with wandb python -c "
+import wandb
+src = wandb.Api().artifact('<weights ref, e.g. sea-ai/yolo-train/run_xxx_model:v0>')
+print(src.link('wandb-registry-model/<product>-<camera>').qualified_name)
+"
+```
+
+- Check that the new version's digest equals the source's, and cite the registry versions (e.g. `watchkeeper-IR:v1 (= YOLOv5n-IR:v2)`) wherever the engine is documented, such as the Core-Backend PR.
