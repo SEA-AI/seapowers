@@ -33,8 +33,16 @@ How the change was validated before merge: tests, benchmarks, screenshots, video
 - Use the **complete diff** against the base branch as the source of truth.
 - Describe the **impact of the change**, not the implementation history.
 - Focus on user-visible, behavioral, or architectural changes. Skip mechanical details unless they matter for review.
-- Fill **Testing** with **pre-merge** evidence you produced (test results, screenshots, videos). Attach local images and videos with `gh pr create --attach <file>` or `gh pr edit --attach <file>`; reference them in the body as `![alt](./file.png)`. `--attach` needs `gh` 2.99.0+, so run `gh --version` and suggest upgrading if older.
+- Fill **Testing** with **pre-merge** evidence you produced (test results, screenshots, videos). Attach local images and videos with `gh pr create --attach <file>` or `gh pr edit --attach <file>`; reference them in the body as `![alt](./file.png)`. If `gh pr create --help` does not list `--attach`, suggest upgrading `gh`.
 - List any validation you could not run so the author can add it.
+
+## Old patterns
+
+<details>
+<summary>Testing left to the author (before <code>gh --attach</code>)</summary>
+
+Testing held `<!-- To be filled in manually. -->` and the agent only suggested pre-merge validation for the author to add.
+</details>
 
 ## Writing Style
 
