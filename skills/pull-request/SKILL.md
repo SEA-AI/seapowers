@@ -36,14 +36,6 @@ How the change was validated before merge: tests, benchmarks, screenshots, video
 - Fill **Testing** with **pre-merge** evidence you produced (test results, screenshots, videos). Attach local images and videos with `gh pr create --attach <file>` or `gh pr edit --attach <file>`; reference them in the body as `![alt](./file.png)`. If `gh pr create --help` does not list `--attach`, suggest upgrading `gh`.
 - List any validation you could not run so the author can add it.
 
-## Old patterns
-
-<details>
-<summary>Testing left to the author (before <code>gh --attach</code>)</summary>
-
-Testing held `<!-- To be filled in manually. -->` and the agent only suggested pre-merge validation for the author to add.
-</details>
-
 ## Writing Style
 
 - **Be concise and precise**: write only what helps the reader understand the change.
