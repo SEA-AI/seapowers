@@ -55,6 +55,8 @@ Use a `mermaid` code block (GitHub renders it). Keep it small (about 10 nodes or
 | Database schema | `erDiagram` |
 | Before/after numbers (performance, metrics) | Table or plot, not a diagram |
 
+Mermaid keeps adding diagram types; check the [Mermaid docs](https://mermaid.js.org/intro/) for a better fit, and prefer stable ones GitHub already renders.
+
 ## Large PRs
 
 If the diff is large (e.g. 500+ lines changed, many unrelated files, or multiple independent features), suggest to the user that the PR should be split into smaller, focused PRs. Explain which changes could be grouped together and propose a split.
