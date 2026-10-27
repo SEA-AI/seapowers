@@ -1,7 +1,7 @@
 # seapowers
 
 [![Claude Code Plugin](https://img.shields.io/badge/Claude_Code-Plugin-7c3aed?logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQyIDAtOC0zLjU4LTgtOHMzLjU4LTggOC04IDggMy41OCA4IDgtMy41OCA4LTggOHoiLz48L3N2Zz4=&style=flat-square)](https://docs.anthropic.com/en/docs/claude-code/skills)
-[![Skills & Plugins](https://img.shields.io/badge/Skills%20%26%20Plugins-5-blue?style=flat-square)](#-available-skills-and-plugins)
+[![Skills & Plugins](https://img.shields.io/badge/Skills%20%26%20Plugins-6-blue?style=flat-square)](#-available-skills-and-plugins)
 [![Upstream Sync](https://img.shields.io/github/actions/workflow/status/SEA-AI/seapowers/sync-upstream-skills.yml?label=Upstream%20Sync&style=flat-square)](https://github.com/SEA-AI/seapowers/actions/workflows/sync-upstream-skills.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 

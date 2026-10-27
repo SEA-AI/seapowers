@@ -133,26 +133,22 @@ Fix and re-run on a validation error.
 
 ## 3. Confirm, then launch
 
-Show the user the run name, the resolved table (model, type, detection, horizon, imgsz, infsz, batch_size, trt_flags, ssh_host, queue) and the **full** launch JSON from step 2 exactly as it will be sent, never a shortened draft: pretty-printed (`json.dumps(..., indent=2)`, one key per line, nested lists and objects expanded), in a `json` code block in the chat message. Never put the JSON inside a question dialog (`AskUserQuestion`), which strips the indentation; ask the yes/no question separately. Show the JSON again in the same message as every launch question, even when nothing changed since it was last shown, so the yes always answers a JSON on screen. Launch only after an explicit yes:
-
-```bash
-wandb launch -j sea-ai/export-model/export-model:latest -e sea-ai -p export-model \
-  --queue <queue> --config <config.json>
-```
-
-Report the queued run link from the output.
+Show the user the run name, the resolved table (model, type, detection, horizon, imgsz, infsz, batch_size, trt_flags, ssh_host, queue) and the **full** launch JSON from step 2 exactly as it will be sent, never a shortened draft: pretty-printed (`json.dumps(..., indent=2)`, one key per line, nested lists and objects expanded), in a `json` code block in the chat message. Never put the JSON inside a question dialog (`AskUserQuestion`), which strips the indentation; ask the yes/no question separately. Show the JSON again in the same message as every launch question, even when nothing changed since it was last shown, so the yes always answers a JSON on screen. Launch only after an explicit yes. The bundled watcher queues the config itself, so it follows exactly the run created from this queue item (step 4).
 
 ## 4. Watch progress
 
-`wandb launch` only queues the run. Find it as the newest run in `sea-ai/export-model` once an agent picks it up (step `Agent picks up`), give the W&B run link (its Logs tab shows the live console), then run the bundled watcher with the `Monitor` tool (re-armed when it expires; without `Monitor`, a background command you read):
+Submit and watch with the bundled watcher, run with the `Monitor` tool (re-armed when it expires; without `Monitor`, a background command you read):
 
 ```bash
-uv run -q --with wandb python "<this skill's folder>/watch_run.py" sea-ai/export-model/<run_id>
+uv run -q --with wandb python "<this skill's folder>/watch_run.py" submit <config.json> <queue>
 ```
 
-It prints one line per stage change, and each line moves the bar:
+`submit` queues the config, waits for the run created from that queue item, never the project's newest run (another export may start at the same time), and then watches it. To re-arm after an expiry, pass the run path instead: `watch_run.py sea-ai/export-model/<run_id>`. It prints one line per event, and each line moves the bar:
 
-- `start ... estimate=<min|none>`: with an estimate, resend the stages with the 20 `Compile n%` steps.
+- `queued <id>`: `Queue run` done, `Agent picks up` active.
+- `start <name> <url> ...`: give the user the W&B run link (its Logs tab shows the live console).
+
+- `start ... estimate=<min|none>`: also `Agent picks up` done; with an estimate, resend the stages with the 20 `Compile n%` steps.
 - `stage ONNX export`: `Export models` active. `stage TRT compile`: ONNX done, first compile step active.
 - `progress <n>`: `next` once per line (one per 5%). It stops at 95% until the run ends.
 - `end finished ...`: all compile steps done, then the Cleanup steps. `end failed|crashed|killed`: `failed` on the active step.
@@ -163,9 +159,11 @@ If the run fails, read the tail of its `output.log` and report the cause. SSH er
 
 ## 5. After a release build: link the weights in the registry
 
-When the user says an engine goes to the devices (not for test exports), offer once to link its source weights into the product collections of the W&B model registry, so `<product>-<camera>:latest` is always what the shipped engine contains:
+When the user says an engine goes to the devices (not for test exports), offer once to link its detection weights into the product collections of the W&B model registry, so `<product>-<camera>:latest` is the detection model the shipped engine contains:
 
-- Collections: `watchkeeper-IR`, `watchkeeper-RGB`, `sentry-IR`, `sentry-RGB` (one per product and camera). Skip a camera whose weights are already the collection's `latest`.
+- Collections: `watchkeeper-IR`, `watchkeeper-RGB`, `sentry-IR`, `sentry-RGB` (one per product and camera), for the **detection** weights only. Skip a camera whose weights are already the collection's `latest`.
+- A camera with an ensemble (two or more `detection` refs) is not linked: one `latest` cannot stand for several models. Horizon weights stay in their own collection (e.g. `YOLO11p-OBBh`) and are not linked here either.
+- The complete record of a release is the engine artifact itself: its metadata lists every detection and horizon ref per camera. Cite the engine artifact together with any linked registry versions.
 - Link, do not copy, and only after an explicit yes, since `latest` moves for everyone who loads it:
 
 ```bash
