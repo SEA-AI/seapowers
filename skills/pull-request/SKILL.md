@@ -21,7 +21,7 @@ Why are these changes necessary? Is there a specific stakeholder (PM, service, Q
 
 ## How?
 
-A high level description of the implemented changes. Visual aid is always preferred (diagrams, plots, tables, etc...).
+A high level description of the implemented changes. Prefer a small diagram over text-only explanations; use plots or tables for numbers.
 
 ## Testing
 
@@ -41,6 +41,19 @@ How the change was validated before merge: tests, benchmarks, screenshots, video
 - **Be concise and precise**: write only what helps the reader understand the change.
 - **Use simple, plain language**. Avoid jargon and unnecessary formality.
 - **Make PRs easy to scan**. Prefer tables, diagrams, and code snippets over long paragraphs when they improve clarity.
+
+## Diagrams
+
+Use a `mermaid` code block (GitHub renders it). Keep it small (about 10 nodes or fewer), show only the part the PR changes, and skip it for trivial changes.
+
+| The change is about… | Use |
+|---|---|
+| Control or data flow, pipelines, decision logic | `flowchart` |
+| Calls between services or components, request/response order | `sequenceDiagram` |
+| Modes or lifecycle (e.g. alarm or connection states) | `stateDiagram-v2` |
+| Module or class structure, new interfaces | `classDiagram` |
+| Database schema | `erDiagram` |
+| Before/after numbers (performance, metrics) | Table or plot, not a diagram |
 
 ## Large PRs
 
