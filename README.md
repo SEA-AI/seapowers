@@ -19,6 +19,7 @@
 | 🎨 `sea-ai-brand` | Brand Book 2026 guidelines for all SEA.AI outputs (docs, Word, PDFs, diagrams, decks incl. Defence, social, video, UI) | Internal |
 | 🚀 `launch-export-model` | Launch the ml-ops export_model W&B job (.pt → ONNX → TensorRT) from a plain-language request | Internal |
 | 🎥 `record-device-app` | Run a product on a device from a recording and screen-record its web app, with Device and Viewer partner agents | Internal |
+| 📈 `pipeline-timeline` | Core-Backend worker performance on a Jetson: A/B campaigns with `power_mode_perf.sh`, which thread sets the pace, and a frame-by-frame hover timeline | Internal |
 
 ### Agents
 
