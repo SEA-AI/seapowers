@@ -1,26 +1,21 @@
-"""Watch an export-model run and print one line per stage change.
+"""Launch or watch an export-model run; one output line per event drives a progress bar.
 
-Usage:
-  uv run -q --with wandb python watch_run.py submit <launch.json> <queue> [poll_seconds]
-  uv run -q --with wandb python watch_run.py <entity/project/run_id> [poll_seconds]
+Run with --help for the modes and the output lines.
+"""
 
-`submit` queues the launch config, waits for the run created from that queue item
-(never the project's newest run, which may be someone else's) and then watches it.
-
-Output, one line each:
-  queued <queue item id>                          (submit only)
+OUTPUT = """output, one line each:
+  queued <queue item id>                              (submit only)
   start <name> <url> estimate=<min|none> samples=<n>
   stage <ONNX export|TRT compile> elapsed=<min>
-  progress <5..95> elapsed=<min>   (TRT compile, every 5% of the estimate; only with one)
+  progress <5..95> elapsed=<min>    every 5% of the estimated TRT compile; only with an estimate
   end <finished|failed|crashed|killed> elapsed=<min> artifacts=<type:name,...>
 
 The estimate is the mean runtime of past finished runs that built an engine on the
 same compile device (SSH host) for the same network type (dan, ahoy, yolo). No match
-means no estimate: compile times are not comparable across devices.
-"""
+means no estimate: compile times are not comparable across devices."""
 
+import argparse
 import json
-import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -92,11 +87,7 @@ def submit(config_path: str, queue: str) -> str:
     return "/".join(run.path)
 
 
-def main() -> None:
-    args = sys.argv[1:]
-    path = submit(args[1], args[2]) if args[0] == "submit" else args[0]
-    rest = args[3:] if args[0] == "submit" else args[1:]
-    poll = int(rest[0]) if rest else 30
+def watch(path: str, poll: int) -> None:
     api = wandb.Api()
     run = api.run(path)
     total, n = estimate(api, run) if builds_engine(run) else (None, 0)
@@ -105,9 +96,8 @@ def main() -> None:
     started = datetime.fromisoformat(run.created_at)
     last, reported = None, 0
     while True:
-        run.load(
-            force=True
-        )  # Api caches runs; without a forced reload the state never changes
+        # Api caches runs; without a forced reload the state never changes
+        run.load(force=True)
         if run.state in TERMINAL:  # pending/queued/running keep polling
             artifacts = ",".join(f"{a.type}:{a.name}" for a in run.logged_artifacts())
             print(
@@ -127,6 +117,29 @@ def main() -> None:
                 reported += 5
                 print(f"progress {reported} elapsed={elapsed:.0f}", flush=True)
         time.sleep(poll)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description=__doc__.splitlines()[0],
+        epilog=OUTPUT,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--poll", type=int, default=30, help="seconds between W&B polls"
+    )
+    modes = parser.add_subparsers(dest="mode", required=True)
+    sub = modes.add_parser(
+        "submit",
+        help="queue a launch config, then watch the run created from that queue item",
+    )
+    sub.add_argument("config", help="launch JSON: {name, overrides: {run_config}}")
+    sub.add_argument("--queue", required=True, help="W&B launch queue")
+    run = modes.add_parser("watch", help="watch an existing run, e.g. after a restart")
+    run.add_argument("run_path", help="entity/project/run_id")
+    args = parser.parse_args()
+    path = submit(args.config, args.queue) if args.mode == "submit" else args.run_path
+    watch(path, args.poll)
 
 
 if __name__ == "__main__":
