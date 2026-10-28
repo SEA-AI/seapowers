@@ -2,8 +2,8 @@
 # Interleaved A/B campaign on the device with Tools/scripts/power_mode_perf.sh.
 #
 # Copy this file into a NEW folder on the device (e.g. ~/perf_<ticket>_<date>/), put the two variants of the
-# file under test next to it as <case>.<basename> (e.g. on.alertsocket.py, off.alertsocket.py), adjust the
-# variables below, then start it detached:
+# file under test next to it as <case>.<basename> (e.g. on.alertsocket.py, off.alertsocket.py), set the
+# variables below (the values are examples), then start it detached:
 #     nohup ./campaign.sh > campaign.log 2>&1 < /dev/null &
 # The worker service must be stopped first (needs the user's sudo).
 set -u
@@ -22,7 +22,9 @@ TOOLS="/home/power/Tools/scripts"
 BASE="$(basename "$TARGET")"
 OUT="$WORK/pmp"; mkdir -p "$OUT"
 for c in $CASES; do [ -f "$WORK/$c.$BASE" ] || { echo "missing $WORK/$c.$BASE"; exit 2; }; done
+[ -x "$TOOLS/power_mode_perf.sh" ] || { echo "missing $TOOLS/power_mode_perf.sh"; exit 2; }
 cp -n "$TARGET" "$WORK/installed.$BASE"      # keep the installed file
+trap 'cp "$WORK/installed.$BASE" "$TARGET"' EXIT
 
 if [ -n "$SCENARIO" ]; then
   printf '{"detection": {"inference_verbose": true, "mock_cnn_enabled": true, "mock_scenario": "%s"}}\n' "$SCENARIO" > "$WORK/overrides.json"
@@ -32,8 +34,10 @@ else
   MOCK_ENV="mock_cnn_enabled=false"
 fi
 
-# default power_mode_perf.sh tracer string with the element under test added
-TR="proctime(filter=inference|ignoremaskfilter|cpptransformation|sensorfusion|apply_stabilisation|horizon_detection|detection_horizon_filter|cppdistanceestimation|imgtracker|threatlevelmanager|postprocessing|bboxcache|alarmmanager|wsminiimages|track_object|${ELEMENT}|wsstatus|queue|encodingbin_rtsp,infer-only=True);framerate(filter=^inference|${ELEMENT}|wsstatus|encodingbin_rtsp|shmsink_rtsp);detectioncount(filter=imgtracker,infer-only=True);queuelevel"
+# power_mode_perf.sh's default tracer string with the element under test added to proctime and framerate
+DEFAULT_TR="$(sed -n 's/^PERF_TRACERS="\${PERF_TRACERS:-\(.*\)}"$/\1/p' "$TOOLS/power_mode_perf.sh")"
+[ -n "$DEFAULT_TR" ] || { echo "no PERF_TRACERS default found in $TOOLS/power_mode_perf.sh"; exit 2; }
+TR="$(echo "$DEFAULT_TR" | sed "s/proctime(filter=/proctime(filter=${ELEMENT}|/; s/framerate(filter=^inference|/framerate(filter=^inference|${ELEMENT}|/")"
 
 echo "CAMPAIGN START $(date -u +%FT%TZ) element=$ELEMENT scenario=${SCENARIO:-real} rounds=$ROUNDS duration=$DURATION"
 first=1
@@ -51,5 +55,4 @@ for n in $(seq 1 "$ROUNDS"); do
   done
   CASES="$(echo $CASES | awk '{for (i=NF; i>0; i--) printf "%s ", $i}')"   # alternate the order each round
 done
-cp "$WORK/installed.$BASE" "$TARGET"
 echo "CAMPAIGN END $(date -u +%FT%TZ) (installed file restored)"
