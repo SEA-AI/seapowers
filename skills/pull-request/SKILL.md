@@ -21,11 +21,11 @@ Why are these changes necessary? Is there a specific stakeholder (PM, service, Q
 
 ## How?
 
-A high level description of the implemented changes. Visual aid is always preferred (diagrams, plots, tables, etc...).
+A high level description of the implemented changes. Prefer a small diagram over text-only explanations; use plots or tables for numbers.
 
 ## Testing
 
-<!-- To be filled in manually. -->
+How the change was validated before merge: tests, benchmarks, screenshots, videos, manual checks, etc.
 ```
 
 ## Instructions
@@ -33,13 +33,29 @@ A high level description of the implemented changes. Visual aid is always prefer
 - Use the **complete diff** against the base branch as the source of truth.
 - Describe the **impact of the change**, not the implementation history.
 - Focus on user-visible, behavioral, or architectural changes. Skip mechanical details unless they matter for review.
-- Leave the **Testing** section empty with the HTML comment. Suggest relevant **pre-merge** validation (tests, benchmarks, screenshots, videos, manual checks, etc.) that the author can add.
+- Fill **Testing** with **pre-merge** evidence you produced (test results, screenshots, videos). Attach local images and videos with `gh pr create --attach <file>` or `gh pr edit --attach <file>`; reference them in the body as `![alt](./file.png)`. If `gh pr create --help` does not list `--attach`, suggest upgrading `gh`.
+- List any validation you could not run so the author can add it.
 
 ## Writing Style
 
 - **Be concise and precise**: write only what helps the reader understand the change.
 - **Use simple, plain language**. Avoid jargon and unnecessary formality.
 - **Make PRs easy to scan**. Prefer tables, diagrams, and code snippets over long paragraphs when they improve clarity.
+
+## Diagrams
+
+Use a `mermaid` code block (GitHub renders it). Keep it small (about 10 nodes or fewer), show only the part the PR changes, and skip it for trivial changes.
+
+| The change is about… | Use |
+|---|---|
+| Control or data flow, pipelines, decision logic | `flowchart` |
+| Calls between services or components, request/response order | `sequenceDiagram` |
+| Modes or lifecycle (e.g. alarm or connection states) | `stateDiagram-v2` |
+| Module or class structure, new interfaces | `classDiagram` |
+| Database schema | `erDiagram` |
+| Before/after numbers (performance, metrics) | Table or plot, not a diagram |
+
+Mermaid keeps adding diagram types; check the [Mermaid docs](https://mermaid.js.org/intro/) for a better fit, and prefer stable ones GitHub already renders.
 
 ## Large PRs
 
