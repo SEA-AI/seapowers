@@ -17,7 +17,15 @@
 | 🐍 `python-best-practices` | Modern Python tooling and patterns (uv, ruff, pytest, typing, async, project layout) | Internal |
 | ⚛️ `react-best-practices` | React & Next.js performance optimization (70 rules across 8 categories) | [Vercel Labs](https://github.com/vercel-labs/agent-skills) |
 | 🎨 `sea-ai-brand` | Brand Book 2026 guidelines for all SEA.AI outputs (docs, Word, PDFs, diagrams, decks incl. Defence, social, video, UI) | Internal |
-| 📈 `pipeline-timeline` | Core-Backend worker performance on a Jetson: A/B campaigns with `power_mode_perf.sh`, bottleneck analysis per thread, and the frame-by-frame hover timeline | Internal |
+| 🎥 `record-device-app` | Run a product on a device from a recording and screen-record its web app, with Device and Viewer partner agents | Internal |
+| 📈 `pipeline-timeline` | Core-Backend worker performance on a Jetson: A/B campaigns with `power_mode_perf.sh`, which thread sets the pace, and a frame-by-frame hover timeline | Internal |
+
+### Agents
+
+| Agent | Description |
+|-------|-------------|
+| `record-device` | Device partner for `record-device-app`: controls the worker over ssh with `device.py` |
+| `record-viewer` | Viewer partner for `record-device-app`: drives the web app in a browser with `rec.py` |
 
 ### Plugins
 
@@ -40,6 +48,8 @@ seapowers/                             # Repository root = plugin root
 │   └── workflows/
 │       ├── ci.yml                     # Version check + skill lint on PRs
 │       └── sync-upstream-skills.yml   # Weekly upstream sync
+├── agents/                            # Subagent definitions used by skills
+│   └── my-agent.md
 ├── skills/
 │   └── my-skill/
 │       └── SKILL.md
